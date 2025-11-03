@@ -1,0 +1,289 @@
+Slug: neonatologists, ID: child15
+Slug: neonatologists, ID: child15
+Slug: neonatologists, ID: child15
+Slug: neonatologists, ID: child15
+Slug: neonatologists, ID: child15, API: https://allupipay.in/publicsewa/api/users/main-search-display-request.php, Body: {"childrenId":"child15"}
+Slug: neonatologists, ID: child15, API: https://allupipay.in/publicsewa/api/users/main-search-display-request.php, Body: {"childrenId":"child15"}
+Response Status: 200
+
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+
+Response Status: 200
+
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+
+Slug: neonatologists, ID: child15, API: https://allupipay.in/publicsewa/api/users/main-search-display-request.php, Body: {"childrenId":"child15"}
+Response Status: 200
+
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+
+Slug: neonatologists, ID: child15, API: https://allupipay.in/publicsewa/api/users/main-search-display-request.php, Body: {"childrenId":"child15"}
+Response Status: 200
+
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+
+Slug: neonatologists, ID: child15, API: https://allupipay.in/publicsewa/api/users/main-search-display-request.php, Body: {"childrenId":"child15"}
+Response Status: 200
+
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+
+[2025-10-26T09:57:10.646Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+
+[2025-10-26T09:57:10.768Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+
+[2025-10-26T09:58:06.985Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+
+[2025-10-26T10:01:26.642Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+[2025-10-26T10:01:26.809Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+Response JSON: {"error":"Invalid ID"}
+
+Response JSON: {"error":"Invalid ID"}
+
+[2025-10-26T10:01:32.383Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+Response JSON: {"error":"Invalid ID"}
+
+[2025-10-26T10:02:16.677Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+
+[2025-10-26T10:02:16.831Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+
+[2025-10-26T10:02:21.692Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+
+[2025-10-26T10:03:01.910Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+
+Slug: neonatologists, ID: child15, API: https://allupipay.in/publicsewa/api/users/main-search-display-request.php, Body: {"childrenId":"child15"}
+Response Status: 200
+
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+
+Slug: neonatologists, ID: child15, API: https://allupipay.in/publicsewa/api/users/main-search-display-request.php, Body: {"childrenId":"child15"}
+Response Status: 200
+
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+
+
+=== REQUEST START (2025-10-26T10:06:05.706Z) ===
+Slug: neonatologists
+ID: child15
+API URL: https://allupipay.in/publicsewa/api/users/main-search-display-request.php
+Body Data: {
+  "childrenId": "child15"
+}
+Response Status: 200
+Response JSON (trimmed): [
+  {
+    "id": 137,
+    "category": null,
+    "subcategory": 0,
+    "childcategory": 15,
+    "businessName": "Location",
+    "pinCode": "",
+    "description": "Permission this is too much hai",
+    "block": "21",
+    "village": "parmanikdih2",
+    "district": "3",
+    "mobile": "8210249746",
+    "userId": 3,
+    "status": 1,
+    "created_at": "2025-10-15 12:59:12",
+    "name": "Ansar Hussain",
+    "mobile_user": "8210249746",
+    "pin": "815318",
+    "city": "Giridh",
+    "latitude": "24.354284
+=== REQUEST END ===
+
+⚠️ No listings found for ID: child15
+❌ FETCH ERROR: NEXT_HTTP_ERROR_FALLBACK;404
+=== REQUEST END ===
+
+
+=== REQUEST START (2025-10-26T10:06:05.801Z) ===
+Slug: neonatologists
+ID: child15
+API URL: https://allupipay.in/publicsewa/api/users/main-search-display-request.php
+Body Data: {
+  "childrenId": "child15"
+}
+Response Status: 200
+Response JSON (trimmed): [
+  {
+    "id": 137,
+    "category": null,
+    "subcategory": 0,
+    "childcategory": 15,
+    "businessName": "Location",
+    "pinCode": "",
+    "description": "Permission this is too much hai",
+    "block": "21",
+    "village": "parmanikdih2",
+    "district": "3",
+    "mobile": "8210249746",
+    "userId": 3,
+    "status": 1,
+    "created_at": "2025-10-15 12:59:12",
+    "name": "Ansar Hussain",
+    "mobile_user": "8210249746",
+    "pin": "815318",
+    "city": "Giridh",
+    "latitude": "24.354284
+=== REQUEST END ===
+
+⚠️ No listings found for ID: child15
+❌ FETCH ERROR: NEXT_HTTP_ERROR_FALLBACK;404
+=== REQUEST END ===
+
+
+=== REQUEST START (2025-10-26T10:06:16.063Z) ===
+Slug: neonatologists
+ID: child15
+API URL: https://allupipay.in/publicsewa/api/users/main-search-display-request.php
+Body Data: {
+  "childrenId": "child15"
+}
+Response Status: 200
+Response JSON (trimmed): [
+  {
+    "id": 137,
+    "category": null,
+    "subcategory": 0,
+    "childcategory": 15,
+    "businessName": "Location",
+    "pinCode": "",
+    "description": "Permission this is too much hai",
+    "block": "21",
+    "village": "parmanikdih2",
+    "district": "3",
+    "mobile": "8210249746",
+    "userId": 3,
+    "status": 1,
+    "created_at": "2025-10-15 12:59:12",
+    "name": "Ansar Hussain",
+    "mobile_user": "8210249746",
+    "pin": "815318",
+    "city": "Giridh",
+    "latitude": "24.354284
+=== REQUEST END ===
+
+⚠️ No listings found for ID: child15
+❌ FETCH ERROR: NEXT_HTTP_ERROR_FALLBACK;404
+=== REQUEST END ===
+
+
+=== REQUEST START (2025-10-26T10:06:56.200Z) ===
+Slug: neonatologists
+ID: child15
+API URL: https://allupipay.in/publicsewa/api/users/main-search-display-request.php
+Body Data: {
+  "childrenId": "child15"
+}
+Response Status: 200
+Response JSON (trimmed): [
+  {
+    "id": 137,
+    "category": null,
+    "subcategory": 0,
+    "childcategory": 15,
+    "businessName": "Location",
+    "pinCode": "",
+    "description": "Permission this is too much hai",
+    "block": "21",
+    "village": "parmanikdih2",
+    "district": "3",
+    "mobile": "8210249746",
+    "userId": 3,
+    "status": 1,
+    "created_at": "2025-10-15 12:59:12",
+    "name": "Ansar Hussain",
+    "mobile_user": "8210249746",
+    "pin": "815318",
+    "city": "Giridh",
+    "latitude": "24.354284
+=== REQUEST END ===
+
+⚠️ No listings found for ID: child15
+❌ FETCH ERROR: NEXT_HTTP_ERROR_FALLBACK;404
+=== REQUEST END ===
+
+
+=== REQUEST START (2025-10-26T10:06:56.394Z) ===
+Slug: neonatologists
+ID: child15
+API URL: https://allupipay.in/publicsewa/api/users/main-search-display-request.php
+Body Data: {
+  "childrenId": "child15"
+}
+Response Status: 200
+Response JSON (trimmed): [
+  {
+    "id": 137,
+    "category": null,
+    "subcategory": 0,
+    "childcategory": 15,
+    "businessName": "Location",
+    "pinCode": "",
+    "description": "Permission this is too much hai",
+    "block": "21",
+    "village": "parmanikdih2",
+    "district": "3",
+    "mobile": "8210249746",
+    "userId": 3,
+    "status": 1,
+    "created_at": "2025-10-15 12:59:12",
+    "name": "Ansar Hussain",
+    "mobile_user": "8210249746",
+    "pin": "815318",
+    "city": "Giridh",
+    "latitude": "24.354284
+=== REQUEST END ===
+
+⚠️ No listings found for ID: child15
+❌ FETCH ERROR: NEXT_HTTP_ERROR_FALLBACK;404
+=== REQUEST END ===
+
+[2025-10-26T10:10:33.319Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+Listings Found: 7
+
+[2025-10-26T10:10:33.468Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+Listings Found: 7
+
+[2025-10-26T10:10:40.578Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+Listings Found: 7
+
+[2025-10-26T10:18:03.703Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+Listings Found: 7
+
+[2025-10-26T10:20:39.685Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+Listings Found: 7
+
+[2025-10-26T11:05:27.262Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+Listings Found: 7
+
+[2025-10-26T11:05:32.175Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+Listings Found: 7
+
+[2025-10-26T11:06:46.317Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+Listings Found: 7
+
+[2025-10-26T11:10:24.440Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+Listings Found: 7
+
+[2025-10-26T11:22:46.862Z] Slug: neonatologists, ID: child15, Body: {"childrenId":"child15"}
+Response JSON: [{"id":137,"category":null,"subcategory":0,"childcategory":15,"businessName":"Location","pinCode":"","description":"Permission this is too much hai","block":"21","village":"parmanikdih2","district":"3","mobile":"8210249746","userId":3,"status":1,"created_at":"2025-10-15 12:59:12","name":"Ansar Hussain","mobile_user":"8210249746","pin":"815318","city":"Giridh","latitude":"24.3542843","longitude":"86.1320836","user_village":"parmanikdih2","user_block":"jamua","state":"Jharkhand","user_created_at":
+Listings Found: 7
+

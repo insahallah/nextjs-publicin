@@ -1,0 +1,121 @@
+/* Hero.css - Hover Effects for Publicin.in */
+
+/* Main hover box styles */
+.hover-box {
+  transition: all 0.3s ease-in-out;
+  cursor: pointer;
+  border: 1px solid #e9ecef;
+  background-color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Hover effect - cursor jab box par jaye */
+.hover-box:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 123, 255, 0.2);
+  border-color: #007bff;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+}
+
+/* Icon animation on hover */
+.hover-box:hover .category-icon {
+  transform: scale(1.3);
+  transition: transform 0.3s ease;
+  color: #007bff;
+}
+
+/* Title color change on hover */
+.hover-box:hover .category-title {
+  color: #007bff;
+  font-weight: 700;
+}
+
+/* View button animation on hover */
+.hover-box:hover .view-btn {
+  background-color: #007bff !important;
+  color: white !important;
+  border-color: #007bff !important;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+/* Smooth transitions for all elements */
+.category-icon {
+  transition: all 0.3s ease;
+}
+
+.category-title {
+  transition: color 0.3s ease;
+}
+
+.view-btn {
+  transition: all 0.3s ease;
+}
+
+/* Additional subtle effects */
+.hover-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 123, 255, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.hover-box:hover::before {
+  left: 100%;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .hover-box:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 123, 255, 0.15);
+  }
+  
+  .hover-box:hover .category-icon {
+    transform: scale(1.2);
+  }
+}
+
+/* Touch device support */
+@media (hover: none) {
+  .hover-box:active {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2);
+    border-color: #007bff;
+    background-color: #f8f9ff;
+  }
+  
+  .hover-box:active .category-icon {
+    transform: scale(1.2);
+  }
+  
+  .hover-box:active .category-title {
+    color: #007bff;
+  }
+  
+  .hover-box:active .view-btn {
+    background-color: #007bff !important;
+    color: white !important;
+    border-color: #007bff !important;
+  }
+}
+
+/* Ensure compatibility with your existing CSS */
+.main_title h2 {
+  margin-bottom: 15px;
+}
+
+.main_title p {
+  color: #555;
+  font-size: 1.1rem;
+}
+
+.margin_120_95 {
+  margin-top: 120px;
+  margin-bottom: 95px;
+}

@@ -1,0 +1,126 @@
+[
+  {
+    "fullPath": "beauty/cat12",
+    "name": "Beauty"
+  },
+  {
+    "fullPath": "beauty/salon-men/sub241",
+    "name": "Men Salon"
+  },
+  {
+    "fullPath": "beauty/salon-women/sub242",
+    "name": "Women Salon"
+  },
+  {
+    "fullPath": "beauty/beauty-parlour/sub243",
+    "name": "Beauty Parlour"
+  },
+  {
+    "fullPath": "beauty/hair-cutting/sub244",
+    "name": "Hair Cutting"
+  },
+  {
+    "fullPath": "beauty/bridal-makeup/sub245",
+    "name": "Bridal Makeup"
+  },
+  {
+    "fullPath": "beauty/facial-skincare/sub246",
+    "name": "Facial Skincare"
+  },
+  {
+    "fullPath": "beauty/mehndi-henna-artist/sub247",
+    "name": "Mehndi Henna Artist"
+  },
+  {
+    "fullPath": "beauty/spa-body-massage/sub248",
+    "name": "Spa Body Massage"
+  },
+  {
+    "fullPath": "beauty/nail-art-extension/sub249",
+    "name": "Nail Art Extension"
+  },
+  {
+    "fullPath": "beauty/threading-waxing/sub250",
+    "name": "Threading Waxing"
+  },
+  {
+    "fullPath": "beauty/tattoo-artist/sub251",
+    "name": "Tattoo Artist"
+  },
+  {
+    "fullPath": "beauty/cosmetic-product-store/sub252",
+    "name": "Cosmetic Product Store"
+  },
+  {
+    "fullPath": "agriculture-farming/cat101",
+    "name": "Agriculture & Farming"
+  },
+  {
+    "fullPath": "agriculture-farming/crop-farming/sub102",
+    "name": "Crop Farming"
+  },
+  {
+    "fullPath": "agriculture-farming/crop-farming/wheat-farming/child80",
+    "name": "Wheat Farming"
+  },
+  {
+    "fullPath": "agriculture-farming/crop-farming/paddy-farming/child81",
+    "name": "Paddy Farming"
+  },
+  {
+    "fullPath": "agriculture-farming/crop-farming/corn-farming/child82",
+    "name": "Corn Farming"
+  },
+  {
+    "fullPath": "doctors/cat3",
+    "name": "Doctors"
+  },
+  {
+    "fullPath": "doctors/child-health-paediatric-specialties/sub77",
+    "name": "Child Health Paediatric Specialties"
+  },
+  {
+    "fullPath": "doctors/child-health-paediatric-specialties/neonatologists/child15",
+    "name": "Neonatologists"
+  },
+  {
+    "fullPath": "doctors/child-health-paediatric-specialties/paediatric-ent-specialists/child16",
+    "name": "Paediatric ENT Specialists"
+  },
+  {
+    "fullPath": "doctors/child-health-paediatric-specialties/paediatric-gastroenterologists/child17",
+    "name": "Paediatric Gastroenterologists"
+  },
+  {
+    "fullPath": "doctors/child-health-paediatric-specialties/paediatric-neurologists/child18",
+    "name": "Paediatric Neurologists"
+  },
+  {
+    "fullPath": "doctors/child-health-paediatric-specialties/paediatric-ophthalmologists/child19",
+    "name": "Paediatric Ophthalmologists"
+  },
+  {
+    "fullPath": "doctors/child-health-paediatric-specialties/paediatric-orthopaedics/child20",
+    "name": "Paediatric Orthopaedics"
+  },
+  {
+    "fullPath": "doctors/child-health-paediatric-specialties/paediatric-surgeons/child21",
+    "name": "Paediatric Surgeons"
+  },
+  {
+    "fullPath": "doctors/child-health-paediatric-specialties/paediatricians/child22",
+    "name": "Paediatricians"
+  },
+  {
+    "fullPath": "doctors/child-health-paediatric-specialties/paedodontists/child23",
+    "name": "Paedodontists"
+  },
+  {
+    "fullPath": "automobile-vehicle-services/cat343",
+    "name": "Automobile & Vehicle Services"
+  },
+  {
+    "fullPath": "automobile-vehicle-services/garage-workshop-services/sub344",
+    "name": "Garage Workshop Services"
+  }
+]
