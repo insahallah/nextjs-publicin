@@ -2,7 +2,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 
 interface ImageWithFallbackProps {
   src: string;
@@ -10,6 +9,8 @@ interface ImageWithFallbackProps {
   fallbackSrc: string;
   className?: string;
   style?: React.CSSProperties;
+  width?: number;
+  height?: number;
 }
 
 export default function ImageWithFallback({ 
@@ -17,17 +18,24 @@ export default function ImageWithFallback({
   alt, 
   fallbackSrc, 
   className = '', 
-  style 
+  style,
+  width = 250,
+  height = 300
 }: ImageWithFallbackProps) {
   const [imgSrc, setImgSrc] = useState(src);
+  const [hasError, setHasError] = useState(false);
 
   return (
-    <Image
-      src={imgSrc}
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={hasError ? fallbackSrc : imgSrc}
       alt={alt}
-      onError={() => setImgSrc(fallbackSrc)}
-      width={350}
-      height={500}
+      onError={() => {
+        setImgSrc(fallbackSrc);
+        setHasError(true);
+      }}
+      width={width}
+      height={height}
       className={className}
       style={style}
     />
