@@ -1,43 +1,76 @@
-// components/ImageWithFallback.tsx
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 
 interface ImageWithFallbackProps {
   src: string;
   alt: string;
-  fallbackSrc: string;
+  fill?: boolean;
   className?: string;
-  style?: React.CSSProperties;
+  fallbackSrc: string;
+  priority?: boolean;
   width?: number;
   height?: number;
+  onLoad?: () => void;
+  onError?: () => void;
 }
 
-export default function ImageWithFallback({ 
-  src, 
-  alt, 
-  fallbackSrc, 
-  className = '', 
-  style,
-  width = 250,
-  height = 300
+export default function ImageWithFallback({
+  src,
+  alt,
+  fill = true,
+  className = '',
+  fallbackSrc,
+  priority = false,
+  width,
+  height,
+  onLoad,
+  onError,
 }: ImageWithFallbackProps) {
+  const [error, setError] = useState(false);
   const [imgSrc, setImgSrc] = useState(src);
-  const [hasError, setHasError] = useState(false);
+
+  const handleError = () => {
+    if (imgSrc !== fallbackSrc) {
+      setImgSrc(fallbackSrc);
+      setError(true);
+    }
+    onError?.();
+  };
+
+  const handleLoad = () => {
+    setError(false);
+    onLoad?.();
+  };
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={hasError ? fallbackSrc : imgSrc}
-      alt={alt}
-      onError={() => {
-        setImgSrc(fallbackSrc);
-        setHasError(true);
-      }}
-      width={width}
-      height={height}
-      className={className}
-      style={style}
-    />
+    <div className={`relative ${fill ? 'w-full h-full' : ''}`}>
+      {fill ? (
+        <Image
+          src={imgSrc}
+          alt={alt}
+          fill
+          className={className}
+          onError={handleError}
+          onLoad={handleLoad}
+          priority={priority}
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          unoptimized={true}
+        />
+      ) : (
+        <Image
+          src={imgSrc}
+          alt={alt}
+          width={width}
+          height={height}
+          className={className}
+          onError={handleError}
+          onLoad={handleLoad}
+          priority={priority}
+          unoptimized={true}
+        />
+      )}
+    </div>
   );
 }
