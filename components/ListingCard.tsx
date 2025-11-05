@@ -134,16 +134,16 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
               </div>
             </div>
 
-            {/* Action Buttons - Compact */}
+            {/* Action Buttons - Compact with Shake Animation */}
             <div className="mt-auto">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 mb-2">
-                {/* Call Button */}
+                {/* Call Button with Shake Animation - SOLID GREEN */}
                 {listing.phone ? (
                   <button 
                     onClick={handleCallClick}
-                    className="flex items-center justify-center gap-1 px-2 py-1.5 bg-[#058A07] text-white rounded-lg font-semibold hover:bg-[#047506] transition-all duration-200 shadow-sm hover:shadow text-[10px]"
+                    className="flex items-center justify-center gap-1 px-2 py-1.5 bg-[#058A07] text-white rounded-lg font-semibold hover:bg-[#047506] transition-all duration-300 shadow-sm hover:shadow-lg hover:scale-105 active:scale-95 animate-pulse"
                   >
-                    <span className="text-xs">📞</span>
+                    <span className="text-xs animate-bounce">📞</span>
                     <span>Call Now</span>
                   </button>
                 ) : (
@@ -153,13 +153,13 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
                   </button>
                 )}
                 
-                {/* WhatsApp Button */}
+                {/* WhatsApp Button with Shake Animation - SOLID GREEN */}
                 {listing.phone ? (
                   <button 
                     onClick={handleWhatsAppClick}
-                    className="flex items-center justify-center gap-1 px-2 py-1.5 bg-[#058A07]/10 text-[#058A07] rounded-lg font-semibold hover:bg-[#058A07]/20 transition-all duration-200 shadow-sm hover:shadow border border-[#058A07]/20 text-[10px]"
+                    className="flex items-center justify-center gap-1 px-2 py-1.5 bg-[#058A07] text-white rounded-lg font-semibold hover:bg-[#047506] transition-all duration-300 shadow-sm hover:shadow-lg hover:scale-105 active:scale-95 animate-pulse"
                   >
-                    <span className="text-xs">💬</span>
+                    <span className="text-xs animate-bounce">💬</span>
                     <span>WhatsApp</span>
                   </button>
                 ) : (
@@ -199,6 +199,18 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
           </div>
         </div>
       </div>
+
+      {/* Custom CSS for Shake Animation */}
+      <style jsx>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-3px); }
+          75% { transform: translateX(3px); }
+        }
+        .animate-shake {
+          animation: shake 0.8s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 }
