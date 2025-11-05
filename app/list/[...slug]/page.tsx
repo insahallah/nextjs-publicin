@@ -19,7 +19,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   // Review submit handler
   const handleSubmitReview = async (reviewData: any) => {
     try {
-      const response = await fetch('/api/reviews', {
+      const response = await fetch('https://allupipay.in/publicsewa/api/submit_review.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -265,11 +265,12 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
       {/* Review Modal */}
       <ReviewModal
-        isOpen={isReviewModalOpen}
-        onClose={() => setIsReviewModalOpen(false)}
-        onSubmit={handleSubmitReview}
-        businessName={selectedBusiness?.displayName || "this business"}
-      />
+  isOpen={isReviewModalOpen}
+  onClose={() => setIsReviewModalOpen(false)}
+  onSubmit={handleSubmitReview}
+  businessName={selectedBusiness?.displayName}
+  businessImages={selectedBusiness?.images || []}
+/>
 
       <Footer />
     </div>

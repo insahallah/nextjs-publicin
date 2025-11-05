@@ -47,6 +47,21 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
     }
   };
 
+  const handleDirectionClick = () => {
+    // Check if latitude and longitude are available
+    if (listing.latitude && listing.longitude) {
+      // Use exact coordinates for precise location
+      const mapsUrl = `https://www.google.com/maps?q=${listing.latitude},${listing.longitude}`;
+      window.open(mapsUrl, '_blank');
+    } else if (listing.location) {
+      // Fallback to location search if coordinates not available
+      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(listing.location)}`;
+      window.open(mapsUrl, '_blank');
+    } else {
+      alert('Location information not available');
+    }
+  };
+
   return (
     <div className="group bg-white rounded-xl shadow-md hover:shadow-lg border border-gray-200 overflow-hidden transition-all duration-300 hover:-translate-y-0.5">
       <div className="flex flex-col lg:flex-row h-full">
@@ -90,6 +105,12 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
                 <div className="flex items-center gap-1 text-gray-600 mb-2">
                   <span className="text-sm">🏢</span>
                   <span className="text-xs">{listing.location}</span>
+                  {/* Show coordinates if available */}
+                  {listing.latitude && listing.longitude && (
+                    <span className="text-[8px] text-gray-400 ml-1">
+                      ({parseFloat(listing.latitude).toFixed(4)}, {parseFloat(listing.longitude).toFixed(4)})
+                    </span>
+                  )}
                 </div>
               </div>
               
@@ -136,7 +157,7 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
 
             {/* Action Buttons - Compact with Shake Animation */}
             <div className="mt-auto">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 mb-2">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-1.5 mb-2">
                 {/* Call Button with Shake Animation - SOLID GREEN */}
                 {listing.phone ? (
                   <button 
@@ -168,6 +189,18 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
                     <span>WhatsApp</span>
                   </button>
                 )}
+                
+                {/* Direction Button - With GPS Coordinates */}
+                <button 
+                  onClick={handleDirectionClick}
+                  className="flex items-center justify-center gap-1 px-2 py-1.5 bg-[#FF6B00] text-white rounded-lg font-semibold hover:bg-[#E55A00] transition-all duration-300 shadow-sm hover:shadow-lg hover:scale-105 active:scale-95"
+                  title={listing.latitude && listing.longitude ? 
+                    `Exact location: ${listing.latitude}, ${listing.longitude}` : 
+                    'Get directions'}
+                >
+                  <span className="text-xs">📍</span>
+                  <span className="text-[10px]">Direction</span>
+                </button>
                 
                 {/* Enquiry Button */}
                 <button 

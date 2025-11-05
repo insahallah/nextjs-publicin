@@ -7,6 +7,7 @@ interface ReviewModalProps {
   onClose: () => void;
   onSubmit: (reviewData: ReviewData) => void;
   businessName?: string;
+  businessImages?: string[]; // New prop for business images
 }
 
 interface ReviewData {
@@ -16,7 +17,13 @@ interface ReviewData {
   recommend: boolean | null;
 }
 
-export default function ReviewModal({ isOpen, onClose, onSubmit, businessName = "this business" }: ReviewModalProps) {
+export default function ReviewModal({ 
+  isOpen, 
+  onClose, 
+  onSubmit, 
+  businessName = "this business",
+  businessImages = [] // Default empty array
+}: ReviewModalProps) {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [title, setTitle] = useState('');
@@ -100,9 +107,27 @@ export default function ReviewModal({ isOpen, onClose, onSubmit, businessName = 
         </div>
 
         <form onSubmit={handleSubmit} className="review-form">
-          {/* Business Info */}
+          {/* Business Info with Single Image */}
           <div className="business-info">
-            <h3>Reviewing: {businessName}</h3>
+            <div className="business-info-content">
+              <div className="business-text">
+                <h3>Reviewing: {businessName}</h3>
+              </div>
+              
+              {/* Single Business Image Display - Only First Image */}
+              {businessImages.length > 0 && (
+                <div className="business-image-side">
+                  <img 
+                    src={businessImages[0]} 
+                    alt={businessName}
+                    className="single-business-image"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/default-image.jpg';
+                    }}
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Star Rating */}
@@ -290,11 +315,35 @@ export default function ReviewModal({ isOpen, onClose, onSubmit, businessName = 
           border-left: 4px solid #3b82f6;
         }
 
-        .business-info h3 {
+        .business-info-content {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+        }
+
+        .business-text {
+          flex: 1;
+        }
+
+        .business-text h3 {
           margin: 0;
           color: #374151;
           font-size: 16px;
           font-weight: 500;
+        }
+
+        /* Single Business Image Styles */
+        .business-image-side {
+          flex-shrink: 0;
+        }
+
+        .single-business-image {
+          width: 80px;
+          height: 80px;
+          object-fit: cover;
+          border-radius: 8px;
+          border: 2px solid #e5e7eb;
         }
 
         .form-group {
@@ -504,6 +553,18 @@ export default function ReviewModal({ isOpen, onClose, onSubmit, businessName = 
 
           .review-form {
             padding: 20px;
+          }
+
+          .business-info-content {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+          }
+
+          .single-business-image {
+            width: 60px;
+            height: 60px;
+            align-self: flex-end;
           }
 
           .recommend-options {

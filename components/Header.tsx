@@ -6,25 +6,198 @@ import Link from 'next/link';
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchType, setSearchType] = useState('all');
-  const [activeSubmenu, setActiveSubmenu] = useState<number | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [loginForm, setLoginForm] = useState({
+    mobile: '',
+    password: ''
+  });
+  const [registerForm, setRegisterForm] = useState({
+    fullName: '',
+    mobile: '',
+    pinCode: '',
+    city: '',
+    village: '',
+    block: '',
+    state: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check screen size
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+
+    return () => {
+      window.removeEventListener('resize', checkScreenSize);
+    };
+  }, []);
+
+  // Check if user is logged in on component mount
+  useEffect(() => {
+    const checkAuthStatus = () => {
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('authToken');
+        const userData = localStorage.getItem('userData');
+        
+        if (token && userData) {
+          setIsLoggedIn(true);
+          setUser(JSON.parse(userData));
+        }
+      }
+    };
+
+    checkAuthStatus();
+  }, []);
 
   const toggleMenu = () => {
-    console.log('Toggling menu:', !isMenuOpen);
     setIsMenuOpen(!isMenuOpen);
-    if (!isMenuOpen) {
-      setActiveSubmenu(null);
-    }
   };
 
   const closeMenu = () => {
-    console.log('Closing menu');
     setIsMenuOpen(false);
-    setActiveSubmenu(null);
   };
 
-  const toggleSubmenu = (index: number) => {
-    console.log('Toggling submenu:', index);
-    setActiveSubmenu(activeSubmenu === index ? null : index);
+  // Login functionality
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoggingIn(true);
+
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Mock login - Replace with actual API call
+      if (loginForm.mobile && loginForm.password) {
+        const mockUser = {
+          id: 1,
+          name: 'John Doe',
+          mobile: loginForm.mobile,
+          role: 'user'
+        };
+        
+        const mockToken = 'mock_jwt_token_' + Date.now();
+        
+        // Store in localStorage
+        localStorage.setItem('authToken', mockToken);
+        localStorage.setItem('userData', JSON.stringify(mockUser));
+        
+        setIsLoggedIn(true);
+        setUser(mockUser);
+        setShowLoginModal(false);
+        setLoginForm({ mobile: '', password: '' });
+        
+        alert('Login successful!');
+      } else {
+        alert('Please enter mobile number and password');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      alert('Login failed. Please try again.');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  // Register functionality
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsRegistering(true);
+
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Validation
+      if (registerForm.password !== registerForm.confirmPassword) {
+        alert('Passwords do not match');
+        return;
+      }
+
+      // Check if all required fields are filled
+      const requiredFields = ['fullName', 'mobile', 'pinCode', 'city', 'village', 'block', 'state', 'password'];
+      const emptyFields = requiredFields.filter(field => !registerForm[field as keyof typeof registerForm]);
+      
+      if (emptyFields.length > 0) {
+        alert('Please fill all required fields');
+        return;
+      }
+
+      // Mock user data - Replace with actual API call
+      const mockUser = {
+        id: Date.now(),
+        fullName: registerForm.fullName,
+        mobile: registerForm.mobile,
+        pinCode: registerForm.pinCode,
+        city: registerForm.city,
+        village: registerForm.village,
+        block: registerForm.block,
+        state: registerForm.state,
+        role: 'user'
+      };
+      
+      const mockToken = 'mock_jwt_token_' + Date.now();
+      
+      // Store in localStorage
+      localStorage.setItem('authToken', mockToken);
+      localStorage.setItem('userData', JSON.stringify(mockUser));
+      
+      setIsLoggedIn(true);
+      setUser(mockUser);
+      setShowRegisterModal(false);
+      setRegisterForm({ 
+        fullName: '', 
+        mobile: '', 
+        pinCode: '', 
+        city: '', 
+        village: '', 
+        block: '', 
+        state: '', 
+        password: '', 
+        confirmPassword: '' 
+      });
+      
+      alert('Registration successful!');
+    } catch (error) {
+      console.error('Registration error:', error);
+      alert('Registration failed. Please try again.');
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
+    setIsLoggedIn(false);
+    setUser(null);
+    alert('Logged out successfully!');
+  };
+
+  const handleLoginInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setLoginForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleRegisterInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setRegisterForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   // ESC key press par menu close
@@ -32,10 +205,12 @@ const Header = () => {
     const handleEscKey = (event: KeyboardEvent) => {
       if (event.keyCode === 27) {
         closeMenu();
+        setShowLoginModal(false);
+        setShowRegisterModal(false);
       }
     };
 
-    if (isMenuOpen) {
+    if (isMenuOpen || showLoginModal || showRegisterModal) {
       document.addEventListener('keydown', handleEscKey);
       document.body.style.overflow = 'hidden';
     } else {
@@ -46,7 +221,7 @@ const Header = () => {
       document.removeEventListener('keydown', handleEscKey);
       document.body.style.overflow = 'auto';
     };
-  }, [isMenuOpen]);
+  }, [isMenuOpen, showLoginModal, showRegisterModal]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,13 +242,20 @@ const Header = () => {
           onClick={toggleMenu}
           type="button"
           aria-label="Toggle menu"
+          style={{
+            position: 'absolute',
+            left: '15px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 1001
+          }}
         >
           <div className={`hamburger hamburger--spin ${isMenuOpen ? 'is-active' : ''}`}>
             <div className="hamburger-box">
               <div className="hamburger-inner"></div>
             </div>
           </div>
-          <span className="menu-text">Menu</span>
+          
         </button>
         
         <div className="container">
@@ -81,113 +263,877 @@ const Header = () => {
             <div className="col-lg-3 col-6">
               <div id="logo_home">
                 <h1>
-                  <Link href="/" title="Findoctor">Findoctor</Link>
+                  <Link href="/" title="Findoctor" style={{ 
+                    fontSize: isMobile ? '20px' : '24px',
+                    textDecoration: 'none',
+                    color: '#333'
+                  }}>
+                    Findoctor
+                  </Link>
                 </h1>
               </div>
             </div>
-            <div className="col-lg-9 col-6">
-              <ul id="top_access">
-                <li><Link href="/login"><i className="pe-7s-user"></i></Link></li>
-                <li><Link href="/register-doctor"><i className="pe-7s-add-user"></i></Link></li>
-              </ul>
-              
-              {/* Desktop Menu - Only visible on large screens */}
-              <nav id="menu" className="main-menu desktop-menu">
-                <ul>
-                  <li>
-                    <span><Link href="#0">Home</Link></span>
-                    <ul>
-                      <li><Link href="/">Home Default</Link></li>
-                      <li><Link href="/home-kenburns">KenBurns Slider</Link></li>
-                      <li><Link href="/home-v2">Home Version 2</Link></li>
-                      <li><Link href="/home-v3">Home Version 3</Link></li>
-                      <li><Link href="/home-v4">Home Version 4</Link></li>
-                      <li><Link href="/home-map">Home with Map</Link></li>
-                      <li><Link href="/home-revolution">Revolution Slider</Link></li>
-                      <li><Link href="/home-cookie">With Cookie Bar</Link></li>
-                    </ul>
-                  </li>
-                  
-                  <li>
-                    <span><Link href="#0">Pages</Link></span>
-                    <ul>
-                      <li>
-                        <span><Link href="#0">List pages</Link></span>
-                        <ul>
-                          <li><Link href="/list">List page</Link></li>
-                          <li><Link href="/grid-list">List grid page</Link></li>
-                          <li><Link href="/list-map">List map page</Link></li>
-                        </ul>
+            
+            {/* Desktop - Show Login/Signup, Mobile - Hide */}
+            {!isMobile && (
+              <div className="col-lg-9 col-6">
+                {/* Centered User Access Section with Larger Icons */}
+                <ul id="top_access" style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: '20px',
+                  margin: 0,
+                  padding: 0,
+                  listStyle: 'none',
+                  height: '100%'
+                }}>
+                  {isLoggedIn ? (
+                    <>
+                      <li className="user-welcome">
+                        <span style={{ 
+                          color: '#333', 
+                          fontSize: '16px',
+                          fontWeight: '500'
+                        }}>
+                          Welcome, {user?.fullName}
+                        </span>
                       </li>
                       <li>
-                        <span><Link href="#0">Detail pages</Link></span>
-                        <ul>
-                          <li><Link href="/detail-page">Detail page</Link></li>
-                          <li><Link href="/detail-page-2">Detail page 2</Link></li>
-                          <li><Link href="/detail-page-3">Detail page 3</Link></li>
-                          <li><Link href="/detail-page-working-booking">Detail working booking</Link></li>
-                        </ul>
+                        <button 
+                          onClick={handleLogout}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#666',
+                            cursor: 'pointer',
+                            padding: '12px',
+                            borderRadius: '8px',
+                            transition: 'all 0.3s ease',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = '#e74c3c';
+                            e.currentTarget.style.backgroundColor = '#fdf2f2';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = '#666';
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                          title="Logout"
+                        >
+                          <i className="pe-7s-power" style={{ fontSize: '28px' }}></i>
+                          <span style={{ fontSize: '12px', fontWeight: '500' }}>Logout</span>
+                        </button>
                       </li>
-                      <li><Link href="/submit-review">Submit Review</Link></li>
-                      <li><Link href="/blog">Blog</Link></li>
-                      <li><Link href="/badges">Badges</Link></li>
-                      <li><Link href="/login">Login</Link></li>
-                      <li><Link href="/login-2">Login 2</Link></li>
-                      <li><Link href="/register-doctor">Register Doctor</Link></li>
-                      <li><Link href="/register-doctor-working">Working doctor register</Link></li>
-                      <li><Link href="/register">Register</Link></li>
-                      <li><Link href="/about">About Us</Link></li>
-                      <li><Link href="/contacts">Contacts</Link></li>
-                    </ul>
-                  </li>
-                  
-                  <li>
-                    <span><Link href="#0">Extra Elements</Link></span>
-                    <ul>
-                      <li><Link href="/detail-page-working-booking">Detail working booking</Link></li>
-                      <li><Link href="/booking-page">Booking page</Link></li>
-                      <li><Link href="/confirm">Confirm page</Link></li>
-                      <li><Link href="/faq">Faq page</Link></li>
-                      <li><Link href="/coming_soon">Coming soon</Link></li>
+                    </>
+                  ) : (
+                    <>
                       <li>
-                        <span><Link href="#0">Pricing tables</Link></span>
-                        <ul>
-                          <li><Link href="/pricing-tables-1">Pricing tables 1</Link></li>
-                          <li><Link href="/pricing-tables-2">Pricing tables 2</Link></li>
-                          <li><Link href="/pricing-tables-3">Pricing tables 3</Link></li>
-                        </ul>
+                        <button 
+                          onClick={() => setShowLoginModal(true)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#666',
+                            cursor: 'pointer',
+                            padding: '12px',
+                            borderRadius: '8px',
+                            transition: 'all 0.3s ease',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = '#3498db';
+                            e.currentTarget.style.backgroundColor = '#f0f8ff';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = '#666';
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                          title="Login"
+                        >
+                          <i className="pe-7s-user" style={{ fontSize: '28px' }}></i>
+                          <span style={{ fontSize: '12px', fontWeight: '500' }}>Login</span>
+                        </button>
                       </li>
-                      <li><Link href="/icon-pack-1">Icon pack 1</Link></li>
-                      <li><Link href="/icon-pack-2">Icon pack 2</Link></li>
-                      <li><Link href="/icon-pack-3">Icon pack 3</Link></li>
-                      <li><Link href="/404">404 page</Link></li>
-                    </ul>
-                  </li>
-                  
-                  <li><span><Link href="/menu_2">Menu V2</Link></span></li>
-                  <li>
-                    <span>
-                      <Link href="/admin" target="_blank" rel="noopener noreferrer">
-                        Admin
-                      </Link>
-                    </span>
-                  </li>
-                  <li>
-                    <span>
-                      <Link 
-                        href="https://1.envato.market/1kDnR" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                      >
-                        Buy this template
-                      </Link>
-                    </span>
-                  </li>
+                      <li>
+                        <button 
+                          onClick={() => setShowRegisterModal(true)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#666',
+                            cursor: 'pointer',
+                            padding: '12px',
+                            borderRadius: '8px',
+                            transition: 'all 0.3s ease',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = '#27ae60';
+                            e.currentTarget.style.backgroundColor = '#f0fff4';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = '#666';
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                          title="Sign Up"
+                        >
+                          <i className="pe-7s-add-user" style={{ fontSize: '28px' }}></i>
+                          <span style={{ fontSize: '12px', fontWeight: '500' }}>Sign Up</span>
+                        </button>
+                      </li>
+                    </>
+                  )}
                 </ul>
-              </nav>
-            </div>
+                
+                {/* Simplified Desktop Menu - Centered */}
+                <nav id="menu" className="main-menu desktop-menu" style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  height: '100%'
+                }}>
+                  <ul style={{
+                    display: 'flex',
+                    gap: '30px',
+                    margin: 0,
+                    padding: 0,
+                    listStyle: 'none',
+                    alignItems: 'center'
+                  }}>
+                    <li>
+                      <Link href="/" style={{
+                        textDecoration: 'none',
+                        color: '#333',
+                        fontWeight: '500',
+                        fontSize: '16px',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        transition: 'all 0.3s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#3498db';
+                        e.currentTarget.style.backgroundColor = '#f0f8ff';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = '#333';
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}>
+                        🏠 Home
+                      </Link>
+                    </li>
+                    <li>
+                      <Link 
+                        href="/list-your-business" 
+                        style={{
+                          color: '#27ae60',
+                          fontWeight: 'bold',
+                          background: '#f0fff4',
+                          padding: '12px 24px',
+                          borderRadius: '25px',
+                          border: '2px solid #27ae60',
+                          textDecoration: 'none',
+                          fontSize: '16px',
+                          transition: 'all 0.3s ease',
+                          display: 'inline-block'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#27ae60';
+                          e.currentTarget.style.color = 'white';
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(39, 174, 96, 0.3)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#f0fff4';
+                          e.currentTarget.style.color = '#27ae60';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                      >
+                        📍 List Your Business FREE
+                      </Link>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Login Modal */}
+        {showLoginModal && (
+          <div 
+            className="modal-overlay"
+            onClick={() => setShowLoginModal(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10000,
+              padding: '20px'
+            }}
+          >
+            <div 
+              className="modal-content"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'white',
+                borderRadius: '12px',
+                padding: '30px',
+                width: '100%',
+                maxWidth: '400px',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
+              }}
+            >
+              <div className="modal-header" style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '20px'
+              }}>
+                <h2 style={{ margin: 0, color: '#333' }}>Login with Publicin</h2>
+                <button 
+                  onClick={() => setShowLoginModal(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '24px',
+                    cursor: 'pointer',
+                    color: '#666'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleLogin}>
+                <div className="form-group" style={{ marginBottom: '20px' }}>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: '500',
+                    color: '#333'
+                  }}>
+                    Mobile Number *
+                  </label>
+                  <input
+                    type="tel"
+                    name="mobile"
+                    value={loginForm.mobile}
+                    onChange={handleLoginInputChange}
+                    placeholder="Enter your mobile number"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '2px solid #e1e5e9',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      transition: 'border-color 0.3s ease'
+                    }}
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '25px' }}>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: '500',
+                    color: '#333'
+                  }}>
+                    Password *
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={loginForm.password}
+                    onChange={handleLoginInputChange}
+                    placeholder="Enter your password"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '2px solid #e1e5e9',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      transition: 'border-color 0.3s ease'
+                    }}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoggingIn}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: '#3498db',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    fontWeight: '500',
+                    cursor: isLoggingIn ? 'not-allowed' : 'pointer',
+                    opacity: isLoggingIn ? 0.7 : 1,
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  {isLoggingIn ? 'Logging in...' : 'Login'}
+                </button>
+              </form>
+
+              <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                <p style={{ color: '#666', margin: 0 }}>
+                  Don't have an account?{' '}
+                  <button 
+                    onClick={() => {
+                      setShowLoginModal(false);
+                      setShowRegisterModal(true);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#3498db',
+                      cursor: 'pointer',
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    Sign up
+                  </button>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Register Modal - WITHOUT "It's time to find you" section in mobile */}
+        {showRegisterModal && (
+          <div 
+            className="modal-overlay"
+            onClick={() => setShowRegisterModal(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10000,
+              padding: isMobile ? '10px' : '20px'
+            }}
+          >
+            <div 
+              className="modal-content"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'white',
+                borderRadius: '15px',
+                width: '100%',
+                maxWidth: isMobile ? '100%' : '900px',
+                height: isMobile ? '100vh' : '95vh',
+                maxHeight: isMobile ? '100vh' : '95vh',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                overflow: 'hidden'
+              }}
+            >
+              {/* Left Side - Benefits Section - Hidden in Mobile */}
+              {!isMobile && (
+                <div style={{
+                  flex: '1',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  padding: '40px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  overflowY: 'auto'
+                }}>
+                  <h3 style={{ 
+                    fontSize: '24px', 
+                    fontWeight: '600', 
+                    marginBottom: '20px',
+                    color: 'white'
+                  }}>
+                    It's time to find you!
+                  </h3>
+                  
+                  <p style={{ 
+                    fontSize: '16px', 
+                    lineHeight: '1.6', 
+                    marginBottom: '30px',
+                    opacity: 0.9
+                  }}>
+                    Join thousands of businesses already listed on our platform. 
+                    Get discovered by customers in your area and grow your business online.
+                  </p>
+
+                  <div style={{ marginBottom: '25px', display: 'flex', alignItems: 'flex-start', gap: '15px' }}>
+                    <div style={{ 
+                      background: 'rgba(255,255,255,0.2)', 
+                      borderRadius: '50%', 
+                      width: '50px', 
+                      height: '50px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <i className="pe-7s-map-2" style={{ fontSize: '24px', color: 'white' }}></i>
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px 0', color: 'white' }}>
+                        Let customers Find you!
+                      </h4>
+                      <p style={{ fontSize: '14px', lineHeight: '1.5', margin: 0, opacity: 0.9 }}>
+                        Get listed in our directory and appear in local searches. Increase your visibility.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '25px', display: 'flex', alignItems: 'flex-start', gap: '15px' }}>
+                    <div style={{ 
+                      background: 'rgba(255,255,255,0.2)', 
+                      borderRadius: '50%', 
+                      width: '50px', 
+                      height: '50px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <i className="pe-7s-date" style={{ fontSize: '24px', color: 'white' }}></i>
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px 0', color: 'white' }}>
+                        Easily Manage Your Profile
+                      </h4>
+                      <p style={{ fontSize: '14px', lineHeight: '1.5', margin: 0, opacity: 0.9 }}>
+                        Update your business information, services, and contact details anytime.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '15px' }}>
+                    <div style={{ 
+                      background: 'rgba(255,255,255,0.2)', 
+                      borderRadius: '50%', 
+                      width: '50px', 
+                      height: '50px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <i className="pe-7s-phone" style={{ fontSize: '24px', color: 'white' }}></i>
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px 0', color: 'white' }}>
+                        Get Instant Enquiries
+                      </h4>
+                      <p style={{ fontSize: '14px', lineHeight: '1.5', margin: 0, opacity: 0.9 }}>
+                        Receive direct enquiries from potential customers through calls and messages.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Right Side - Registration Form */}
+              <div style={{
+                flex: '1',
+                padding: isMobile ? '25px' : '40px',
+                background: 'white',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column'
+              }}>
+                {/* Header */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '30px'
+                }}>
+                  <h2 style={{ 
+                    margin: 0, 
+                    color: '#333', 
+                    fontSize: isMobile ? '24px' : '28px', 
+                    fontWeight: '700' 
+                  }}>
+                    Join Our Community
+                  </h2>
+                  <button 
+                    onClick={() => setShowRegisterModal(false)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: isMobile ? '24px' : '28px',
+                      cursor: 'pointer',
+                      color: '#666',
+                      width: '40px',
+                      height: '40px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '50%',
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <form onSubmit={handleRegister}>
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        fontWeight: '600',
+                        color: '#333',
+                        fontSize: '14px'
+                      }}>
+                        Full Name *
+                      </label>
+                      <input 
+                        type="text" 
+                        style={{
+                          width: '100%',
+                          padding: '15px',
+                          border: '2px solid #e1e5e9',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          transition: 'all 0.3s ease',
+                          background: '#f8f9fa'
+                        }}
+                        placeholder="Enter your full name"
+                        name="fullName"
+                        value={registerForm.fullName}
+                        onChange={handleRegisterInputChange}
+                        required
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        fontWeight: '600',
+                        color: '#333',
+                        fontSize: '14px'
+                      }}>
+                        Mobile Number *
+                      </label>
+                      <input 
+                        type="tel" 
+                        style={{
+                          width: '100%',
+                          padding: '15px',
+                          border: '2px solid #e1e5e9',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          transition: 'all 0.3s ease',
+                          background: '#f8f9fa'
+                        }}
+                        placeholder="Enter your mobile number"
+                        name="mobile"
+                        value={registerForm.mobile}
+                        onChange={handleRegisterInputChange}
+                        required
+                      />
+                    </div>
+
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '15px', 
+                      marginBottom: '20px',
+                      flexDirection: isMobile ? 'column' : 'row'
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <label style={{
+                          display: 'block',
+                          marginBottom: '8px',
+                          fontWeight: '600',
+                          color: '#333',
+                          fontSize: '14px'
+                        }}>
+                          Pin Code *
+                        </label>
+                        <input 
+                          type="text" 
+                          style={{
+                            width: '100%',
+                            padding: '15px',
+                            border: '2px solid #e1e5e9',
+                            borderRadius: '8px',
+                            fontSize: '16px',
+                            transition: 'all 0.3s ease',
+                            background: '#f8f9fa'
+                          }}
+                          placeholder="Enter pin code"
+                          name="pinCode"
+                          value={registerForm.pinCode}
+                          onChange={handleRegisterInputChange}
+                          required
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={{
+                          display: 'block',
+                          marginBottom: '8px',
+                          fontWeight: '600',
+                          color: '#333',
+                          fontSize: '14px'
+                        }}>
+                          City *
+                        </label>
+                        <input 
+                          type="text" 
+                          style={{
+                            width: '100%',
+                            padding: '15px',
+                            border: '2px solid #e1e5e9',
+                            borderRadius: '8px',
+                            fontSize: '16px',
+                            transition: 'all 0.3s ease',
+                            background: '#f8f9fa'
+                          }}
+                          placeholder="Enter city"
+                          name="city"
+                          value={registerForm.city}
+                          onChange={handleRegisterInputChange}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '15px', 
+                      marginBottom: '20px',
+                      flexDirection: isMobile ? 'column' : 'row'
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <label style={{
+                          display: 'block',
+                          marginBottom: '8px',
+                          fontWeight: '600',
+                          color: '#333',
+                          fontSize: '14px'
+                        }}>
+                          Village *
+                        </label>
+                        <input 
+                          type="text" 
+                          style={{
+                            width: '100%',
+                            padding: '15px',
+                            border: '2px solid #e1e5e9',
+                            borderRadius: '8px',
+                            fontSize: '16px',
+                            transition: 'all 0.3s ease',
+                            background: '#f8f9fa'
+                          }}
+                          placeholder="Enter village"
+                          name="village"
+                          value={registerForm.village}
+                          onChange={handleRegisterInputChange}
+                          required
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={{
+                          display: 'block',
+                          marginBottom: '8px',
+                          fontWeight: '600',
+                          color: '#333',
+                          fontSize: '14px'
+                        }}>
+                          Block *
+                        </label>
+                        <input 
+                          type="text" 
+                          style={{
+                            width: '100%',
+                            padding: '15px',
+                            border: '2px solid #e1e5e9',
+                            borderRadius: '8px',
+                            fontSize: '16px',
+                            transition: 'all 0.3s ease',
+                            background: '#f8f9fa'
+                          }}
+                          placeholder="Enter block"
+                          name="block"
+                          value={registerForm.block}
+                          onChange={handleRegisterInputChange}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        fontWeight: '600',
+                        color: '#333',
+                        fontSize: '14px'
+                      }}>
+                        State *
+                      </label>
+                      <input 
+                        type="text" 
+                        style={{
+                          width: '100%',
+                          padding: '15px',
+                          border: '2px solid #e1e5e9',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          transition: 'all 0.3s ease',
+                          background: '#f8f9fa'
+                        }}
+                        placeholder="Enter state"
+                        name="state"
+                        value={registerForm.state}
+                        onChange={handleRegisterInputChange}
+                        required
+                      />
+                    </div>
+
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '15px', 
+                      marginBottom: '30px',
+                      flexDirection: isMobile ? 'column' : 'row'
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <label style={{
+                          display: 'block',
+                          marginBottom: '8px',
+                          fontWeight: '600',
+                          color: '#333',
+                          fontSize: '14px'
+                        }}>
+                          Password *
+                        </label>
+                        <input 
+                          type="password" 
+                          style={{
+                            width: '100%',
+                            padding: '15px',
+                            border: '2px solid #e1e5e9',
+                            borderRadius: '8px',
+                            fontSize: '16px',
+                            transition: 'all 0.3s ease',
+                            background: '#f8f9fa'
+                          }}
+                          placeholder="Enter password"
+                          name="password"
+                          value={registerForm.password}
+                          onChange={handleRegisterInputChange}
+                          required
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={{
+                          display: 'block',
+                          marginBottom: '8px',
+                          fontWeight: '600',
+                          color: '#333',
+                          fontSize: '14px'
+                        }}>
+                          Confirm Password *
+                        </label>
+                        <input 
+                          type="password" 
+                          style={{
+                            width: '100%',
+                            padding: '15px',
+                            border: '2px solid #e1e5e9',
+                            borderRadius: '8px',
+                            fontSize: '16px',
+                            transition: 'all 0.3s ease',
+                            background: '#f8f9fa'
+                          }}
+                          placeholder="Confirm password"
+                          name="confirmPassword"
+                          value={registerForm.confirmPassword}
+                          onChange={handleRegisterInputChange}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isRegistering}
+                      style={{
+                        width: '100%',
+                        padding: '18px',
+                        background: '#27ae60',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '18px',
+                        fontWeight: '600',
+                        cursor: isRegistering ? 'not-allowed' : 'pointer',
+                        opacity: isRegistering ? 0.7 : 1,
+                        transition: 'all 0.3s ease',
+                        marginBottom: '20px'
+                      }}
+                    >
+                      {isRegistering ? 'Creating Account...' : 'Create Account'}
+                    </button>
+                  </form>
+
+                  <div style={{ textAlign: 'center' }}>
+                    <p style={{ color: '#666', margin: 0, fontSize: '16px' }}>
+                      Already have an account?{' '}
+                      <button 
+                        onClick={() => {
+                          setShowRegisterModal(false);
+                          setShowLoginModal(true);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#3498db',
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                          fontSize: '16px',
+                          fontWeight: '600'
+                        }}
+                      >
+                        Login here
+                      </button>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Mobile Menu Backdrop */}
         <div 
@@ -207,7 +1153,7 @@ const Header = () => {
           }}
         ></div>
         
-        {/* Mobile Menu - Sliding from left side */}
+        {/* Mobile Menu - Simplified */}
         <nav 
           className={`mobile-menu ${isMenuOpen ? 'mobile-open' : ''}`}
           style={{ 
@@ -223,278 +1169,144 @@ const Header = () => {
             boxShadow: '2px 0 10px rgba(0, 0, 0, 0.1)'
           }}
         >
-          <div className="mobile-menu-header" style={{
-            padding: '1rem',
-            borderBottom: '1px solid #eee',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            backgroundColor: '#f8f9fa'
-          }}>
-            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '600' }}>Findoctor Menu</h3>
-            <button 
-              className="close-menu" 
-              onClick={closeMenu}
-              style={{
-                background: 'none',
-                border: 'none',
-                fontSize: '1.5rem',
-                cursor: 'pointer',
-                width: '30px',
-                height: '30px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              ×
-            </button>
-          </div>
-          
-          <div className="mobile-menu-content" style={{ padding: '1rem' }}>
-            <ul className="mobile-main-menu" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-              {/* Home Menu Item */}
-              <li className={`menu-item ${activeSubmenu === 0 ? 'active' : ''}`} style={{ marginBottom: '0.5rem' }}>
-                <div 
-                  className="menu-link" 
-                  onClick={() => toggleSubmenu(0)}
+          <div style={{ padding: '20px' }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '20px',
+              paddingBottom: '15px',
+              borderBottom: '1px solid #eee'
+            }}>
+              <h3 style={{ margin: 0, color: '#333' }}>Menu</h3>
+              <button 
+                onClick={closeMenu}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#666'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+              <li style={{ marginBottom: '10px' }}>
+                <Link 
+                  href="/" 
+                  onClick={closeMenu}
                   style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '0.75rem 1rem',
-                    backgroundColor: '#f8f9fa',
+                    display: 'block',
+                    padding: '12px 15px',
+                    color: '#333',
+                    textDecoration: 'none',
                     borderRadius: '6px',
-                    cursor: 'pointer',
-                    border: '1px solid #e9ecef',
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#f0f8ff';
+                    e.currentTarget.style.color = '#3498db';
                   }}
                 >
-                  <span style={{ fontWeight: '500' }}>Home</span>
-                  <span className="menu-arrow" style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
-                    {activeSubmenu === 0 ? '−' : '+'}
-                  </span>
-                </div>
-                <ul 
-                  className="submenu" 
-                  style={{ 
-                    listStyle: 'none',
-                    padding: '0.5rem 0',
-                    margin: '0.5rem 0 0 0',
-                    display: activeSubmenu === 0 ? 'block' : 'none'
-                  }}
-                >
-                  {[
-                    { href: '/', text: 'Home Default' },
-                    { href: '/home-kenburns', text: 'KenBurns Slider' },
-                    { href: '/home-v2', text: 'Home Version 2' },
-                    { href: '/home-v3', text: 'Home Version 3' },
-                    { href: '/home-v4', text: 'Home Version 4' },
-                    { href: '/home-map', text: 'Home with Map' },
-                    { href: '/home-revolution', text: 'Revolution Slider' },
-                    { href: '/home-cookie', text: 'With Cookie Bar' }
-                  ].map((item, index) => (
-                    <li key={index} style={{ marginBottom: '0.25rem' }}>
-                      <Link 
-                        href={item.href} 
-                        onClick={closeMenu} 
-                        style={{ 
-                          textDecoration: 'none', 
-                          color: '#495057',
-                          display: 'block',
-                          padding: '0.5rem 1rem',
-                          borderRadius: '4px',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        {item.text}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+                  🏠 Home
+                </Link>
               </li>
-
-              {/* Pages Menu Item */}
-              <li className={`menu-item ${activeSubmenu === 1 ? 'active' : ''}`} style={{ marginBottom: '0.5rem' }}>
-                <div 
-                  className="menu-link" 
-                  onClick={() => toggleSubmenu(1)}
+              <li style={{ marginBottom: '10px' }}>
+                <Link 
+                  href="/list-your-business" 
+                  onClick={closeMenu}
                   style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '0.75rem 1rem',
-                    backgroundColor: '#f8f9fa',
+                    display: 'block',
+                    padding: '12px 15px',
+                    color: '#27ae60',
+                    textDecoration: 'none',
                     borderRadius: '6px',
-                    cursor: 'pointer',
-                    border: '1px solid #e9ecef',
-                    transition: 'all 0.2s ease'
+                    border: '1px solid #27ae60',
+                    transition: 'all 0.3s ease',
+                    textAlign: 'center',
+                    fontWeight: '500'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#27ae60';
+                    e.currentTarget.style.color = 'white';
                   }}
                 >
-                  <span style={{ fontWeight: '500' }}>Pages</span>
-                  <span className="menu-arrow" style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
-                    {activeSubmenu === 1 ? '−' : '+'}
-                  </span>
-                </div>
-                <ul 
-                  className="submenu" 
-                  style={{ 
-                    listStyle: 'none',
-                    padding: '0.5rem 0',
-                    margin: '0.5rem 0 0 0',
-                    display: activeSubmenu === 1 ? 'block' : 'none'
-                  }}
-                >
-                  {[
-                    { href: '/list', text: 'List page' },
-                    { href: '/grid-list', text: 'List grid page' },
-                    { href: '/list-map', text: 'List map page' },
-                    { href: '/detail-page', text: 'Detail page' },
-                    { href: '/detail-page-2', text: 'Detail page 2' },
-                    { href: '/detail-page-3', text: 'Detail page 3' },
-                    { href: '/detail-page-working-booking', text: 'Detail working booking' },
-                    { href: '/submit-review', text: 'Submit Review' },
-                    { href: '/blog', text: 'Blog' },
-                    { href: '/badges', text: 'Badges' },
-                    { href: '/login', text: 'Login' },
-                    { href: '/login-2', text: 'Login 2' },
-                    { href: '/register-doctor', text: 'Register Doctor' },
-                    { href: '/register-doctor-working', text: 'Working doctor register' },
-                    { href: '/register', text: 'Register' },
-                    { href: '/about', text: 'About Us' },
-                    { href: '/contacts', text: 'Contacts' }
-                  ].map((item, index) => (
-                    <li key={index} style={{ marginBottom: '0.25rem' }}>
-                      <Link 
-                        href={item.href} 
-                        onClick={closeMenu} 
-                        style={{ 
-                          textDecoration: 'none', 
-                          color: '#495057',
-                          display: 'block',
-                          padding: '0.5rem 1rem',
-                          borderRadius: '4px',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        {item.text}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+                  📍 List Your Business FREE
+                </Link>
               </li>
+            </ul>
 
-              {/* Extra Elements Menu Item */}
-              <li className={`menu-item ${activeSubmenu === 2 ? 'active' : ''}`} style={{ marginBottom: '0.5rem' }}>
-                <div 
-                  className="menu-link" 
-                  onClick={() => toggleSubmenu(2)}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '0.75rem 1rem',
-                    backgroundColor: '#f8f9fa',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    border: '1px solid #e9ecef',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <span style={{ fontWeight: '500' }}>Extra Elements</span>
-                  <span className="menu-arrow" style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
-                    {activeSubmenu === 2 ? '−' : '+'}
-                  </span>
-                </div>
-                <ul 
-                  className="submenu" 
-                  style={{ 
-                    listStyle: 'none',
-                    padding: '0.5rem 0',
-                    margin: '0.5rem 0 0 0',
-                    display: activeSubmenu === 2 ? 'block' : 'none'
-                  }}
-                >
-                  {[
-                    { href: '/detail-page-working-booking', text: 'Detail working booking' },
-                    { href: '/booking-page', text: 'Booking page' },
-                    { href: '/confirm', text: 'Confirm page' },
-                    { href: '/faq', text: 'Faq page' },
-                    { href: '/coming_soon', text: 'Coming soon' },
-                    { href: '/pricing-tables-1', text: 'Pricing tables 1' },
-                    { href: '/pricing-tables-2', text: 'Pricing tables 2' },
-                    { href: '/pricing-tables-3', text: 'Pricing tables 3' },
-                    { href: '/icon-pack-1', text: 'Icon pack 1' },
-                    { href: '/icon-pack-2', text: 'Icon pack 2' },
-                    { href: '/icon-pack-3', text: 'Icon pack 3' },
-                    { href: '/404', text: '404 page' }
-                  ].map((item, index) => (
-                    <li key={index} style={{ marginBottom: '0.25rem' }}>
-                      <Link 
-                        href={item.href} 
-                        onClick={closeMenu} 
-                        style={{ 
-                          textDecoration: 'none', 
-                          color: '#495057',
-                          display: 'block',
-                          padding: '0.5rem 1rem',
-                          borderRadius: '4px',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        {item.text}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </li>
-
-              {/* Simple Menu Items */}
-              {[
-                { href: '/menu_2', text: 'Menu V2' },
-                { href: '/admin', text: 'Admin', external: true },
-                { href: 'https://1.envato.market/1kDnR', text: 'Buy this template', external: true }
-              ].map((item, index) => (
-                <li key={index} className="menu-item" style={{ marginBottom: '0.5rem' }}>
-                  <Link 
-                    href={item.href} 
-                    className="menu-link-simple" 
-                    onClick={closeMenu}
-                    target={item.external ? '_blank' : undefined}
-                    rel={item.external ? 'noopener noreferrer' : undefined}
+            <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
+              {isLoggedIn ? (
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ marginBottom: '15px', color: '#333' }}>
+                    Welcome, <strong>{user?.fullName}</strong>
+                  </p>
+                  <button 
+                    onClick={() => {
+                      handleLogout();
+                      closeMenu();
+                    }}
                     style={{
-                      display: 'block',
-                      padding: '0.75rem 1rem',
-                      backgroundColor: '#f8f9fa',
+                      width: '100%',
+                      padding: '12px',
+                      background: '#e74c3c',
+                      color: 'white',
+                      border: 'none',
                       borderRadius: '6px',
-                      textDecoration: 'none',
-                      color: '#495057',
-                      fontWeight: '500',
-                      border: '1px solid #e9ecef',
-                      transition: 'all 0.2s ease'
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500'
                     }}
                   >
-                    <span>{item.text}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            
-            {/* Footer in Mobile Menu */}
-            <div className="mobile-menu-footer" style={{ 
-              marginTop: '2rem', 
-              paddingTop: '1rem', 
-              borderTop: '1px solid #dee2e6', 
-              textAlign: 'center' 
-            }}>
-              <p style={{ 
-                margin: 0, 
-                color: '#6c757d', 
-                fontSize: '0.875rem',
-                fontWeight: '400'
-              }}>
-                &copy; 2024 Findoctor. All rights reserved.
-              </p>
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button 
+                    onClick={() => {
+                      setShowLoginModal(true);
+                      closeMenu();
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      background: '#3498db',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Login
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setShowRegisterModal(true);
+                      closeMenu();
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      background: '#27ae60',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Sign Up
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </nav>
