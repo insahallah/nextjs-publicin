@@ -11,7 +11,7 @@ interface ListingCardProps {
 
 function renderStars(rating: number) {
   return Array.from({ length: 5 }, (_, i) => (
-    <span key={i} className={`text-sm ${i < Math.floor(rating) ? "text-yellow-500" : "text-gray-300"}`}>
+    <span key={i} className={`text-xs ${i < Math.floor(rating) ? "text-yellow-500" : "text-gray-300"}`}>
       ★
     </span>
   ));
@@ -48,10 +48,10 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
   };
 
   return (
-    <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-200 overflow-hidden transition-all duration-500 hover:-translate-y-1">
+    <div className="group bg-white rounded-xl shadow-md hover:shadow-lg border border-gray-200 overflow-hidden transition-all duration-300 hover:-translate-y-0.5">
       <div className="flex flex-col lg:flex-row h-full">
-        {/* Image Section */}
-        <div className="lg:w-80 lg:flex-shrink-0 h-64 lg:h-80 relative">
+        {/* Image Section - Compact Size */}
+        <div className="lg:w-56 lg:flex-shrink-0 h-40 lg:h-44 relative">
           <ImageSlider 
             images={listingImages}
             alt={listing.displayName}
@@ -59,95 +59,97 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
           />
         </div>
 
-        {/* Content Section */}
-        <div className="flex-1 p-4 sm:p-6 lg:p-8">
+        {/* Content Section - Compact Padding */}
+        <div className="flex-1 p-3 sm:p-4">
           <div className="flex flex-col h-full">
-            {/* Header Section */}
-            <div className="flex flex-col sm:flex-row justify-between items-start mb-4 gap-4">
+            {/* Header Section - Compact */}
+            <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-2">
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className={`${listing.badgeColor} text-xs px-3 py-1.5 rounded-full font-semibold shadow-lg`}>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <span className={`${listing.badgeColor} text-[10px] px-2 py-0.5 rounded-full font-semibold`}>
                     {listing.badge}
                   </span>
-                  <span className="text-xs text-gray-600 bg-white/80 px-2 py-1 rounded-full border border-gray-200">
+                  <span className="text-[10px] text-gray-600 bg-white/80 px-1.5 py-0.5 rounded-full border border-gray-200">
                     📍 {listing.distance} km
                   </span>
                   {listing.isOpen ? (
-                    <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-200 font-medium">
+                    <span className="text-[10px] text-[#058A07] bg-[#058A07]/10 px-1.5 py-0.5 rounded-full border border-[#058A07]/20 font-medium">
                       🟢 Open Now
                     </span>
                   ) : (
-                    <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-full border border-red-200 font-medium">
+                    <span className="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-200 font-medium">
                       🔴 Closed
                     </span>
                   )}
                 </div>
-                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors duration-300">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1 group-hover:text-[#058A07] transition-colors duration-300">
                   {listing.displayName}
                 </h3>
                 
-                {/* Location */}
-                <div className="flex items-center gap-2 text-gray-600 mb-4">
-                  <span className="text-lg">🏢</span>
-                  <span className="text-sm sm:text-base">{listing.location}</span>
+                {/* Location - Compact */}
+                <div className="flex items-center gap-1 text-gray-600 mb-2">
+                  <span className="text-sm">🏢</span>
+                  <span className="text-xs">{listing.location}</span>
                 </div>
               </div>
               
-              {/* Rating Section */}
-              <div className="text-right bg-white rounded-xl px-4 py-3 border border-gray-200 shadow-lg">
-                <div className="flex items-center gap-2 mb-1 justify-end">
+              {/* Rating Section - Compact */}
+              <div className="text-right bg-white rounded px-2 py-1.5 border border-gray-200 shadow-sm">
+                <div className="flex items-center gap-1 mb-0.5 justify-end">
                   {renderStars(listing.rating)}
-                  <span className="text-lg font-bold text-gray-900">
+                  <span className="text-sm font-bold text-gray-900">
                     {listing.rating}
                   </span>
                 </div>
-                <span className="text-xs text-gray-500 font-medium">{listing.reviewCount?.toLocaleString() || 0} reviews</span>
+                <span className="text-[10px] text-gray-500 font-medium">
+                  {listing.reviewCount?.toLocaleString() || 0} reviews
+                </span>
               </div>
             </div>
 
-            {/* Description */}
-            <div className="mb-6">
-              <p className="text-sm text-gray-600 line-clamp-3">
-                {listing.description || "No description available."}
+            {/* Description - Compact with limited lines */}
+            <div className="mb-3 flex-1">
+              <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
+                {listing.description || "Welcome to our service provider. While our name might echo a legacy of trust, our primary focus is entirely on delivering quality services. We offer a comprehensive range of services to meet your needs..."}
               </p>
             </div>
 
-            {/* Services Tags */}
-            <div className="mb-6">
-              <h4 className="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wide">Services Offered</h4>
-              <div className="flex flex-wrap gap-2">
-                {listing.services?.slice(0, 4).map((service: string, serviceIndex: number) => (
+            {/* Services Tags - Compact */}
+            <div className="mb-3">
+              <h4 className="text-[10px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">SERVICES OFFERED</h4>
+              <div className="flex flex-wrap gap-1">
+                {listing.services?.slice(0, 3).map((service: string, serviceIndex: number) => (
                   <span 
                     key={serviceIndex} 
-                    className="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-xs border border-blue-200 font-medium shadow-sm hover:shadow-md transition-shadow duration-200"
+                    className="inline-flex items-center px-1.5 py-0.5 bg-[#0076D7]/10 text-[#0076D7] rounded text-[10px] border border-[#0076D7]/20 font-medium"
                   >
                     {service}
                   </span>
                 ))}
-                {listing.services?.length > 4 && (
-                  <span className="inline-flex items-center px-3 py-1.5 bg-gray-50 text-gray-600 rounded-full text-xs border border-gray-200 font-medium">
-                    +{listing.services.length - 4} more
+                {listing.services?.length > 3 && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 bg-gray-50 text-gray-600 rounded text-[10px] border border-gray-200 font-medium">
+                    +{listing.services.length - 3} more
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Action Buttons */}
+            {/* Action Buttons - Compact */}
             <div className="mt-auto">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 mb-2">
                 {/* Call Button */}
                 {listing.phone ? (
                   <button 
                     onClick={handleCallClick}
-                    className="flex items-center justify-center gap-2 px-4 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-all duration-300 shadow-lg hover:shadow-xl"
+                    className="flex items-center justify-center gap-1 px-2 py-1.5 bg-[#058A07] text-white rounded-lg font-semibold hover:bg-[#047506] transition-all duration-200 shadow-sm hover:shadow text-[10px]"
                   >
-                    <span className="text-lg">📞</span>
-                    <span className="text-xs">Call Now</span>
+                    <span className="text-xs">📞</span>
+                    <span>Call Now</span>
                   </button>
                 ) : (
-                  <button className="flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 shadow-lg hover:shadow-xl">
-                    <span className="text-lg">📞</span>
-                    <span className="text-xs">Show Number</span>
+                  <button className="flex items-center justify-center gap-1 px-2 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm hover:shadow text-[10px]">
+                    <span className="text-xs">📞</span>
+                    <span>Show Number</span>
                   </button>
                 )}
                 
@@ -155,41 +157,41 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
                 {listing.phone ? (
                   <button 
                     onClick={handleWhatsAppClick}
-                    className="flex items-center justify-center gap-2 px-4 py-3 bg-green-100 text-green-800 rounded-xl font-semibold hover:bg-green-200 transition-all duration-300 shadow-lg hover:shadow-xl"
+                    className="flex items-center justify-center gap-1 px-2 py-1.5 bg-[#058A07]/10 text-[#058A07] rounded-lg font-semibold hover:bg-[#058A07]/20 transition-all duration-200 shadow-sm hover:shadow border border-[#058A07]/20 text-[10px]"
                   >
-                    <span className="text-lg">💬</span>
-                    <span className="text-xs">WhatsApp</span>
+                    <span className="text-xs">💬</span>
+                    <span>WhatsApp</span>
                   </button>
                 ) : (
-                  <button className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-500 rounded-xl font-semibold cursor-not-allowed">
-                    <span className="text-lg">💬</span>
-                    <span className="text-xs">WhatsApp</span>
+                  <button className="flex items-center justify-center gap-1 px-2 py-1.5 bg-gray-100 text-gray-500 rounded-lg font-semibold cursor-not-allowed text-[10px]">
+                    <span className="text-xs">💬</span>
+                    <span>WhatsApp</span>
                   </button>
                 )}
                 
                 {/* Enquiry Button */}
                 <button 
                   onClick={handleEnquiryClick}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 shadow-lg hover:shadow-xl"
+                  className="flex items-center justify-center gap-1 px-2 py-1.5 bg-white border border-[#0076D7] text-[#0076D7] rounded-lg font-semibold hover:bg-[#0076D7]/5 transition-all duration-200 shadow-sm hover:shadow text-[10px]"
                 >
-                  <span className="text-lg">📩</span>
-                  <span className="text-xs">Send Enquiry</span>
+                  <span className="text-xs">📩</span>
+                  <span>Send Enquiry</span>
                 </button>
 
                 {/* Review Button */}
                 <button 
                   onClick={handleReviewClick}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-all duration-300 shadow-lg hover:shadow-xl"
+                  className="flex items-center justify-center gap-1 px-2 py-1.5 bg-[#0076D7] text-white rounded-lg font-semibold hover:bg-[#0066C4] transition-all duration-200 shadow-sm hover:shadow text-[10px]"
                 >
-                  <span className="text-lg">⭐</span>
-                  <span className="text-xs">Write Review</span>
+                  <span className="text-xs">⭐</span>
+                  <span>Write Review</span>
                 </button>
               </div>
 
-              {/* Response Time */}
+              {/* Response Time - Compact */}
               {listing.respondsIn && (
-                <div className="flex items-center gap-2 text-xs text-green-600 font-semibold bg-green-50 px-4 py-2 rounded-lg border border-green-200">
-                  <span className="text-sm">⚡</span>
+                <div className="flex items-center gap-1 text-[10px] text-[#058A07] font-semibold bg-[#058A07]/10 px-2 py-1 rounded border border-[#058A07]/20">
+                  <span className="text-[10px]">⚡</span>
                   <span>Responds within {listing.respondsIn}</span>
                 </div>
               )}
