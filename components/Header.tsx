@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
@@ -28,36 +27,73 @@ const Header = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Check screen size
+  // API endpoints
+  const API_BASE_URL = 'https://allupipay.in/publicsewa/api';
+  const LOGIN_ENDPOINT = `${API_BASE_URL}/login.php`;
+
+  // Check screen size function
+  const checkScreenSize = () => {
+    setIsMobile(window.innerWidth < 768);
+  };
+
+  // Check auth status function
+  const checkAuthStatus = () => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('authToken');
+      const userData = localStorage.getItem('userData');
+      
+      if (token && userData) {
+        setIsLoggedIn(true);
+        setUser(JSON.parse(userData));
+      } else {
+        setIsLoggedIn(false);
+        setUser(null);
+      }
+    }
+  };
+
+  // Event listeners for modal coordination
   useEffect(() => {
-    const checkScreenSize = () => {
-      setIsMobile(window.innerWidth < 768);
+    const handleOpenLoginModal = () => {
+      console.log('✅ Login modal requested from ReviewModal - Opening login modal');
+      setShowLoginModal(true);
     };
 
-    checkScreenSize();
-    window.addEventListener('resize', checkScreenSize);
+    window.addEventListener('openLoginModal', handleOpenLoginModal);
+    
+    return () => {
+      window.removeEventListener('openLoginModal', handleOpenLoginModal);
+    };
+  }, []);
+
+  // Check screen size and auth status
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        // Check screen size
+        checkScreenSize();
+        window.addEventListener('resize', checkScreenSize);
+
+        // Check if user is logged in
+        checkAuthStatus();
+        
+        // Small delay to ensure everything is loaded properly
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+      } catch (error) {
+        console.error('Initialization error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeApp();
 
     return () => {
       window.removeEventListener('resize', checkScreenSize);
     };
-  }, []);
-
-  // Check if user is logged in on component mount
-  useEffect(() => {
-    const checkAuthStatus = () => {
-      if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('authToken');
-        const userData = localStorage.getItem('userData');
-        
-        if (token && userData) {
-          setIsLoggedIn(true);
-          setUser(JSON.parse(userData));
-        }
-      }
-    };
-
-    checkAuthStatus();
   }, []);
 
   const toggleMenu = () => {
@@ -68,56 +104,92 @@ const Header = () => {
     setIsMenuOpen(false);
   };
 
-  // Login functionality
+  // REAL LOGIN API CALL - FIXED FOR CORRECT API RESPONSE
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoggingIn(true);
+    
+    console.log('🔐 Starting login process...', {
+      mobile: loginForm.mobile,
+      password: loginForm.password
+    });
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock login - Replace with actual API call
-      if (loginForm.mobile && loginForm.password) {
-        const mockUser = {
-          id: 1,
-          name: 'John Doe',
-          mobile: loginForm.mobile,
-          role: 'user'
-        };
+      // URLSearchParams use karo form data ke liye
+      const formData = new URLSearchParams();
+      formData.append('mobile', loginForm.mobile);
+      formData.append('password', loginForm.password);
+
+      console.log('📤 Sending login request to:', LOGIN_ENDPOINT);
+
+      const response = await fetch(LOGIN_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData.toString()
+      });
+
+      console.log('📥 Login response status:', response.status);
+      console.log('📥 Login response ok:', response.ok);
+
+      const data = await response.json();
+      console.log('📥 Login response data:', data);
+
+      // ✅ FIXED: Check for correct API response format
+      if (response.ok && data.status === 'success') {
+        console.log('✅ LOGIN SUCCESSFUL - Closing modal and dispatching event');
         
-        const mockToken = 'mock_jwt_token_' + Date.now();
-        
-        // Store in localStorage
-        localStorage.setItem('authToken', mockToken);
-        localStorage.setItem('userData', JSON.stringify(mockUser));
+        // Store token and user data
+        localStorage.setItem('authToken', data.token || data.id);
+        localStorage.setItem('userData', JSON.stringify({
+          id: data.id,
+          fullName: data.fullName || data.name || 'User',
+          mobile: data.mobile,
+          city: data.city,
+          village: data.village,
+          ...data
+        }));
         
         setIsLoggedIn(true);
-        setUser(mockUser);
+        setUser(data);
+        
+        // ✅ CLOSE LOGIN MODAL
+        console.log('🔒 Setting showLoginModal to false');
         setShowLoginModal(false);
         setLoginForm({ mobile: '', password: '' });
         
+        // ✅ DISPATCH EVENT AFTER MODAL CLOSE
+        setTimeout(() => {
+          console.log('🎯 Dispatching userLoggedIn event');
+          window.dispatchEvent(new CustomEvent('userLoggedIn', {
+            detail: { 
+              user: data,
+              timestamp: new Date().toISOString()
+            }
+          }));
+        }, 100);
+        
         alert('Login successful!');
       } else {
-        alert('Please enter mobile number and password');
+        console.log('❌ LOGIN FAILED:', data.message);
+        alert(data.message || 'Login failed. Please try again.');
       }
     } catch (error) {
-      console.error('Login error:', error);
-      alert('Login failed. Please try again.');
+      console.error('🚨 Login error:', error);
+      alert('Login failed. Please check your connection and try again.');
     } finally {
+      console.log('🏁 Login process finished');
       setIsLoggingIn(false);
     }
   };
 
-  // Register functionality
+  // ✅ ADDED: REGISTRATION API CALL
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsRegistering(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       // Validation
       if (registerForm.password !== registerForm.confirmPassword) {
         alert('Passwords do not match');
@@ -133,44 +205,88 @@ const Header = () => {
         return;
       }
 
-      // Mock user data - Replace with actual API call
-      const mockUser = {
-        id: Date.now(),
-        fullName: registerForm.fullName,
-        mobile: registerForm.mobile,
-        pinCode: registerForm.pinCode,
-        city: registerForm.city,
-        village: registerForm.village,
-        block: registerForm.block,
-        state: registerForm.state,
-        role: 'user'
-      };
-      
-      const mockToken = 'mock_jwt_token_' + Date.now();
-      
-      // Store in localStorage
-      localStorage.setItem('authToken', mockToken);
-      localStorage.setItem('userData', JSON.stringify(mockUser));
-      
-      setIsLoggedIn(true);
-      setUser(mockUser);
-      setShowRegisterModal(false);
-      setRegisterForm({ 
-        fullName: '', 
-        mobile: '', 
-        pinCode: '', 
-        city: '', 
-        village: '', 
-        block: '', 
-        state: '', 
-        password: '', 
-        confirmPassword: '' 
+      console.log('📤 Sending registration request...');
+
+      const response = await fetch(`${API_BASE_URL}/register.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fullName: registerForm.fullName,
+          mobile: registerForm.mobile,
+          pinCode: registerForm.pinCode,
+          city: registerForm.city,
+          village: registerForm.village,
+          block: registerForm.block,
+          state: registerForm.state,
+          password: registerForm.password
+        })
       });
-      
-      alert('Registration successful!');
+
+      const data = await response.json();
+      console.log('📥 Registration response:', data);
+
+      if (response.ok && data.status === 'success') {
+        // Store token and user data
+        localStorage.setItem('authToken', data.token || data.id);
+        localStorage.setItem('userData', JSON.stringify({
+          id: data.id,
+          fullName: registerForm.fullName,
+          mobile: registerForm.mobile,
+          city: registerForm.city,
+          village: registerForm.village,
+          ...data
+        }));
+        
+        setIsLoggedIn(true);
+        setUser({
+          id: data.id,
+          fullName: registerForm.fullName,
+          mobile: registerForm.mobile,
+          city: registerForm.city,
+          village: registerForm.village,
+          ...data
+        });
+        
+        // Close register modal
+        setShowRegisterModal(false);
+        setRegisterForm({ 
+          fullName: '', 
+          mobile: '', 
+          pinCode: '', 
+          city: '', 
+          village: '', 
+          block: '', 
+          state: '', 
+          password: '', 
+          confirmPassword: '' 
+        });
+
+        // Dispatch event after registration
+        setTimeout(() => {
+          console.log('🎯 Dispatching userLoggedIn event after registration');
+          window.dispatchEvent(new CustomEvent('userLoggedIn', {
+            detail: { 
+              user: {
+                id: data.id,
+                fullName: registerForm.fullName,
+                mobile: registerForm.mobile,
+                city: registerForm.city,
+                village: registerForm.village,
+                ...data
+              }
+            }
+          }));
+        }, 100);
+        
+        alert('Registration successful!');
+      } else {
+        alert(data.message || 'Registration failed. Please try again.');
+      }
     } catch (error) {
       console.error('Registration error:', error);
-      alert('Registration failed. Please try again.');
+      alert('Registration failed. Please check your connection and try again.');
     } finally {
       setIsRegistering(false);
     }
@@ -181,6 +297,13 @@ const Header = () => {
     localStorage.removeItem('userData');
     setIsLoggedIn(false);
     setUser(null);
+    
+    // Dispatch event when user logs out
+    window.dispatchEvent(new CustomEvent('userLoggedOut'));
+    
+    // Close mobile menu if open
+    closeMenu();
+    
     alert('Logged out successfully!');
   };
 
@@ -255,7 +378,6 @@ const Header = () => {
               <div className="hamburger-inner"></div>
             </div>
           </div>
-          
         </button>
         
         <div className="container">
@@ -274,8 +396,8 @@ const Header = () => {
               </div>
             </div>
             
-            {/* Desktop - Show Login/Signup, Mobile - Hide */}
-            {!isMobile && (
+            {/* Desktop - Show Login/Signup only when not loading */}
+            {!isMobile && !isLoading && (
               <div className="col-lg-9 col-6">
                 {/* Centered User Access Section with Larger Icons */}
                 <ul id="top_access" style={{
@@ -467,6 +589,25 @@ const Header = () => {
                 </nav>
               </div>
             )}
+
+            {/* Loading State - Show simple placeholder while loading */}
+            {!isMobile && isLoading && (
+              <div className="col-lg-9 col-6">
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  height: '100%'
+                }}>
+                  <div style={{
+                    width: '100px',
+                    height: '20px',
+                    background: '#f0f0f0',
+                    borderRadius: '4px'
+                  }}></div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -485,7 +626,7 @@ const Header = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              zIndex: 10000,
+              zIndex: 10001,
               padding: '20px'
             }}
           >
@@ -622,7 +763,7 @@ const Header = () => {
           </div>
         )}
 
-        {/* Register Modal - WITHOUT "It's time to find you" section in mobile */}
+        {/* ✅ ADDED: Register Modal */}
         {showRegisterModal && (
           <div 
             className="modal-overlay"
@@ -675,7 +816,7 @@ const Header = () => {
                     marginBottom: '20px',
                     color: 'white'
                   }}>
-                    It's time to find you!
+                    Join Our Community
                   </h3>
                   
                   <p style={{ 
@@ -684,8 +825,7 @@ const Header = () => {
                     marginBottom: '30px',
                     opacity: 0.9
                   }}>
-                    Join thousands of businesses already listed on our platform. 
-                    Get discovered by customers in your area and grow your business online.
+                    Create your account and start exploring local businesses. Get access to exclusive features and personalized recommendations.
                   </p>
 
                   <div style={{ marginBottom: '25px', display: 'flex', alignItems: 'flex-start', gap: '15px' }}>
@@ -703,10 +843,10 @@ const Header = () => {
                     </div>
                     <div>
                       <h4 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px 0', color: 'white' }}>
-                        Let customers Find you!
+                        Discover Local Businesses
                       </h4>
                       <p style={{ fontSize: '14px', lineHeight: '1.5', margin: 0, opacity: 0.9 }}>
-                        Get listed in our directory and appear in local searches. Increase your visibility.
+                        Find and connect with the best service providers in your area.
                       </p>
                     </div>
                   </div>
@@ -722,14 +862,14 @@ const Header = () => {
                       justifyContent: 'center',
                       flexShrink: 0
                     }}>
-                      <i className="pe-7s-date" style={{ fontSize: '24px', color: 'white' }}></i>
+                      <i className="pe-7s-star" style={{ fontSize: '24px', color: 'white' }}></i>
                     </div>
                     <div>
                       <h4 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px 0', color: 'white' }}>
-                        Easily Manage Your Profile
+                        Rate & Review
                       </h4>
                       <p style={{ fontSize: '14px', lineHeight: '1.5', margin: 0, opacity: 0.9 }}>
-                        Update your business information, services, and contact details anytime.
+                        Share your experiences and help others make better choices.
                       </p>
                     </div>
                   </div>
@@ -745,14 +885,14 @@ const Header = () => {
                       justifyContent: 'center',
                       flexShrink: 0
                     }}>
-                      <i className="pe-7s-phone" style={{ fontSize: '24px', color: 'white' }}></i>
+                      <i className="pe-7s-share" style={{ fontSize: '24px', color: 'white' }}></i>
                     </div>
                     <div>
                       <h4 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px 0', color: 'white' }}>
-                        Get Instant Enquiries
+                        Share with Friends
                       </h4>
                       <p style={{ fontSize: '14px', lineHeight: '1.5', margin: 0, opacity: 0.9 }}>
-                        Receive direct enquiries from potential customers through calls and messages.
+                        Recommend great businesses to your friends and family.
                       </p>
                     </div>
                   </div>
@@ -781,7 +921,7 @@ const Header = () => {
                     fontSize: isMobile ? '24px' : '28px', 
                     fontWeight: '700' 
                   }}>
-                    Join Our Community
+                    Create Account
                   </h2>
                   <button 
                     onClick={() => setShowRegisterModal(false)}
@@ -1153,7 +1293,7 @@ const Header = () => {
           }}
         ></div>
         
-        {/* Mobile Menu - Simplified */}
+        {/* ✅ FIXED: Mobile Menu - Proper Content Display */}
         <nav 
           className={`mobile-menu ${isMenuOpen ? 'mobile-open' : ''}`}
           style={{ 
@@ -1170,29 +1310,16 @@ const Header = () => {
           }}
         >
           <div style={{ padding: '20px' }}>
+            {/* Mobile Menu Header */}
             <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
               marginBottom: '20px',
               paddingBottom: '15px',
               borderBottom: '1px solid #eee'
             }}>
-              <h3 style={{ margin: 0, color: '#333' }}>Menu</h3>
-              <button 
-                onClick={closeMenu}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '24px',
-                  cursor: 'pointer',
-                  color: '#666'
-                }}
-              >
-                ×
-              </button>
+              <h3 style={{ margin: 0, color: '#333', textAlign: 'center' }}>Menu</h3>
             </div>
             
+            {/* Navigation Links */}
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               <li style={{ marginBottom: '10px' }}>
                 <Link 
@@ -1239,12 +1366,29 @@ const Header = () => {
               </li>
             </ul>
 
+            {/* ✅ FIXED: User Section - Properly Shows Content */}
             <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
               {isLoggedIn ? (
                 <div style={{ textAlign: 'center' }}>
-                  <p style={{ marginBottom: '15px', color: '#333' }}>
-                    Welcome, <strong>{user?.fullName}</strong>
-                  </p>
+                  {/* User Welcome Message */}
+                  <div style={{ 
+                    padding: '15px',
+                    background: '#f0f8ff',
+                    borderRadius: '8px',
+                    marginBottom: '15px'
+                  }}>
+                    <p style={{ margin: '0 0 5px 0', color: '#333', fontWeight: '500' }}>
+                      Welcome,
+                    </p>
+                    <p style={{ margin: 0, color: '#3498db', fontWeight: 'bold', fontSize: '16px' }}>
+                      {user?.fullName || 'User'}
+                    </p>
+                    <p style={{ margin: '5px 0 0 0', color: '#666', fontSize: '12px' }}>
+                      {user?.mobile}
+                    </p>
+                  </div>
+                  
+                  {/* Logout Button */}
                   <button 
                     onClick={() => {
                       handleLogout();
@@ -1259,21 +1403,26 @@ const Header = () => {
                       borderRadius: '6px',
                       cursor: 'pointer',
                       fontSize: '14px',
-                      fontWeight: '500'
+                      fontWeight: '500',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
                     }}
                   >
+                    <i className="pe-7s-power" style={{ fontSize: '16px' }}></i>
                     Logout
                   </button>
                 </div>
               ) : (
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <button 
                     onClick={() => {
                       setShowLoginModal(true);
                       closeMenu();
                     }}
                     style={{
-                      flex: 1,
+                      width: '100%',
                       padding: '12px',
                       background: '#3498db',
                       color: 'white',
@@ -1281,9 +1430,14 @@ const Header = () => {
                       borderRadius: '6px',
                       cursor: 'pointer',
                       fontSize: '14px',
-                      fontWeight: '500'
+                      fontWeight: '500',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
                     }}
                   >
+                    <i className="pe-7s-user" style={{ fontSize: '16px' }}></i>
                     Login
                   </button>
                   <button 
@@ -1292,7 +1446,7 @@ const Header = () => {
                       closeMenu();
                     }}
                     style={{
-                      flex: 1,
+                      width: '100%',
                       padding: '12px',
                       background: '#27ae60',
                       color: 'white',
@@ -1300,9 +1454,14 @@ const Header = () => {
                       borderRadius: '6px',
                       cursor: 'pointer',
                       fontSize: '14px',
-                      fontWeight: '500'
+                      fontWeight: '500',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
                     }}
                   >
+                    <i className="pe-7s-add-user" style={{ fontSize: '16px' }}></i>
                     Sign Up
                   </button>
                 </div>

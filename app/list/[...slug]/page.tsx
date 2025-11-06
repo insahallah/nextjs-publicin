@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { notFound } from "next/navigation";
-import Header from "@/components/SubHeader";
+import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ListingsContainer from "@/components/ListingsContainer";
 import ReviewModal from "@/components/ReviewModal";
@@ -15,10 +15,54 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   const [filteredListings, setFilteredListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [shouldReopenReviewAfterLogin, setShouldReopenReviewAfterLogin] = useState(false);
+
+  // ✅ FIXED: Listen for login success to auto-open review modal
+  useEffect(() => {
+    console.log('🔄 Parent: Setting up userLoggedIn event listener');
+    
+    const handleUserLoggedIn = (event: any) => {
+      console.log('🎯 Parent: userLoggedIn event received', {
+        shouldReopenReviewAfterLogin,
+        isReviewModalOpen,
+        eventDetail: event.detail
+      });
+      
+      if (shouldReopenReviewAfterLogin && !isReviewModalOpen) {
+        console.log('🔄 Parent: Auto-opening review modal after login');
+        
+        // Multiple delays for reliability
+        setTimeout(() => {
+          console.log('✅ Parent: Setting review modal open to TRUE');
+          setIsReviewModalOpen(true);
+          setShouldReopenReviewAfterLogin(false);
+        }, 1000);
+      } else {
+        console.log('❌ Parent: Not reopening - conditions not met', {
+          shouldReopenReviewAfterLogin,
+          isReviewModalOpen
+        });
+      }
+    };
+
+    window.addEventListener('userLoggedIn', handleUserLoggedIn);
+    
+    return () => {
+      console.log('🧹 Parent: Cleaning up userLoggedIn event listener');
+      window.removeEventListener('userLoggedIn', handleUserLoggedIn);
+    };
+  }, [shouldReopenReviewAfterLogin, isReviewModalOpen]);
+
+  // ✅ Handle login request from ReviewModal
+  const handleLoginRequest = () => {
+    console.log('🔄 Parent: Login requested from ReviewModal');
+    setShouldReopenReviewAfterLogin(true);
+  };
 
   // Review submit handler
   const handleSubmitReview = async (reviewData: any) => {
     try {
+      console.log('📝 Submitting review for:', selectedBusiness?.displayName);
       const response = await fetch('https://allupipay.in/publicsewa/api/submit_review.php', {
         method: 'POST',
         headers: {
@@ -44,8 +88,17 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
   // Function to open review modal
   const openReviewModal = (business: any) => {
+    console.log('🔓 Parent: Manually opening review modal for:', business?.displayName);
     setSelectedBusiness(business);
     setIsReviewModalOpen(true);
+    setShouldReopenReviewAfterLogin(false);
+  };
+
+  // Function to close review modal
+  const closeReviewModal = () => {
+    console.log('❌ Parent: Closing review modal');
+    setIsReviewModalOpen(false);
+    setShouldReopenReviewAfterLogin(false);
   };
 
   // Search functionality
@@ -111,6 +164,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         setFilteredListings(displayListings);
         
       } catch (error) {
+        console.error('Error fetching data:', error);
         notFound();
       } finally {
         setLoading(false);
@@ -119,6 +173,15 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
     fetchData();
   }, [params]);
+
+  // Debug current state
+  useEffect(() => {
+    console.log('🔍 Parent State:', {
+      isReviewModalOpen,
+      shouldReopenReviewAfterLogin,
+      selectedBusiness: selectedBusiness?.displayName
+    });
+  }, [isReviewModalOpen, shouldReopenReviewAfterLogin, selectedBusiness]);
 
   if (loading) {
     return (
@@ -192,9 +255,9 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
               </div>
             </div>
 
-            {/* Search Bar Section - FULL WIDTH with 10px margin */}
-            <div className="pb-6 md:pb-8 border-t border-gray-100 pt-6 md:pt-8 mx-2.5"> {/* 10px margin = mx-2.5 */}
-              <div className="w-full"> {/* Full width container */}
+            {/* Search Bar Section */}
+            <div className="pb-6 md:pb-8 border-t border-gray-100 pt-6 md:pt-8 mx-2.5">
+              <div className="w-full">
                 <div className="text-center mb-6">
                   <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
                     Find the Perfect {name}
@@ -265,12 +328,13 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
       {/* Review Modal */}
       <ReviewModal
-  isOpen={isReviewModalOpen}
-  onClose={() => setIsReviewModalOpen(false)}
-  onSubmit={handleSubmitReview}
-  businessName={selectedBusiness?.displayName}
-  businessImages={selectedBusiness?.images || []}
-/>
+        isOpen={isReviewModalOpen}
+        onClose={closeReviewModal}
+        onSubmit={handleSubmitReview}
+        businessName={selectedBusiness?.displayName}
+        businessImages={selectedBusiness?.images || []}
+        onLoginRequest={handleLoginRequest}
+      />
 
       <Footer />
     </div>
@@ -311,7 +375,7 @@ function getImageUrl(imagePath?: string): string {
   }
 }
 
-// Helper functions (remain the same as previous)
+// Helper functions
 async function fetchAndFormatCategories(): Promise<{ fullPath: string; name: string }[]> {
   try {
     const res = await fetch("https://allupipay.in/publicsewa/api/main-search.php", {
