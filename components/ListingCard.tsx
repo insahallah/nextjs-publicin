@@ -8,7 +8,7 @@ interface ListingCardProps {
   listing: any;
   fallbackImage: string;
   categoryName: string;
-  onReviewClick?: () => void;
+  onReviewClick?: (businessData: ReturnType<typeof prepareBusinessData>) => void;
 }
 
 // Helper to render stars
@@ -34,134 +34,66 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
   const router = useRouter();
   const [currentPath, setCurrentPath] = useState<string>('');
 
-  // Get current URL path on client side
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setCurrentPath(window.location.pathname);
     }
   }, []);
 
-  const listingImages = listing.images && Array.isArray(listing.images) && listing.images.length > 0 
-    ? listing.images 
-    : [fallbackImage];
+  const listingImages = Array.isArray(listing.images) && listing.images.length > 0
+    ? listing.images
+    : [fallbackImage || '/default-image.png'];
 
-  // ✅ FIXED: Get the correct business name
+  // Get correct business name
   const getBusinessDisplayName = () => {
-    // Priority order for business name
-    return listing.businessName || 
-           listing.displayName || 
-           listing.name || 
-           "Business";
+    return listing.businessName || listing.displayName || listing.name || "Business";
   };
 
-  // ✅ UPDATED: Prepare business data for URL parameters
-  const prepareBusinessData = () => {
-    return {
-      id: listing.id,
-      businessName: listing.businessName,
-      displayName: getBusinessDisplayName(),
-      description: listing.description,
-      phone: listing.phone,
-      location: listing.location,
-      rating: listing.rating,
-      reviewCount: listing.reviewCount,
-      services: listing.services,
-      images: listing.images,
-      isOpen: listing.isOpen,
-      latitude: listing.latitude,
-      longitude: listing.longitude,
-      category: categoryName
-    };
+  // Prepare business data
+  const prepareBusinessData = () => ({
+    id: listing.id,
+    businessName: listing.businessName,
+    displayName: getBusinessDisplayName(),
+    description: listing.description,
+    phone: listing.phone,
+    location: listing.location,
+    rating: listing.rating,
+    reviewCount: listing.reviewCount,
+    services: listing.services,
+    images: listing.images,
+    isOpen: listing.isOpen,
+    latitude: listing.latitude,
+    longitude: listing.longitude,
+    category: categoryName
+  });
+
+  // Generate URL for business page
+  const generateBusinessUrl = () => {
+    const businessSlug = generateSlug(getBusinessDisplayName());
+    const businessData = prepareBusinessData();
+    const encodedData = encodeURIComponent(JSON.stringify(businessData));
+
+    const pathSegments = currentPath.split('/').filter(segment => segment);
+    const categoryPath = pathSegments.length > 1 ? pathSegments.slice(1).join('/') : generateSlug(categoryName);
+
+    return `/list/${categoryPath}/${businessSlug}/${listing.id}?data=${encodedData}`;
   };
 
-  // ✅ UPDATED: Correct URL generation with business data in parameters
+  // Handlers
   const handleBusinessClick = () => {
-    const businessDisplayName = getBusinessDisplayName();
-    const businessId = listing.id;
-
-    if (!businessId || !businessDisplayName) {
-      console.error('❌ Missing business ID or name:', { businessId, businessDisplayName });
-      return;
-    }
-
-    try {
-      // Get the current full path
-      const pathSegments = currentPath.split('/').filter(segment => segment);
-      
-      console.log('🔗 Current path segments:', pathSegments);
-      console.log('🏢 Business details:', {
-        id: businessId,
-        displayName: businessDisplayName,
-        businessName: listing.businessName,
-        originalDisplayName: listing.displayName
-      });
-      
-      if (pathSegments.length < 2) {
-        // If no proper category path, use simple fallback
-        const businessSlug = generateSlug(businessDisplayName);
-        const businessData = prepareBusinessData();
-        const encodedData = encodeURIComponent(JSON.stringify(businessData));
-        const fallbackUrl = `/list/${generateSlug(categoryName)}/${businessSlug}/${businessId}?data=${encodedData}`;
-        console.log('🔗 Using fallback URL:', fallbackUrl);
-        router.push(fallbackUrl);
-        return;
-      }
-
-      // Remove the "list" prefix to get category segments
-      const categorySegments = pathSegments.slice(1); // Remove "list"
-      
-      console.log('📁 Original category segments:', categorySegments);
-      
-      // ✅ FIXED: Keep ALL segments including IDs
-      const cleanCategorySegments = [...categorySegments];
-      
-      // ✅ FIXED: Generate business slug from correct business name
-      const businessSlug = generateSlug(businessDisplayName);
-      
-      // ✅ ADDED: Prepare and encode business data for URL parameters
-      const businessData = prepareBusinessData();
-      const encodedData = encodeURIComponent(JSON.stringify(businessData));
-      
-      // Construct URL with full category path + business + data parameters
-      const dynamicUrl = `/list/${cleanCategorySegments.join('/')}/${businessSlug}/${businessId}?data=${encodedData}`;
-      
-      console.log('🔗 Final URL components:', {
-        categoryPath: cleanCategorySegments.join('/'),
-        businessSlug,
-        businessId,
-        encodedDataLength: encodedData.length,
-        finalUrl: dynamicUrl
-      });
-      
-      console.log('🔗 Navigating to:', dynamicUrl);
-      router.push(dynamicUrl);
-      
-    } catch (error) {
-      console.error('Error generating business URL:', error);
-      // Ultimate fallback
-      const businessSlug = generateSlug(getBusinessDisplayName());
-      const businessData = prepareBusinessData();
-      const encodedData = encodeURIComponent(JSON.stringify(businessData));
-      const fallbackUrl = `/list/${generateSlug(categoryName)}/${businessSlug}/${listing.id}?data=${encodedData}`;
-      console.log('🔗 Using ultimate fallback URL:', fallbackUrl);
-      router.push(fallbackUrl);
-    }
+    router.push(generateBusinessUrl());
   };
 
-  // Event handlers with proper type definitions
   const handleCallClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (listing.phone) {
-      window.open(`tel:${listing.phone}`);
-    }
+    if (listing.phone) window.open(`tel:${listing.phone}`);
   };
 
   const handleWhatsAppClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (listing.phone) {
       const message = `Hi, I'm interested in your ${categoryName} services. Could you please provide more information?`;
-      const whatsappUrl = `https://wa.me/${listing.phone}?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, '_blank');
+      window.open(`https://wa.me/${listing.phone}?text=${encodeURIComponent(message)}`, '_blank');
     }
   };
 
@@ -170,66 +102,33 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
     alert(`Enquiry form for ${getBusinessDisplayName()} will open here`);
   };
 
-  // ✅ UPDATED: Review click handler with business data
   const handleReviewClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    
-    // Prepare business data for review modal
-    const businessData = {
-      id: listing.id,
-      businessName: listing.businessName,
-      displayName: getBusinessDisplayName(),
-      description: listing.description,
-      phone: listing.phone,
-      location: listing.location,
-      rating: listing.rating,
-      reviewCount: listing.reviewCount,
-      services: listing.services,
-      images: listing.images,
-      isOpen: listing.isOpen,
-      category: categoryName
-    };
-
-    console.log('📝 Review button clicked for business:', businessData);
-    
-    if (onReviewClick) {
-      // Pass the business data to the parent component
-      onReviewClick(businessData);
-    } else {
-      // Fallback: Open review modal directly or show alert
-      alert(`Write review for ${getBusinessDisplayName()}`);
-    }
+    const businessData = prepareBusinessData();
+    if (onReviewClick) onReviewClick(businessData);
+    else alert(`Write review for ${getBusinessDisplayName()}`);
   };
 
   const handleDirectionClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (listing.latitude && listing.longitude) {
-      const mapsUrl = `https://www.google.com/maps?q=${listing.latitude},${listing.longitude}`;
-      window.open(mapsUrl, '_blank');
-    } else if (listing.location) {
-      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(listing.location)}`;
-      window.open(mapsUrl, '_blank');
-    } else {
-      alert('Location information not available');
-    }
+    if (listing.latitude && listing.longitude)
+      window.open(`https://www.google.com/maps?q=${listing.latitude},${listing.longitude}`, '_blank');
+    else if (listing.location)
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(listing.location)}`, '_blank');
+    else alert('Location information not available');
   };
 
-  // ✅ FIXED: Use correct business name everywhere
   const businessDisplayName = getBusinessDisplayName();
 
   return (
-    <div 
+    <div
       className="group bg-white rounded-xl shadow-md hover:shadow-lg border border-gray-200 overflow-hidden transition-all duration-300 hover:-translate-y-0.5 cursor-pointer"
       onClick={handleBusinessClick}
     >
       <div className="flex flex-col lg:flex-row h-full">
         {/* Image Section */}
         <div className="lg:w-56 lg:flex-shrink-0 h-40 lg:h-44 relative">
-          <ImageSlider 
-            images={listingImages} 
-            alt={businessDisplayName} 
-            fallbackImage={fallbackImage} 
-          />
+          <ImageSlider images={listingImages} alt={businessDisplayName} fallbackImage={fallbackImage} />
         </div>
 
         {/* Content Section */}
@@ -255,12 +154,11 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
                     </span>
                   )}
                 </div>
-                
-                {/* ✅ FIXED: Use correct business name */}
+
                 <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1 group-hover:text-[#058A07] transition-colors duration-300">
                   {businessDisplayName}
                 </h3>
-                
+
                 {/* Location */}
                 <div className="flex items-center gap-1 text-gray-600 mb-2">
                   <span className="text-sm">🏢</span>
@@ -272,14 +170,12 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
                   )}
                 </div>
               </div>
-              
-              {/* Rating Section */}
+
+              {/* Rating */}
               <div className="text-right bg-white rounded px-2 py-1.5 border border-gray-200 shadow-sm">
                 <div className="flex items-center gap-1 mb-0.5 justify-end">
                   {renderStars(listing.rating)}
-                  <span className="text-sm font-bold text-gray-900">
-                    {listing.rating}
-                  </span>
+                  <span className="text-sm font-bold text-gray-900">{listing.rating}</span>
                 </div>
                 <span className="text-[10px] text-gray-500 font-medium">
                   {listing.reviewCount?.toLocaleString() || 0} reviews
@@ -294,13 +190,13 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
               </p>
             </div>
 
-            {/* Services Tags */}
+            {/* Services */}
             <div className="mb-3">
               <h4 className="text-[10px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">SERVICES OFFERED</h4>
               <div className="flex flex-wrap gap-1">
-                {listing.services?.slice(0, 3).map((service: string, serviceIndex: number) => (
-                  <span 
-                    key={serviceIndex} 
+                {listing.services?.slice(0, 3).map((service: string, idx: number) => (
+                  <span
+                    key={idx}
                     className="inline-flex items-center px-1.5 py-0.5 bg-[#0076D7]/10 text-[#0076D7] rounded text-[10px] border border-[#0076D7]/20 font-medium"
                   >
                     {service}
@@ -322,52 +218,36 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
             {/* Action Buttons */}
             <div className="mt-auto">
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-1.5 mb-2">
-                {/* Call Button */}
-                {listing.phone ? (
-                  <button 
-                    onClick={handleCallClick}
-                    className="flex items-center justify-center gap-1 px-2 py-1.5 bg-[#058A07] text-white rounded-lg font-semibold hover:bg-[#047506] transition-all duration-300 shadow-sm hover:shadow-lg hover:scale-105 active:scale-95"
-                  >
-                    <span className="text-xs">📞</span>
-                    <span>Call Now</span>
-                  </button>
-                ) : (
-                  <button className="flex items-center justify-center gap-1 px-2 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm hover:shadow text-[10px]">
-                    <span className="text-xs">📞</span>
-                    <span>Show Number</span>
-                  </button>
-                )}
-                
-                {/* WhatsApp Button */}
-                {listing.phone ? (
-                  <button 
-                    onClick={handleWhatsAppClick}
-                    className="flex items-center justify-center gap-1 px-2 py-1.5 bg-[#058A07] text-white rounded-lg font-semibold hover:bg-[#047506] transition-all duration-300 shadow-sm hover:shadow-lg hover:scale-105 active:scale-95"
-                  >
-                    <span className="text-xs">💬</span>
-                    <span>WhatsApp</span>
-                  </button>
-                ) : (
-                  <button className="flex items-center justify-center gap-1 px-2 py-1.5 bg-gray-100 text-gray-500 rounded-lg font-semibold cursor-not-allowed text-[10px]">
-                    <span className="text-xs">💬</span>
-                    <span>WhatsApp</span>
-                  </button>
-                )}
-                
-                {/* Direction Button */}
-                <button 
+                <button
+                  onClick={handleCallClick}
+                  className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg font-semibold transition-all duration-300 shadow-sm hover:shadow-lg hover:scale-105 active:scale-95 ${
+                    listing.phone ? 'bg-[#058A07] text-white hover:bg-[#047506]' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+                  }`}
+                >
+                  <span className="text-xs">📞</span>
+                  <span>{listing.phone ? 'Call Now' : 'Show Number'}</span>
+                </button>
+
+                <button
+                  onClick={handleWhatsAppClick}
+                  className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg font-semibold transition-all duration-300 shadow-sm hover:shadow-lg hover:scale-105 active:scale-95 ${
+                    listing.phone ? 'bg-[#058A07] text-white hover:bg-[#047506]' : 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  <span className="text-xs">💬</span>
+                  <span>WhatsApp</span>
+                </button>
+
+                <button
                   onClick={handleDirectionClick}
                   className="flex items-center justify-center gap-1 px-2 py-1.5 bg-[#FF6B00] text-white rounded-lg font-semibold hover:bg-[#E55A00] transition-all duration-300 shadow-sm hover:shadow-lg hover:scale-105 active:scale-95"
-                  title={listing.latitude && listing.longitude ? 
-                    `Exact location: ${listing.latitude}, ${listing.longitude}` : 
-                    'Get directions'}
+                  title={listing.latitude && listing.longitude ? `Exact location: ${listing.latitude}, ${listing.longitude}` : 'Get directions'}
                 >
                   <span className="text-xs">📍</span>
                   <span className="text-[10px]">Direction</span>
                 </button>
-                
-                {/* Enquiry Button */}
-                <button 
+
+                <button
                   onClick={handleEnquiryClick}
                   className="flex items-center justify-center gap-1 px-2 py-1.5 bg-white border border-[#0076D7] text-[#0076D7] rounded-lg font-semibold hover:bg-[#0076D7]/5 transition-all duration-200 shadow-sm hover:shadow text-[10px]"
                 >
@@ -375,8 +255,7 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
                   <span>Send Enquiry</span>
                 </button>
 
-                {/* ✅ UPDATED: Review Button with proper business data */}
-                <button 
+                <button
                   onClick={handleReviewClick}
                   className="flex items-center justify-center gap-1 px-2 py-1.5 bg-[#0076D7] text-white rounded-lg font-semibold hover:bg-[#0066C4] transition-all duration-200 shadow-sm hover:shadow text-[10px]"
                   title={`Write review for ${businessDisplayName}`}
@@ -386,7 +265,6 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
                 </button>
               </div>
 
-              {/* Response Time */}
               {listing.respondsIn && (
                 <div className="flex items-center gap-1 text-[10px] text-[#058A07] font-semibold bg-[#058A07]/10 px-2 py-1 rounded border border-[#058A07]/20">
                   <span className="text-[10px]">⚡</span>
