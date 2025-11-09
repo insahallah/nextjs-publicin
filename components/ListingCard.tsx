@@ -4,17 +4,34 @@ import ImageSlider from './ImageSlider';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
+interface BusinessData {
+  id: string | number;
+  businessName?: string;
+  displayName: string;
+  description?: string;
+  phone?: string;
+  location?: string;
+  rating?: number;
+  reviewCount?: number;
+  services?: string[];
+  images?: string[];
+  isOpen?: boolean;
+  latitude?: string | number;
+  longitude?: string | number;
+  category?: string;
+}
+
 interface ListingCardProps {
   listing: any;
   fallbackImage: string;
   categoryName: string;
-  onReviewClick?: (businessData: ReturnType<typeof prepareBusinessData>) => void;
+  onReviewClick?: (businessData: BusinessData) => void;
 }
 
 // Helper to render stars
-function renderStars(rating: number) {
+function renderStars(rating: number = 0) {
   return Array.from({ length: 5 }, (_, i) => (
-    <span key={i} className={`text-xs ${i < Math.floor(rating) ? "text-yellow-500" : "text-gray-300"}`}>
+    <span key={i} className={`text-xs ${i < Math.floor(rating) ? 'text-yellow-500' : 'text-gray-300'}`}>
       ★
     </span>
   ));
@@ -46,11 +63,11 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
 
   // Get correct business name
   const getBusinessDisplayName = () => {
-    return listing.businessName || listing.displayName || listing.name || "Business";
+    return listing.businessName || listing.displayName || listing.name || 'Business';
   };
 
   // Prepare business data
-  const prepareBusinessData = () => ({
+  const prepareBusinessData = (): BusinessData => ({
     id: listing.id,
     businessName: listing.businessName,
     displayName: getBusinessDisplayName(),
