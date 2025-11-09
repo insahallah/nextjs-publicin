@@ -809,8 +809,14 @@ function getCategoryInfoSync(slugArray: string[]) {
     .split("-")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
-  return { id, name, path: slugArray.join('/') };
+
+  // Example defaults for location and area
+  const location = "Kisanpur"; 
+  const area = "DefaultArea";
+
+  return { id, name, path: slugArray.join("/"), location, area };
 }
+
 
 function getLocationInfo(slugArray: string[]) {
   const locationSlug = slugArray[0] || "kisanpur";
