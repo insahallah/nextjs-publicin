@@ -1,12 +1,18 @@
+// app/list/[...slug]/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
-import { notFound } from "next/navigation";
-import Header from "@/components/Header";
+import { notFound, useRouter } from "next/navigation";
+import SubHeader from "@/components/SubHeader";
 import Footer from "@/components/Footer";
 import ListingsContainer from "@/components/ListingsContainer";
 import ReviewModal from "@/components/ReviewModal";
 
+/**
+ * ListPage Component
+ * - Handles both category listings and business details pages
+ * - All data is dynamic from API
+ */
 export default function ListPage({ params }: { params: Promise<{ slug: string[] }> }) {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
@@ -16,172 +22,412 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [shouldReopenReviewAfterLogin, setShouldReopenReviewAfterLogin] = useState(false);
+  const [pageType, setPageType] = useState<'category' | 'business'>('category');
+  const [businessData, setBusinessData] = useState<any>(null);
+  const [selectedRating, setSelectedRating] = useState(0);
 
-  // ✅ FIXED: Listen for login success to auto-open review modal
+  // Listen for login success
   useEffect(() => {
-    console.log('🔄 Parent: Setting up userLoggedIn event listener');
-    
     const handleUserLoggedIn = (event: any) => {
-      console.log('🎯 Parent: userLoggedIn event received', {
-        shouldReopenReviewAfterLogin,
-        isReviewModalOpen,
-        eventDetail: event.detail
-      });
-      
       if (shouldReopenReviewAfterLogin && !isReviewModalOpen) {
-        console.log('🔄 Parent: Auto-opening review modal after login');
-        
-        // Multiple delays for reliability
         setTimeout(() => {
-          console.log('✅ Parent: Setting review modal open to TRUE');
           setIsReviewModalOpen(true);
           setShouldReopenReviewAfterLogin(false);
-        }, 1000);
-      } else {
-        console.log('❌ Parent: Not reopening - conditions not met', {
-          shouldReopenReviewAfterLogin,
-          isReviewModalOpen
-        });
+        }, 700);
       }
     };
 
     window.addEventListener('userLoggedIn', handleUserLoggedIn);
-    
-    return () => {
-      console.log('🧹 Parent: Cleaning up userLoggedIn event listener');
-      window.removeEventListener('userLoggedIn', handleUserLoggedIn);
-    };
+    return () => window.removeEventListener('userLoggedIn', handleUserLoggedIn);
   }, [shouldReopenReviewAfterLogin, isReviewModalOpen]);
 
-  // ✅ Handle login request from ReviewModal
   const handleLoginRequest = () => {
-    console.log('🔄 Parent: Login requested from ReviewModal');
     setShouldReopenReviewAfterLogin(true);
   };
 
-  // Review submit handler
-  const handleSubmitReview = async (reviewData: any) => {
+  // Robust method to get current user id from localStorage
+  const getCurrentUserId = (): string | null => {
+    if (typeof window === 'undefined') return null;
     try {
-      console.log('📝 Submitting review for:', selectedBusiness?.displayName);
-      const response = await fetch('https://allupipay.in/publicsewa/api/submit_review.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          businessId: selectedBusiness?.id,
-          businessName: selectedBusiness?.displayName,
-          ...reviewData
-        }),
-      });
-      
-      if (response.ok) {
-        alert('Review submitted successfully!');
-      } else {
-        throw new Error('Failed to submit review');
+      const keysToTry = ['currentUser', 'userData', 'user', 'authUser'];
+      for (const key of keysToTry) {
+        const item = localStorage.getItem(key);
+        if (!item) continue;
+        try {
+          const parsed = JSON.parse(item);
+          if (parsed?.id) return String(parsed.id);
+          if (parsed?.user_id) return String(parsed.user_id);
+          if (parsed?.uid) return String(parsed.uid);
+        } catch (e) {
+          const trimmed = item.trim();
+          if (/^\d+$/.test(trimmed)) return trimmed;
+        }
       }
-    } catch (error) {
-      alert('Error submitting review. Please try again.');
-      throw error;
+    } catch (err) {
+      console.error('Error reading user id from localStorage', err);
+    }
+    return null;
+  };
+
+  // -----------------------
+  // Review submit handler
+  // -----------------------
+  const handleSubmitReview = async (data: any) => {
+    const userId = getCurrentUserId();
+    if (!userId) {
+      alert("Please log in to submit a review!");
+      setShouldReopenReviewAfterLogin(true);
+      return;
+    }
+
+    if (!selectedBusiness?.id) {
+      alert("No business selected for review!");
+      return;
+    }
+
+    const payload = {
+      user_id: userId.toString(),
+      business_id: selectedBusiness.id.toString(),
+      rating: data.rating?.toString() || "0",
+      review: data.comment || "",
+    };
+
+    console.log("🚀 Final payload:", payload);
+
+    try {
+      const res = await fetch(
+        "https://allupipay.in/publicsewa/api/users/submit_review.php",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      console.log("📨 Response status:", res.status);
+
+      let response: any = {};
+      try {
+        response = await res.json();
+      } catch (jsonErr) {
+        console.error("❌ Error parsing JSON response:", jsonErr);
+        alert("Failed to submit review: Invalid server response");
+        return;
+      }
+
+      console.log("📩 API Response:", response);
+
+      if (!res.ok || response.status !== "success") {
+        throw new Error(response.message || "Request failed");
+      }
+
+      alert("✅ Review submitted successfully!");
+      closeReviewModal();
+    } catch (err: any) {
+      console.error("❌ Error submitting review:", err);
+      alert("Failed to submit review: " + err.message);
     }
   };
 
-  // Function to open review modal
   const openReviewModal = (business: any) => {
-    console.log('🔓 Parent: Manually opening review modal for:', business?.displayName);
     setSelectedBusiness(business);
     setIsReviewModalOpen(true);
     setShouldReopenReviewAfterLogin(false);
   };
 
-  // Function to close review modal
   const closeReviewModal = () => {
-    console.log('❌ Parent: Closing review modal');
     setIsReviewModalOpen(false);
     setShouldReopenReviewAfterLogin(false);
   };
 
-  // Search functionality
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     if (!query.trim()) {
       setFilteredListings(listings);
-    } else {
-      const filtered = listings.filter(listing =>
-        listing.displayName?.toLowerCase().includes(query.toLowerCase()) ||
-        listing.description?.toLowerCase().includes(query.toLowerCase()) ||
-        listing.location?.toLowerCase().includes(query.toLowerCase()) ||
-        listing.services?.some((service: string) => 
-          service.toLowerCase().includes(query.toLowerCase())
-        )
-      );
-      setFilteredListings(filtered);
+      return;
     }
+    const q = query.toLowerCase();
+    const filtered = listings.filter(listing =>
+      (listing.displayName || "").toLowerCase().includes(q) ||
+      (listing.description || "").toLowerCase().includes(q) ||
+      (listing.location || "").toLowerCase().includes(q) ||
+      (Array.isArray(listing.services) && listing.services.some((s: string) => s.toLowerCase().includes(q)))
+    );
+    setFilteredListings(filtered);
   };
 
-  // Fetch data on component mount
+  // Determine if this is a category page or business details page
   useEffect(() => {
-    const fetchData = async () => {
+    const determinePageType = async () => {
       try {
         setLoading(true);
         const { slug } = await params;
-        
+
+        console.log('🔍 URL segments received:', slug);
+
         if (!slug || !Array.isArray(slug)) {
+          console.log('❌ No slug or invalid slug');
           notFound();
           return;
         }
 
-        const { id, name, path } = await getCategoryInfo(slug);
-        const { location, area } = getLocationInfo(slug);
+        // Check if this is a business details page
+        // Business URLs have pattern: /list/category-path/business-name/business-id
+        if (slug.length >= 2) {
+          const lastSegment = slug[slug.length - 1];
+          const secondLastSegment = slug[slug.length - 2];
 
-        if (!id) {
-          notFound();
-          return;
+          console.log('🔍 Checking segments:', { lastSegment, secondLastSegment });
+
+          // Check if last segment is a numeric ID (business ID)
+          if (/^\d+$/.test(lastSegment)) {
+            // This is a business details page
+            setPageType('business');
+            const businessId = lastSegment;
+            const businessName = secondLastSegment;
+            const categorySlug = slug.slice(0, -2); // Remove business name and ID
+
+            console.log('🏢 Business page detected:', {
+              businessId,
+              businessName,
+              categorySlug,
+              fullSlug: slug
+            });
+
+            await fetchBusinessDetails(businessId, categorySlug);
+            return;
+          }
         }
 
-        // Fetch listings
-        const listingsData = await fetchListings(slug);
-        
-        // Generate dynamic content
-        const categoryIcon = getCategoryIcon(name);
-        const categoryDescription = getCategoryDescription(name, location, area);
-        const pageTitle = `${name} in ${location}, ${area}`;
+        // Otherwise, it's a category listings page
+        console.log('📁 Category page detected');
+        setPageType('category');
+        await fetchCategoryData(slug);
 
-        // Process listings with images
-        const displayListings = listingsData.map((listing, index) => ({ 
-          ...listing, 
-          images: getListingImagesFromAPI(listing),
-          badge: getBadgeType(index),
-          badgeColor: getBadgeColor(index),
-          services: listing.services && listing.services.length > 0 ? listing.services : getDefaultServices(name, index)
-        }));
-
-        setPageData({
-          id, name, path, location, area,
-          categoryIcon, categoryDescription, pageTitle
-        });
-        setListings(displayListings);
-        setFilteredListings(displayListings);
-        
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error determining page type:', error);
         notFound();
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    determinePageType();
   }, [params]);
 
-  // Debug current state
-  useEffect(() => {
-    console.log('🔍 Parent State:', {
-      isReviewModalOpen,
-      shouldReopenReviewAfterLogin,
-      selectedBusiness: selectedBusiness?.displayName
+  // Fetch business details - COMPLETELY DYNAMIC
+  const fetchBusinessDetails = async (businessId: string, categorySlug: string[]) => {
+    try {
+      console.log('🔄 Fetching DYNAMIC business details for ID:', businessId);
+
+      // METHOD 1: Try to fetch business directly by ID
+      const directBusinessData = await fetchBusinessDirectly(businessId);
+      if (directBusinessData) {
+        console.log('✅ Business found via direct API call');
+        formatAndSetBusinessData(directBusinessData, categorySlug);
+        return;
+      }
+
+      // METHOD 2: Fetch from category listings and search
+      console.log('🔄 Trying category listings search...');
+      const listingsData = await fetchListings(categorySlug);
+      console.log('📊 Listings data received:', listingsData);
+
+      if (listingsData && listingsData.length > 0) {
+        // Search through all possible ID fields
+        const foundBusiness = listingsData.find(listing => {
+          const possibleIds = [
+            listing.id,
+            listing.business_id,
+            listing.user_id,
+            listing.businessId
+          ];
+          return possibleIds.some(id => id && String(id) === String(businessId));
+        });
+
+        if (foundBusiness) {
+          console.log('✅ Business found in category listings');
+          formatAndSetBusinessData(foundBusiness, categorySlug);
+          return;
+        }
+      }
+
+      // METHOD 3: Try all categories search
+      console.log('🔄 Trying all categories search...');
+      const allCategoriesBusiness = await searchAllCategoriesForBusiness(businessId);
+      if (allCategoriesBusiness) {
+        console.log('✅ Business found in all categories search');
+        formatAndSetBusinessData(allCategoriesBusiness, categorySlug);
+        return;
+      }
+
+      // If all methods fail, show not found
+      console.log('❌ Business not found in any data source');
+      notFound();
+
+    } catch (error) {
+      console.error('Error fetching business details:', error);
+      notFound();
+    }
+  };
+
+  // METHOD 1: Fetch business directly by ID
+  const fetchBusinessDirectly = async (businessId: string): Promise<any> => {
+    try {
+      // Try your main business endpoint
+      const formData = new FormData();
+      formData.append('business_id', businessId);
+
+      const res = await fetch(
+        "https://allupipay.in/publicsewa/api/users/get-business-by-id-for-web.php",
+        {
+          method: "POST",
+          body: formData,
+          cache: "no-store"
+        }
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.status === "success") {
+          return data.data;
+        }
+      }
+
+      // Try alternative endpoint
+      const res2 = await fetch(
+        `https://allupipay.in/publicsewa/api/users/business-details.php?id=${businessId}`,
+        { cache: "no-store" }
+      );
+
+      if (res2.ok) {
+        const data = await res2.json();
+        if (data && data.status === "success") {
+          return data.data;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error in direct business fetch:', error);
+      return null;
+    }
+  };
+
+  // METHOD 3: Search through all categories for the business
+  const searchAllCategoriesForBusiness = async (businessId: string): Promise<any> => {
+    try {
+      // Get all main categories first
+      const categories = await fetchAndFormatCategories();
+
+      // Search in each category
+      for (const category of categories.slice(0, 5)) { // Limit to first 5 categories for performance
+        try {
+          const categorySlug = category.fullPath.split('/');
+          const listingsData = await fetchListings(categorySlug);
+
+          const foundBusiness = listingsData.find(listing => {
+            const possibleIds = [
+              listing.id,
+              listing.business_id,
+              listing.user_id,
+              listing.businessId
+            ];
+            return possibleIds.some(id => id && String(id) === String(businessId));
+          });
+
+          if (foundBusiness) {
+            console.log(`✅ Business found in category: ${category.name}`);
+            return foundBusiness;
+          }
+        } catch (error) {
+          console.error(`Error searching in category ${category.name}:`, error);
+          continue;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error in all categories search:', error);
+      return null;
+    }
+  };
+
+  // Format and set business data - DYNAMIC ONLY
+  const formatAndSetBusinessData = (business: any, categorySlug: string[]) => {
+    if (!business) {
+      console.log('❌ No business data to format');
+      notFound();
+      return;
+    }
+
+    console.log('🔄 Formatting business data:', business);
+
+    // Use ONLY dynamic data from API
+    const businessDetails = {
+      ...business,
+      id: business.id || business.business_id || business.user_id,
+      displayName: business.businessName || business.displayName || business.name || "Business",
+      location: [business.village, business.district, business.state].filter(Boolean).join(", ") || "Location not available",
+      phone: business.mobile && business.mobile !== "Unknown" ? business.mobile : null,
+      rating: business.averageRating || business.rating || 0,
+      reviewCount: business.ratingCount || business.reviewCount || 0,
+      services: business.services || [],
+      images: business.images || [],
+      isOpen: business.isOpen !== undefined ? business.isOpen : true,
+      description: business.description || `Welcome to ${business.businessName || "our business"}. We provide quality services to our customers.`,
+      latitude: business.latitude,
+      longitude: business.longitude
+    };
+
+    setBusinessData(businessDetails);
+
+    // Set page data for breadcrumbs
+    const { name, location, area } = getCategoryInfoSync(categorySlug);
+    setPageData({
+      name: name || "Category",
+      location: location || "Kisanpur",
+      area: area || "Lakhisarai",
+      categorySlug: categorySlug.join('/')
     });
-  }, [isReviewModalOpen, shouldReopenReviewAfterLogin, selectedBusiness]);
+  };
+
+  // Fetch category data
+  const fetchCategoryData = async (slugArray: string[]) => {
+    try {
+      const { id, name, path } = await getCategoryInfo(slugArray);
+      const { location, area } = getLocationInfo(slugArray);
+
+      if (!id) {
+        notFound();
+        return;
+      }
+
+      const listingsData = await fetchListings(slugArray);
+
+      const displayListings = listingsData.map((listing, index) => ({
+        ...listing,
+        images: getListingImagesFromAPI(listing),
+        badge: getBadgeType(index),
+        badgeColor: getBadgeColor(index),
+        services: listing.services && listing.services.length > 0 ? listing.services : getDefaultServices(name, index)
+      }));
+
+      const categoryIcon = getCategoryIcon(name);
+      const categoryDescription = getCategoryDescription(name, location, area);
+      const pageTitle = `${name} in ${location}, ${area}`;
+
+      setPageData({ id, name, path, location, area, categoryIcon, categoryDescription, pageTitle });
+      setListings(displayListings);
+      setFilteredListings(displayListings);
+    } catch (error) {
+      console.error('Error fetching category data:', error);
+      notFound();
+    }
+  };
 
   if (loading) {
     return (
@@ -194,129 +440,267 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     );
   }
 
-  if (!pageData) {
-    return notFound();
+  // Render business details page
+  if (pageType === 'business' && businessData) {
+    return (
+      <div className="bg-gray-50 min-h-screen">
+        <SubHeader />
+
+        <main className="container mx-auto px-4 py-8">
+          {/* Breadcrumb */}
+          <div className="mb-6">
+            <button
+              onClick={() => window.history.back()}
+              className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2 mb-4"
+            >
+              ← Back to {pageData?.name || 'listings'}
+            </button>
+
+            {pageData && (
+              <div className="text-sm text-gray-600">
+                {pageData.location} › {pageData.area} › {pageData.name} › {businessData.displayName}
+              </div>
+            )}
+          </div>
+
+          {/* Business Header */}
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div className="flex flex-col md:flex-row gap-6">
+              {/* Business Image with Action Buttons Below */}
+              <div className="md:w-1/3">
+                <img
+                  src={businessData.images && businessData.images[0] ?
+                    (typeof businessData.images[0] === 'string' ?
+                      businessData.images[0] :
+                      businessData.images[0].path ?
+                        `https://allupipay.in/publicsewa/images/${businessData.images[0].path}` :
+                        "/default-listing.jpg"
+                    ) : "/default-listing.jpg"
+                  }
+                  alt={businessData.displayName}
+                  className="w-full h-64 object-cover rounded-lg mb-4"
+                />
+
+                {/* Combined Action Buttons Section */}
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <h3 className="font-semibold text-lg mb-3 text-gray-800">Quick Actions</h3>
+                  <div className="flex flex-col gap-3">
+                    {businessData.phone ? (
+                      <>
+                        {/* Call Now Button */}
+                        <button
+                          onClick={() => window.open(`tel:${businessData.phone}`)}
+                          className="w-full bg-green-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <i className="fas fa-phone"></i>
+                          Call Now
+                        </button>
+
+                        {/* WhatsApp Button - Simple Green Style */}
+                        <button
+                          onClick={() => {
+                            const cleanPhone = businessData.phone.replace(/\D/g, '');
+                            const message = `Hello ${businessData.displayName}!\n\nI found your business listing and I'm interested in your services. Could you please provide me with more information?\n\nThank you!`;
+                            const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+                            window.open(whatsappUrl, '_blank');
+                          }}
+                          className="w-full bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
+                        >
+                          WhatsApp
+                        </button>
+                      </>
+                    ) : (
+                      <div className="text-center text-gray-500 py-3">
+                        Phone number not available for contact
+                      </div>
+                    )}
+
+                    {/* Get Directions Button */}
+                    <button
+                      onClick={() => {
+                        if (businessData.latitude && businessData.longitude) {
+                          const mapsUrl = `https://www.google.com/maps?q=${businessData.latitude},${businessData.longitude}`;
+                          window.open(mapsUrl, '_blank');
+                        } else if (businessData.location) {
+                          const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(businessData.location)}`;
+                          window.open(mapsUrl, '_blank');
+                        } else {
+                          alert('Location information not available');
+                        }
+                      }}
+                      className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <i className="fas fa-map-marker-alt"></i>
+                      Get Directions
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Business Info */}
+              <div className="md:w-2/3">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                  {businessData.displayName}
+                </h1>
+
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <span key={i} className={`text-lg ${i < Math.floor(businessData.rating || 0) ? "text-yellow-500" : "text-gray-300"}`}>
+                        ★
+                      </span>
+                    ))}
+                    <span className="text-lg font-bold ml-2">{businessData.rating || 0}</span>
+                    <span className="text-gray-600">({businessData.reviewCount || 0} reviews)</span>
+                  </div>
+
+                  {businessData.isOpen ? (
+                    <span className="text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm font-medium">
+                      🟢 Open Now
+                    </span>
+                  ) : (
+                    <span className="text-red-600 bg-red-50 px-3 py-1 rounded-full text-sm font-medium">
+                      🔴 Closed
+                    </span>
+                  )}
+                </div>
+
+                {/* Location */}
+                {businessData.location && (
+                  <div className="flex items-center gap-2 text-gray-600 mb-4">
+                    <span>📍</span>
+                    <span>{businessData.location}</span>
+                  </div>
+                )}
+
+                {/* Phone */}
+                {businessData.phone ? (
+                  <div className="flex items-center gap-2 text-gray-600 mb-4">
+                    <span>📞</span>
+                    <span>{businessData.phone}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-gray-500 mb-4">
+                    <span>📞</span>
+                    <span>Phone number not available</span>
+                  </div>
+                )}
+
+                {/* Description */}
+                {businessData.description && (
+                  <div className="mb-4">
+                    <h3 className="font-semibold text-lg mb-2">About</h3>
+                    <p className="text-gray-700 leading-relaxed">{businessData.description}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Services Section */}
+          {businessData.services && businessData.services.length > 0 && (
+            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+              <h3 className="font-semibold text-xl mb-4">Services Offered</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {businessData.services.map((service: string, index: number) => (
+                  <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <span className="text-blue-800 font-medium">{service}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+         {/* Rating & Review Section */}
+<div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+  <h3 className="font-semibold text-xl mb-6">Rate & Review</h3>
+
+  {/* Big Star Rating */}
+  <div className="flex flex-col items-center justify-center mb-6">
+    <div className="flex items-center gap-2 mb-4">
+      {Array.from({ length: 5 }, (_, i) => (
+        <span
+          key={i}
+          onClick={() => {
+            const userId = getCurrentUserId();
+            if (userId) {
+              setSelectedRating(i + 1);
+              openReviewModal(businessData);
+            } else {
+              alert("Please log in to submit a review!");
+              setShouldReopenReviewAfterLogin(true);
+            }
+          }}
+          className={`cursor-pointer text-5xl transition-all duration-200 transform hover:scale-110 ${
+            i < selectedRating 
+              ? "text-yellow-500 drop-shadow-lg" 
+              : "text-gray-300 hover:text-yellow-300"
+          }`}
+        >
+          ★
+        </span>
+      ))}
+    </div>
+    <span className="text-gray-600 text-lg font-medium">
+      {selectedRating > 0 ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}` : 'Click stars to rate'}
+    </span>
+  </div>
+
+  {/* Current Rating Display */}
+  <div className="flex items-center justify-center gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+    <div className="text-center">
+      <div className="text-4xl font-bold text-gray-900">{businessData.rating || 0}</div>
+      <div className="flex items-center gap-1">
+        {Array.from({ length: 5 }, (_, i) => (
+          <span
+            key={i}
+            className={`text-lg ${
+              i < Math.floor(businessData.rating || 0) ? "text-yellow-500" : "text-gray-300"
+            }`}
+          >
+            ★
+          </span>
+        ))}
+      </div>
+      <div className="text-gray-600 text-sm mt-1">
+        ({businessData.reviewCount || 0} reviews)
+      </div>
+    </div>
+  </div>
+
+
+</div>
+
+        </main>
+
+        <Footer />
+
+        {/* Review Modal */}
+        <ReviewModal
+          isOpen={isReviewModalOpen}
+          onClose={closeReviewModal}
+          onSubmit={handleSubmitReview}
+          businessName={selectedBusiness?.displayName}
+          businessImages={selectedBusiness?.images || []}
+          onLoginRequest={handleLoginRequest}
+          initialRating={selectedRating}
+        />
+      </div>
+    );
   }
+
+  // Render category listings page
+  if (!pageData) return notFound();
 
   const { name, location, area, categoryIcon, categoryDescription, pageTitle } = pageData;
   const fallbackImage = "/default-listing.jpg";
 
   return (
     <div id="page" className="bg-gray-50 min-h-screen">
-      <Header />
-
+      <SubHeader />
       <main className="theia-exception">
-        {/* Breadcrumb */}
-        <div className="bg-white border-b border-gray-200 py-3 md:py-4 shadow-sm">
-          <div className="container mx-auto px-3 sm:px-4">
-            <nav className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm overflow-x-auto">
-              <span className="text-gray-500 hover:text-green-600 cursor-pointer transition-colors whitespace-nowrap">{area}</span>
-              <span className="text-gray-400">›</span>
-              <span className="text-gray-500 hover:text-green-600 cursor-pointer transition-colors whitespace-nowrap">{name} in {area}</span>
-              <span className="text-gray-400">›</span>
-              <span className="text-gray-500 hover:text-green-600 cursor-pointer transition-colors whitespace-nowrap">{location}</span>
-              <span className="text-gray-400">›</span>
-              <span className="text-green-600 font-semibold whitespace-nowrap">{filteredListings.length}+ Listings</span>
-            </nav>
-          </div>
-        </div>
-
-        {/* Page Header with Search Bar */}
-        <div className="bg-white border-b border-gray-200">
-          <div className="container mx-auto px-3 sm:px-4">
-            {/* Main Header Section */}
-            <div className="py-6 md:py-8">
-              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 md:gap-6">
-                <div className="flex-1 w-full">
-                  <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
-                    <span className="text-2xl md:text-4xl">{categoryIcon}</span>
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 break-words">
-                      {pageTitle}
-                    </h1>
-                  </div>
-                  <p className="text-gray-600 text-sm sm:text-base md:text-lg mb-3 md:mb-0">{categoryDescription}</p>
-                  
-                  {/* Quick Stats */}
-                  <div className="flex flex-wrap gap-3 md:gap-6 mt-3 md:mt-4">
-                    <div className="flex items-center gap-1 md:gap-2">
-                      <div className="w-2 h-2 md:w-3 md:h-3 bg-green-500 rounded-full"></div>
-                      <span className="text-xs md:text-sm text-gray-600">{filteredListings.filter(l => l.isOpen).length} Open Now</span>
-                    </div>
-                    <div className="flex items-center gap-1 md:gap-2">
-                      <div className="w-2 h-2 md:w-3 md:h-3 bg-yellow-500 rounded-full"></div>
-                      <span className="text-xs md:text-sm text-gray-600">{filteredListings.filter(l => l.rating >= 4.5).length} Highly Rated</span>
-                    </div>
-                    <div className="flex items-center gap-1 md:gap-2">
-                      <div className="w-2 h-2 md:w-3 md:h-3 bg-blue-500 rounded-full"></div>
-                      <span className="text-xs md:text-sm text-gray-600">{filteredListings.length} {name} in {location}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Search Bar Section */}
-            <div className="pb-6 md:pb-8 border-t border-gray-100 pt-6 md:pt-8 mx-2.5">
-              <div className="w-full">
-                <div className="text-center mb-6">
-                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
-                    Find the Perfect {name}
-                  </h2>
-                  <p className="text-gray-600 text-sm sm:text-base">
-                    Search by business name, services, location, or description
-                  </p>
-                </div>
-                
-                <div className="relative w-full">
-                  <div className="relative flex items-center w-full">
-                    <svg className="absolute left-4 h-5 w-5 text-gray-400 z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    
-                    <input
-                      type="text"
-                      placeholder={`Search ${name} in ${location}...`}
-                      value={searchQuery}
-                      onChange={(e) => handleSearch(e.target.value)}
-                      className="w-full pl-12 pr-12 py-4 border border-gray-300 rounded-2xl focus:outline-none focus:ring-3 focus:ring-green-500 focus:border-green-500 transition-all duration-300 shadow-lg text-gray-900 placeholder-gray-500 text-base"
-                    />
-                    
-                    {searchQuery && (
-                      <button
-                        onClick={() => handleSearch('')}
-                        className="absolute right-4 p-1 rounded-full hover:bg-gray-100 transition-colors duration-200 z-10"
-                      >
-                        <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                  
-                  {/* Search Results Info */}
-                  {searchQuery && (
-                    <div className="mt-4 text-center">
-                      <p className="text-sm text-gray-600 bg-white inline-block px-4 py-2 rounded-full border border-gray-200 shadow-sm">
-                        <span className="font-semibold text-green-600">{filteredListings.length}</span> results found for 
-                        <span className="font-medium text-gray-900"> "{searchQuery}"</span>
-                      </p>
-                      <button
-                        onClick={() => handleSearch('')}
-                        className="mt-2 text-sm text-green-600 hover:text-green-700 font-medium transition-colors duration-200"
-                      >
-                        Clear search
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Listings Container */}
         <div className="container mx-auto px-3 sm:px-4 py-6 md:py-8">
-          <ListingsContainer 
+          <ListingsContainer
             initialListings={filteredListings}
             categoryName={name}
             location={location}
@@ -326,7 +710,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         </div>
       </main>
 
-      {/* Review Modal */}
       <ReviewModal
         isOpen={isReviewModalOpen}
         onClose={closeReviewModal}
@@ -341,67 +724,43 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   );
 }
 
-// Clean image extraction
+/* -------------------- HELPER FUNCTIONS -------------------- */
+
 function getListingImagesFromAPI(listing: any): string[] {
   if (listing.images && Array.isArray(listing.images) && listing.images.length > 0) {
     const validImagePaths = listing.images
-      .filter((img: any) => img && img.path && typeof img.path === 'string' && img.path.trim() !== '')
+      .filter((img: any) => img && img.path)
       .map((img: any) => getImageUrl(img.path));
-    
-    if (validImagePaths.length > 0) {
-      return validImagePaths;
-    }
+    if (validImagePaths.length > 0) return validImagePaths;
   }
-
-  if (listing.imageUrl && listing.imageUrl.trim() !== '') {
-    return [listing.imageUrl];
-  }
-
+  if (listing.imageUrl) return [listing.imageUrl];
   return ["/default-listing.jpg"];
 }
 
-// Clean URL construction
 function getImageUrl(imagePath?: string): string {
-  if (!imagePath) {
-    return "/default-listing.jpg";
-  }
-  
-  if (imagePath.startsWith('post_images/')) {
-    return `https://allupipay.in/publicsewa/images/${imagePath}`;
-  } else if (imagePath.startsWith('https://')) {
-    return imagePath;
-  } else {
-    return `https://allupipay.in/publicsewa/images/${imagePath.replace(/^[\\/]+/, "")}`;
-  }
+  if (!imagePath) return "/default-listing.jpg";
+  if (imagePath.startsWith('post_images/')) return `https://allupipay.in/publicsewa/images/${imagePath}`;
+  if (imagePath.startsWith('https://')) return imagePath;
+  return `https://allupipay.in/publicsewa/images/${imagePath.replace(/^[\\/]+/, "")}`;
 }
 
-// Helper functions
 async function fetchAndFormatCategories(): Promise<{ fullPath: string; name: string }[]> {
   try {
-    const res = await fetch("https://allupipay.in/publicsewa/api/main-search.php", {
-      cache: "no-store",
-    });
-
+    const res = await fetch("https://allupipay.in/publicsewa/api/main-search.php", { cache: "no-store" });
     if (!res.ok) throw new Error(`Failed: ${res.status}`);
-
     const data = await res.json();
     const formattedCategories: { fullPath: string; name: string }[] = [];
-
     const categories = data?.data?.categories || [];
-
     categories.forEach((mainCat: any) => {
       if (!mainCat) return;
-
       const mainName = mainCat.category_name || mainCat.name || "Unknown Category";
       const mainSlug = mainCat.slug || mainName.toLowerCase().replace(/\s+/g, "-");
       const mainId = `cat${mainCat.id}`;
-
       const mainPath = `${mainSlug}/${mainId}`;
       formattedCategories.push({ fullPath: mainPath, name: mainName });
 
       (mainCat.subcategories || []).forEach((subCat: any) => {
         if (!subCat) return;
-
         const subName = subCat.subcategory_name || subCat.name || "Unknown Subcategory";
         const subSlug = subCat.slug || subName.toLowerCase().replace(/\s+/g, "-");
         const subId = `sub${subCat.id}`;
@@ -418,9 +777,9 @@ async function fetchAndFormatCategories(): Promise<{ fullPath: string; name: str
         });
       });
     });
-
     return formattedCategories;
   } catch (error) {
+    console.error(error);
     return [];
   }
 }
@@ -429,55 +788,47 @@ async function getCategoryInfo(slugArray: string[]) {
   const categories = await fetchAndFormatCategories();
   const path = slugArray.join("/");
   const category = categories.find((cat) => cat.fullPath === path);
-
   if (category) {
     const id = category.fullPath.split("/").pop() || "";
     return { id, name: category.name, path };
   }
-
   const id = slugArray.at(-1) || "";
   const nameSlug = slugArray.at(-2) || slugArray[0];
   const name = nameSlug
     .split("-")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
-
   return { id, name, path };
+}
+
+// Synchronous version for business details
+function getCategoryInfoSync(slugArray: string[]) {
+  const id = slugArray.at(-1) || "";
+  const nameSlug = slugArray.at(-2) || slugArray[0];
+  const name = nameSlug
+    .split("-")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+  return { id, name, path: slugArray.join('/') };
 }
 
 function getLocationInfo(slugArray: string[]) {
   const locationSlug = slugArray[0] || "kisanpur";
   const areaSlug = slugArray[1] || "lakhisarai";
-  
-  const location = locationSlug
-    .split("-")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-    
-  const area = areaSlug
-    .split("-")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-
+  const location = locationSlug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  const area = areaSlug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
   return { location, area };
 }
 
 function getCategoryDescription(categoryName: string, location: string, area: string) {
   const descriptions: { [key: string]: string } = {
-    "beauty parlours": `Discover the best beauty services and salons near you in ${location}, ${area}. Find top-rated beauty parlours for all your beauty needs.`,
-    "doctors": `Find the best doctors and medical specialists in ${location}, ${area}. Book appointments with top-rated healthcare professionals.`,
-    "hospitals": `Discover leading hospitals and healthcare centers in ${location}, ${area}. Find emergency care, specialists, and medical facilities.`,
-    "restaurants": `Explore the finest restaurants and eateries in ${location}, ${area}. Discover delicious cuisine and dining experiences.`,
-    "hotels": `Find the perfect hotels and accommodations in ${location}, ${area}. Book your stay with top-rated hospitality services.`,
-    "electricians": `Hire reliable electricians and electrical services in ${location}, ${area}. Find experts for all your electrical needs.`,
-    "plumbers": `Find professional plumbers and plumbing services in ${location}, ${area}. Get quick solutions for all plumbing issues.`,
-    "carpenters": `Discover skilled carpenters and woodwork services in ${location}, ${area}. Quality craftsmanship for your projects.`,
-    "teachers": `Find qualified teachers and tutors in ${location}, ${area}. Get personalized learning and educational support.`,
-    "drivers": `Hire professional drivers and chauffeur services in ${location}, ${area}. Safe and reliable transportation solutions.`
+    "beauty parlours": `Discover the best beauty services and salons near you in ${location}, ${area}.`,
+    "doctors": `Find top doctors and specialists in ${location}, ${area}.`,
+    "hospitals": `Find top hospitals and healthcare centers in ${location}, ${area}.`,
+    "restaurants": `Explore fine restaurants in ${location}, ${area}.`,
   };
-
   const lowerCategory = categoryName.toLowerCase();
-  return descriptions[lowerCategory] || `Discover the best ${categoryName.toLowerCase()} services in ${location}, ${area}. Find top-rated professionals and service providers near you.`;
+  return descriptions[lowerCategory] || `Discover the best ${categoryName} services in ${location}, ${area}.`;
 }
 
 function getCategoryIcon(categoryName: string) {
@@ -493,7 +844,6 @@ function getCategoryIcon(categoryName: string) {
     "teachers": "👩‍🏫",
     "drivers": "🚗"
   };
-
   const lowerCategory = categoryName.toLowerCase();
   return icons[lowerCategory] || "🏢";
 }
@@ -501,38 +851,23 @@ function getCategoryIcon(categoryName: string) {
 async function fetchListings(slugArray: string[]) {
   try {
     const lastPart = slugArray[slugArray.length - 1];
-
     const formData = new FormData();
-
-    if (lastPart.startsWith("child")) {
-      formData.append("childrenId", lastPart);
-    } else if (lastPart.startsWith("sub")) {
-      formData.append("subcategoryId", lastPart);
-    } else if (lastPart.startsWith("cat")) {
-      formData.append("category", lastPart);
-    }
+    if (lastPart.startsWith("child")) formData.append("childrenId", lastPart);
+    else if (lastPart.startsWith("sub")) formData.append("subcategoryId", lastPart);
+    else if (lastPart.startsWith("cat")) formData.append("category", lastPart);
 
     const res = await fetch(
       "https://allupipay.in/publicsewa/api/users/main-search-display-request-for-web.php",
-      {
-        method: "POST",
-        body: formData,
-        cache: "no-store",
-      }
+      { method: "POST", body: formData, cache: "no-store" }
     );
 
     if (!res.ok) return [];
 
     const data = await res.json();
-
     let listings: any[] = [];
     if (Array.isArray(data)) listings = data;
     else if (data?.data && Array.isArray(data.data)) listings = data.data;
-    else
-      listings = Object.values(data)
-        .flat()
-        .filter((v) => Array.isArray(v))
-        .flat();
+    else listings = Object.values(data).flat().filter((v) => Array.isArray(v)).flat();
 
     return listings
       .filter((l) => l.status === 1)
@@ -551,6 +886,7 @@ async function fetchListings(slugArray: string[]) {
         isOpen: true,
       }));
   } catch (e) {
+    console.error('Error fetching listings:', e);
     return [];
   }
 }
@@ -593,10 +929,5 @@ function getDefaultServices(categoryName: string, index: number): string[] {
 
   const defaultServices = ["Service 1", "Service 2", "Service 3", "Professional Services"];
   const categoryServices = serviceMap[categoryName.toLowerCase()];
-  
-  if (categoryServices) {
-    return categoryServices[index % categoryServices.length];
-  }
-  
-  return defaultServices;
+  return categoryServices ? categoryServices[index % categoryServices.length] : defaultServices;
 }
