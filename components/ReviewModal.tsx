@@ -10,6 +10,7 @@ interface ReviewModalProps {
   businessName?: string;
   businessImages?: any[];
   onLoginRequest?: () => void;
+  initialRating?: number; // ✅ Added initialRating prop
 }
 
 export default function ReviewModal({ 
@@ -18,9 +19,10 @@ export default function ReviewModal({
   onSubmit, 
   businessName = "Business",
   businessImages = [],
-  onLoginRequest 
+  onLoginRequest,
+  initialRating = 0 // ✅ default value
 }: ReviewModalProps) {
-  const [rating, setRating] = useState(0);
+  const [rating, setRating] = useState(initialRating);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -40,7 +42,6 @@ export default function ReviewModal({
 
     checkLoginStatus();
     
-    // Listen for login events
     const handleUserLoggedIn = () => {
       setIsLoggedIn(true);
       setShowLoginPrompt(false);
@@ -53,11 +54,11 @@ export default function ReviewModal({
   // Reset form when modal opens/closes
   useEffect(() => {
     if (isOpen) {
-      setRating(0);
+      setRating(initialRating); // ✅ set rating from initialRating
       setComment('');
       setHoverRating(0);
     }
-  }, [isOpen]);
+  }, [isOpen, initialRating]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +82,7 @@ export default function ReviewModal({
       });
       
       // Reset form
-      setRating(0);
+      setRating(initialRating);
       setComment('');
       setHoverRating(0);
     } catch (error) {
@@ -193,7 +194,7 @@ export default function ReviewModal({
               id="comment"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Tell others about your experience... What did you like? What could be improved?"
+              placeholder="Tell others about your experience..."
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
             />
@@ -201,21 +202,6 @@ export default function ReviewModal({
               {comment.length}/500 characters
             </div>
           </div>
-
-          {/* User Info (if logged in) */}
-          {isLoggedIn && (
-            <div className="mb-6 p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                  U
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">You</p>
-                  <p className="text-xs text-gray-500">Review will be posted publicly</p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Submit Button */}
           <div className="flex gap-3">
@@ -231,26 +217,9 @@ export default function ReviewModal({
               disabled={isSubmitting || rating === 0}
               className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Submitting...
-                </div>
-              ) : (
-                'Submit Review'
-              )}
+              {isSubmitting ? 'Submitting...' : 'Submit Review'}
             </button>
           </div>
-
-          {/* Login Reminder */}
-          {!isLoggedIn && !showLoginPrompt && (
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-              <div className="flex items-center gap-2 text-sm text-blue-700">
-                <span>🔒</span>
-                <span>You'll need to login to submit your review</span>
-              </div>
-            </div>
-          )}
         </form>
       </div>
     </div>
