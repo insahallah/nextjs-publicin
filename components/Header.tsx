@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import AwesomeLogin from './AwesomeLogin'; 
+import AwesomeSignup from './AwesomeSignup'; 
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -9,21 +11,6 @@ const Header = () => {
   const [user, setUser] = useState<any>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [loginForm, setLoginForm] = useState({
-    mobile: '',
-    password: ''
-  });
-  const [registerForm, setRegisterForm] = useState({
-    fullName: '',
-    mobile: '',
-    pinCode: '',
-    city: '',
-    village: '',
-    block: '',
-    state: '',
-    password: '',
-    confirmPassword: ''
-  });
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -43,7 +30,7 @@ const Header = () => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('authToken');
       const userData = localStorage.getItem('userData');
-      
+
       if (token && userData) {
         setIsLoggedIn(true);
         setUser(JSON.parse(userData));
@@ -62,7 +49,7 @@ const Header = () => {
     };
 
     window.addEventListener('openLoginModal', handleOpenLoginModal);
-    
+
     return () => {
       window.removeEventListener('openLoginModal', handleOpenLoginModal);
     };
@@ -78,10 +65,10 @@ const Header = () => {
 
         // Check if user is logged in
         checkAuthStatus();
-        
+
         // Small delay to ensure everything is loaded properly
         await new Promise(resolve => setTimeout(resolve, 100));
-        
+
       } catch (error) {
         console.error('Initialization error:', error);
       } finally {
@@ -104,21 +91,18 @@ const Header = () => {
     setIsMenuOpen(false);
   };
 
-  // REAL LOGIN API CALL - FIXED FOR CORRECT API RESPONSE
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // ✅ UPDATED: Awesome Login Handler - Mobile number field use karo
+  const handleAwesomeLogin = async (loginData: any) => {
     setIsLoggingIn(true);
+    console.log('🔐 Awesome Login data:', loginData);
     
-    console.log('🔐 Starting login process...', {
-      mobile: loginForm.mobile,
-      password: loginForm.password
-    });
-
     try {
-      // URLSearchParams use karo form data ke liye
+      // Mobile number directly use karo (ab mobile field hai)
+      const mobileNumber = loginData.mobile;
+
       const formData = new URLSearchParams();
-      formData.append('mobile', loginForm.mobile);
-      formData.append('password', loginForm.password);
+      formData.append('mobile', mobileNumber);
+      formData.append('password', loginData.password);
 
       console.log('📤 Sending login request to:', LOGIN_ENDPOINT);
 
@@ -131,15 +115,12 @@ const Header = () => {
       });
 
       console.log('📥 Login response status:', response.status);
-      console.log('📥 Login response ok:', response.ok);
-
       const data = await response.json();
       console.log('📥 Login response data:', data);
 
-      // ✅ FIXED: Check for correct API response format
       if (response.ok && data.status === 'success') {
-        console.log('✅ LOGIN SUCCESSFUL - Closing modal and dispatching event');
-        
+        console.log('✅ LOGIN SUCCESSFUL');
+
         // Store token and user data
         localStorage.setItem('authToken', data.token || data.id);
         localStorage.setItem('userData', JSON.stringify({
@@ -150,26 +131,22 @@ const Header = () => {
           village: data.village,
           ...data
         }));
-        
+
         setIsLoggedIn(true);
         setUser(data);
-        
-        // ✅ CLOSE LOGIN MODAL
-        console.log('🔒 Setting showLoginModal to false');
         setShowLoginModal(false);
-        setLoginForm({ mobile: '', password: '' });
-        
+
         // ✅ DISPATCH EVENT AFTER MODAL CLOSE
         setTimeout(() => {
           console.log('🎯 Dispatching userLoggedIn event');
           window.dispatchEvent(new CustomEvent('userLoggedIn', {
-            detail: { 
+            detail: {
               user: data,
               timestamp: new Date().toISOString()
             }
           }));
         }, 100);
-        
+
         alert('Login successful!');
       } else {
         console.log('❌ LOGIN FAILED:', data.message);
@@ -184,28 +161,14 @@ const Header = () => {
     }
   };
 
-  // ✅ ADDED: REGISTRATION API CALL
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // ✅ UPDATED: Awesome Signup Handler - Mobile number field use karo
+  const handleAwesomeSignup = async (signupData: any) => {
     setIsRegistering(true);
-
+    console.log('📝 Awesome Signup data:', signupData);
+    
     try {
-      // Validation
-      if (registerForm.password !== registerForm.confirmPassword) {
-        alert('Passwords do not match');
-        return;
-      }
-
-      // Check if all required fields are filled
-      const requiredFields = ['fullName', 'mobile', 'pinCode', 'city', 'village', 'block', 'state', 'password'];
-      const emptyFields = requiredFields.filter(field => !registerForm[field as keyof typeof registerForm]);
-      
-      if (emptyFields.length > 0) {
-        alert('Please fill all required fields');
-        return;
-      }
-
-      console.log('📤 Sending registration request...');
+      // Mobile number directly use karo (ab mobile field hai)
+      const mobileNumber = signupData.mobile;
 
       const response = await fetch(`${API_BASE_URL}/register.php`, {
         method: 'POST',
@@ -213,14 +176,14 @@ const Header = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          fullName: registerForm.fullName,
-          mobile: registerForm.mobile,
-          pinCode: registerForm.pinCode,
-          city: registerForm.city,
-          village: registerForm.village,
-          block: registerForm.block,
-          state: registerForm.state,
-          password: registerForm.password
+          fullName: `${signupData.firstName} ${signupData.lastName}`,
+          mobile: mobileNumber,
+          pinCode: signupData.pinCode || '000000',
+          city: signupData.city || 'Unknown',
+          village: signupData.village || 'Unknown',
+          block: signupData.block || 'Unknown',
+          state: signupData.state || 'Unknown',
+          password: signupData.password
         })
       });
 
@@ -232,54 +195,42 @@ const Header = () => {
         localStorage.setItem('authToken', data.token || data.id);
         localStorage.setItem('userData', JSON.stringify({
           id: data.id,
-          fullName: registerForm.fullName,
-          mobile: registerForm.mobile,
-          city: registerForm.city,
-          village: registerForm.village,
+          fullName: `${signupData.firstName} ${signupData.lastName}`,
+          mobile: mobileNumber,
+          city: signupData.city,
+          village: signupData.village,
           ...data
         }));
-        
+
         setIsLoggedIn(true);
         setUser({
           id: data.id,
-          fullName: registerForm.fullName,
-          mobile: registerForm.mobile,
-          city: registerForm.city,
-          village: registerForm.village,
+          fullName: `${signupData.firstName} ${signupData.lastName}`,
+          mobile: mobileNumber,
+          city: signupData.city,
+          village: signupData.village,
           ...data
         });
-        
-        // Close register modal
+
         setShowRegisterModal(false);
-        setRegisterForm({ 
-          fullName: '', 
-          mobile: '', 
-          pinCode: '', 
-          city: '', 
-          village: '', 
-          block: '', 
-          state: '', 
-          password: '', 
-          confirmPassword: '' 
-        });
 
         // Dispatch event after registration
         setTimeout(() => {
           console.log('🎯 Dispatching userLoggedIn event after registration');
           window.dispatchEvent(new CustomEvent('userLoggedIn', {
-            detail: { 
+            detail: {
               user: {
                 id: data.id,
-                fullName: registerForm.fullName,
-                mobile: registerForm.mobile,
-                city: registerForm.city,
-                village: registerForm.village,
+                fullName: `${signupData.firstName} ${signupData.lastName}`,
+                mobile: mobileNumber,
+                city: signupData.city,
+                village: signupData.village,
                 ...data
               }
             }
           }));
         }, 100);
-        
+
         alert('Registration successful!');
       } else {
         alert(data.message || 'Registration failed. Please try again.');
@@ -297,30 +248,14 @@ const Header = () => {
     localStorage.removeItem('userData');
     setIsLoggedIn(false);
     setUser(null);
-    
+
     // Dispatch event when user logs out
     window.dispatchEvent(new CustomEvent('userLoggedOut'));
-    
+
     // Close mobile menu if open
     closeMenu();
-    
+
     alert('Logged out successfully!');
-  };
-
-  const handleLoginInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setLoginForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleRegisterInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setRegisterForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
   };
 
   // ESC key press par menu close
@@ -335,7 +270,9 @@ const Header = () => {
 
     if (isMenuOpen || showLoginModal || showRegisterModal) {
       document.addEventListener('keydown', handleEscKey);
-      document.body.style.overflow = 'hidden';
+      if (showLoginModal || showRegisterModal) {
+        document.body.style.overflow = 'hidden';
+      }
     } else {
       document.body.style.overflow = 'auto';
     }
@@ -355,12 +292,17 @@ const Header = () => {
     setSearchType(type);
   };
 
+  // ✅ ADDED: Forgot Password Handler for AwesomeLogin
+  const handleForgotPassword = () => {
+    alert('Password reset feature coming soon!');
+  };
+
   return (
     <div id="page" className={isMenuOpen ? 'menu-open' : ''}>
       {/* Header Section */}
       <header className="header_sticky">
         {/* Mobile Menu Button */}
-        <button 
+        <button
           className="btn_mobile"
           onClick={toggleMenu}
           type="button"
@@ -379,13 +321,13 @@ const Header = () => {
             </div>
           </div>
         </button>
-        
+
         <div className="container">
           <div className="row">
             <div className="col-lg-3 col-6">
               <div id="logo_home">
                 <h1>
-                  <Link href="/" title="Findoctor" style={{ 
+                  <Link href="/" title="Findoctor" style={{
                     fontSize: isMobile ? '20px' : '24px',
                     textDecoration: 'none',
                     color: '#333'
@@ -395,7 +337,7 @@ const Header = () => {
                 </h1>
               </div>
             </div>
-            
+
             {/* Desktop - Show Login/Signup only when not loading */}
             {!isMobile && !isLoading && (
               <div className="col-lg-9 col-6">
@@ -413,8 +355,8 @@ const Header = () => {
                   {isLoggedIn ? (
                     <>
                       <li className="user-welcome">
-                        <span style={{ 
-                          color: '#333', 
+                        <span style={{
+                          color: '#333',
                           fontSize: '16px',
                           fontWeight: '500'
                         }}>
@@ -422,7 +364,7 @@ const Header = () => {
                         </span>
                       </li>
                       <li>
-                        <button 
+                        <button
                           onClick={handleLogout}
                           style={{
                             background: 'none',
@@ -455,7 +397,7 @@ const Header = () => {
                   ) : (
                     <>
                       <li>
-                        <button 
+                        <button
                           onClick={() => setShowLoginModal(true)}
                           style={{
                             background: 'none',
@@ -485,7 +427,7 @@ const Header = () => {
                         </button>
                       </li>
                       <li>
-                        <button 
+                        <button
                           onClick={() => setShowRegisterModal(true)}
                           style={{
                             background: 'none',
@@ -517,7 +459,7 @@ const Header = () => {
                     </>
                   )}
                 </ul>
-                
+
                 {/* Simplified Desktop Menu - Centered */}
                 <nav id="menu" className="main-menu desktop-menu" style={{
                   display: 'flex',
@@ -543,20 +485,20 @@ const Header = () => {
                         borderRadius: '6px',
                         transition: 'all 0.3s ease'
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.color = '#3498db';
-                        e.currentTarget.style.backgroundColor = '#f0f8ff';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.color = '#333';
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }}>
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = '#3498db';
+                          e.currentTarget.style.backgroundColor = '#f0f8ff';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = '#333';
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}>
                         🏠 Home
                       </Link>
                     </li>
                     <li>
-                      <Link 
-                        href="/list-your-business" 
+                      <Link
+                        href="/list-your-business"
                         style={{
                           color: '#27ae60',
                           fontWeight: 'bold',
@@ -611,9 +553,9 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Login Modal */}
+        {/* ✅ UPDATED: Awesome Login Modal with Scroll Fix */}
         {showLoginModal && (
-          <div 
+          <div
             className="modal-overlay"
             onClick={() => setShowLoginModal(false)}
             style={{
@@ -627,145 +569,37 @@ const Header = () => {
               alignItems: 'center',
               justifyContent: 'center',
               zIndex: 10001,
-              padding: '20px'
+              padding: '20px',
+              backdropFilter: 'blur(5px)',
+              overflow: 'auto' // ✅ Scroll enable for overlay
             }}
           >
-            <div 
-              className="modal-content"
+            <div
               onClick={(e) => e.stopPropagation()}
               style={{
-                background: 'white',
-                borderRadius: '12px',
-                padding: '30px',
                 width: '100%',
-                maxWidth: '400px',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
+                maxWidth: '450px',
+                margin: 'auto' // ✅ Center the modal
               }}
             >
-              <div className="modal-header" style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '20px'
-              }}>
-                <h2 style={{ margin: 0, color: '#333' }}>Login with Publicin</h2>
-                <button 
-                  onClick={() => setShowLoginModal(false)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    fontSize: '24px',
-                    cursor: 'pointer',
-                    color: '#666'
-                  }}
-                >
-                  ×
-                </button>
-              </div>
-
-              <form onSubmit={handleLogin}>
-                <div className="form-group" style={{ marginBottom: '20px' }}>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: '500',
-                    color: '#333'
-                  }}>
-                    Mobile Number *
-                  </label>
-                  <input
-                    type="tel"
-                    name="mobile"
-                    value={loginForm.mobile}
-                    onChange={handleLoginInputChange}
-                    placeholder="Enter your mobile number"
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '2px solid #e1e5e9',
-                      borderRadius: '8px',
-                      fontSize: '16px',
-                      transition: 'border-color 0.3s ease'
-                    }}
-                  />
-                </div>
-
-                <div className="form-group" style={{ marginBottom: '25px' }}>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: '500',
-                    color: '#333'
-                  }}>
-                    Password *
-                  </label>
-                  <input
-                    type="password"
-                    name="password"
-                    value={loginForm.password}
-                    onChange={handleLoginInputChange}
-                    placeholder="Enter your password"
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '2px solid #e1e5e9',
-                      borderRadius: '8px',
-                      fontSize: '16px',
-                      transition: 'border-color 0.3s ease'
-                    }}
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoggingIn}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: '#3498db',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    fontWeight: '500',
-                    cursor: isLoggingIn ? 'not-allowed' : 'pointer',
-                    opacity: isLoggingIn ? 0.7 : 1,
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  {isLoggingIn ? 'Logging in...' : 'Login'}
-                </button>
-              </form>
-
-              <div style={{ marginTop: '20px', textAlign: 'center' }}>
-                <p style={{ color: '#666', margin: 0 }}>
-                  Don't have an account?{' '}
-                  <button 
-                    onClick={() => {
-                      setShowLoginModal(false);
-                      setShowRegisterModal(true);
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#3498db',
-                      cursor: 'pointer',
-                      textDecoration: 'underline'
-                    }}
-                  >
-                    Sign up
-                  </button>
-                </p>
-              </div>
+              <AwesomeLogin
+                onLogin={handleAwesomeLogin}
+                onSwitchToSignup={() => {
+                  setShowLoginModal(false);
+                  setShowRegisterModal(true);
+                }}
+                onForgotPassword={handleForgotPassword}
+                loading={isLoggingIn}
+                className="awesome-auth-modal"
+                showSocialLogin={false}
+              />
             </div>
           </div>
         )}
 
-        {/* ✅ ADDED: Register Modal */}
+        {/* ✅ UPDATED: Awesome Signup Modal with Scroll Fix */}
         {showRegisterModal && (
-          <div 
+          <div
             className="modal-overlay"
             onClick={() => setShowRegisterModal(false)}
             style={{
@@ -776,508 +610,40 @@ const Header = () => {
               bottom: 0,
               background: 'rgba(0, 0, 0, 0.6)',
               display: 'flex',
-              alignItems: 'center',
+              alignItems: 'flex-start', // ✅ Changed to flex-start for scroll
               justifyContent: 'center',
-              zIndex: 10000,
-              padding: isMobile ? '10px' : '20px'
+              zIndex: 10001,
+              padding: '20px',
+              backdropFilter: 'blur(5px)',
+              overflow: 'auto' // ✅ Scroll enable for overlay
             }}
           >
-            <div 
-              className="modal-content"
+            <div
               onClick={(e) => e.stopPropagation()}
               style={{
-                background: 'white',
-                borderRadius: '15px',
                 width: '100%',
-                maxWidth: isMobile ? '100%' : '900px',
-                height: isMobile ? '100vh' : '95vh',
-                maxHeight: isMobile ? '100vh' : '95vh',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-                display: 'flex',
-                flexDirection: isMobile ? 'column' : 'row',
-                overflow: 'hidden'
+                maxWidth: '500px',
+                margin: '20px auto' // ✅ Margin for better spacing
               }}
             >
-              {/* Left Side - Benefits Section - Hidden in Mobile */}
-              {!isMobile && (
-                <div style={{
-                  flex: '1',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  padding: '40px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  overflowY: 'auto'
-                }}>
-                  <h3 style={{ 
-                    fontSize: '24px', 
-                    fontWeight: '600', 
-                    marginBottom: '20px',
-                    color: 'white'
-                  }}>
-                    Join Our Community
-                  </h3>
-                  
-                  <p style={{ 
-                    fontSize: '16px', 
-                    lineHeight: '1.6', 
-                    marginBottom: '30px',
-                    opacity: 0.9
-                  }}>
-                    Create your account and start exploring local businesses. Get access to exclusive features and personalized recommendations.
-                  </p>
-
-                  <div style={{ marginBottom: '25px', display: 'flex', alignItems: 'flex-start', gap: '15px' }}>
-                    <div style={{ 
-                      background: 'rgba(255,255,255,0.2)', 
-                      borderRadius: '50%', 
-                      width: '50px', 
-                      height: '50px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}>
-                      <i className="pe-7s-map-2" style={{ fontSize: '24px', color: 'white' }}></i>
-                    </div>
-                    <div>
-                      <h4 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px 0', color: 'white' }}>
-                        Discover Local Businesses
-                      </h4>
-                      <p style={{ fontSize: '14px', lineHeight: '1.5', margin: 0, opacity: 0.9 }}>
-                        Find and connect with the best service providers in your area.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: '25px', display: 'flex', alignItems: 'flex-start', gap: '15px' }}>
-                    <div style={{ 
-                      background: 'rgba(255,255,255,0.2)', 
-                      borderRadius: '50%', 
-                      width: '50px', 
-                      height: '50px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}>
-                      <i className="pe-7s-star" style={{ fontSize: '24px', color: 'white' }}></i>
-                    </div>
-                    <div>
-                      <h4 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px 0', color: 'white' }}>
-                        Rate & Review
-                      </h4>
-                      <p style={{ fontSize: '14px', lineHeight: '1.5', margin: 0, opacity: 0.9 }}>
-                        Share your experiences and help others make better choices.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '15px' }}>
-                    <div style={{ 
-                      background: 'rgba(255,255,255,0.2)', 
-                      borderRadius: '50%', 
-                      width: '50px', 
-                      height: '50px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}>
-                      <i className="pe-7s-share" style={{ fontSize: '24px', color: 'white' }}></i>
-                    </div>
-                    <div>
-                      <h4 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px 0', color: 'white' }}>
-                        Share with Friends
-                      </h4>
-                      <p style={{ fontSize: '14px', lineHeight: '1.5', margin: 0, opacity: 0.9 }}>
-                        Recommend great businesses to your friends and family.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Right Side - Registration Form */}
-              <div style={{
-                flex: '1',
-                padding: isMobile ? '25px' : '40px',
-                background: 'white',
-                overflowY: 'auto',
-                display: 'flex',
-                flexDirection: 'column'
-              }}>
-                {/* Header */}
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '30px'
-                }}>
-                  <h2 style={{ 
-                    margin: 0, 
-                    color: '#333', 
-                    fontSize: isMobile ? '24px' : '28px', 
-                    fontWeight: '700' 
-                  }}>
-                    Create Account
-                  </h2>
-                  <button 
-                    onClick={() => setShowRegisterModal(false)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      fontSize: isMobile ? '24px' : '28px',
-                      cursor: 'pointer',
-                      color: '#666',
-                      width: '40px',
-                      height: '40px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: '50%',
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <div style={{ flex: 1 }}>
-                  <form onSubmit={handleRegister}>
-                    <div style={{ marginBottom: '20px' }}>
-                      <label style={{
-                        display: 'block',
-                        marginBottom: '8px',
-                        fontWeight: '600',
-                        color: '#333',
-                        fontSize: '14px'
-                      }}>
-                        Full Name *
-                      </label>
-                      <input 
-                        type="text" 
-                        style={{
-                          width: '100%',
-                          padding: '15px',
-                          border: '2px solid #e1e5e9',
-                          borderRadius: '8px',
-                          fontSize: '16px',
-                          transition: 'all 0.3s ease',
-                          background: '#f8f9fa'
-                        }}
-                        placeholder="Enter your full name"
-                        name="fullName"
-                        value={registerForm.fullName}
-                        onChange={handleRegisterInputChange}
-                        required
-                      />
-                    </div>
-
-                    <div style={{ marginBottom: '20px' }}>
-                      <label style={{
-                        display: 'block',
-                        marginBottom: '8px',
-                        fontWeight: '600',
-                        color: '#333',
-                        fontSize: '14px'
-                      }}>
-                        Mobile Number *
-                      </label>
-                      <input 
-                        type="tel" 
-                        style={{
-                          width: '100%',
-                          padding: '15px',
-                          border: '2px solid #e1e5e9',
-                          borderRadius: '8px',
-                          fontSize: '16px',
-                          transition: 'all 0.3s ease',
-                          background: '#f8f9fa'
-                        }}
-                        placeholder="Enter your mobile number"
-                        name="mobile"
-                        value={registerForm.mobile}
-                        onChange={handleRegisterInputChange}
-                        required
-                      />
-                    </div>
-
-                    <div style={{ 
-                      display: 'flex', 
-                      gap: '15px', 
-                      marginBottom: '20px',
-                      flexDirection: isMobile ? 'column' : 'row'
-                    }}>
-                      <div style={{ flex: 1 }}>
-                        <label style={{
-                          display: 'block',
-                          marginBottom: '8px',
-                          fontWeight: '600',
-                          color: '#333',
-                          fontSize: '14px'
-                        }}>
-                          Pin Code *
-                        </label>
-                        <input 
-                          type="text" 
-                          style={{
-                            width: '100%',
-                            padding: '15px',
-                            border: '2px solid #e1e5e9',
-                            borderRadius: '8px',
-                            fontSize: '16px',
-                            transition: 'all 0.3s ease',
-                            background: '#f8f9fa'
-                          }}
-                          placeholder="Enter pin code"
-                          name="pinCode"
-                          value={registerForm.pinCode}
-                          onChange={handleRegisterInputChange}
-                          required
-                        />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <label style={{
-                          display: 'block',
-                          marginBottom: '8px',
-                          fontWeight: '600',
-                          color: '#333',
-                          fontSize: '14px'
-                        }}>
-                          City *
-                        </label>
-                        <input 
-                          type="text" 
-                          style={{
-                            width: '100%',
-                            padding: '15px',
-                            border: '2px solid #e1e5e9',
-                            borderRadius: '8px',
-                            fontSize: '16px',
-                            transition: 'all 0.3s ease',
-                            background: '#f8f9fa'
-                          }}
-                          placeholder="Enter city"
-                          name="city"
-                          value={registerForm.city}
-                          onChange={handleRegisterInputChange}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ 
-                      display: 'flex', 
-                      gap: '15px', 
-                      marginBottom: '20px',
-                      flexDirection: isMobile ? 'column' : 'row'
-                    }}>
-                      <div style={{ flex: 1 }}>
-                        <label style={{
-                          display: 'block',
-                          marginBottom: '8px',
-                          fontWeight: '600',
-                          color: '#333',
-                          fontSize: '14px'
-                        }}>
-                          Village *
-                        </label>
-                        <input 
-                          type="text" 
-                          style={{
-                            width: '100%',
-                            padding: '15px',
-                            border: '2px solid #e1e5e9',
-                            borderRadius: '8px',
-                            fontSize: '16px',
-                            transition: 'all 0.3s ease',
-                            background: '#f8f9fa'
-                          }}
-                          placeholder="Enter village"
-                          name="village"
-                          value={registerForm.village}
-                          onChange={handleRegisterInputChange}
-                          required
-                        />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <label style={{
-                          display: 'block',
-                          marginBottom: '8px',
-                          fontWeight: '600',
-                          color: '#333',
-                          fontSize: '14px'
-                        }}>
-                          Block *
-                        </label>
-                        <input 
-                          type="text" 
-                          style={{
-                            width: '100%',
-                            padding: '15px',
-                            border: '2px solid #e1e5e9',
-                            borderRadius: '8px',
-                            fontSize: '16px',
-                            transition: 'all 0.3s ease',
-                            background: '#f8f9fa'
-                          }}
-                          placeholder="Enter block"
-                          name="block"
-                          value={registerForm.block}
-                          onChange={handleRegisterInputChange}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ marginBottom: '20px' }}>
-                      <label style={{
-                        display: 'block',
-                        marginBottom: '8px',
-                        fontWeight: '600',
-                        color: '#333',
-                        fontSize: '14px'
-                      }}>
-                        State *
-                      </label>
-                      <input 
-                        type="text" 
-                        style={{
-                          width: '100%',
-                          padding: '15px',
-                          border: '2px solid #e1e5e9',
-                          borderRadius: '8px',
-                          fontSize: '16px',
-                          transition: 'all 0.3s ease',
-                          background: '#f8f9fa'
-                        }}
-                        placeholder="Enter state"
-                        name="state"
-                        value={registerForm.state}
-                        onChange={handleRegisterInputChange}
-                        required
-                      />
-                    </div>
-
-                    <div style={{ 
-                      display: 'flex', 
-                      gap: '15px', 
-                      marginBottom: '30px',
-                      flexDirection: isMobile ? 'column' : 'row'
-                    }}>
-                      <div style={{ flex: 1 }}>
-                        <label style={{
-                          display: 'block',
-                          marginBottom: '8px',
-                          fontWeight: '600',
-                          color: '#333',
-                          fontSize: '14px'
-                        }}>
-                          Password *
-                        </label>
-                        <input 
-                          type="password" 
-                          style={{
-                            width: '100%',
-                            padding: '15px',
-                            border: '2px solid #e1e5e9',
-                            borderRadius: '8px',
-                            fontSize: '16px',
-                            transition: 'all 0.3s ease',
-                            background: '#f8f9fa'
-                          }}
-                          placeholder="Enter password"
-                          name="password"
-                          value={registerForm.password}
-                          onChange={handleRegisterInputChange}
-                          required
-                        />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <label style={{
-                          display: 'block',
-                          marginBottom: '8px',
-                          fontWeight: '600',
-                          color: '#333',
-                          fontSize: '14px'
-                        }}>
-                          Confirm Password *
-                        </label>
-                        <input 
-                          type="password" 
-                          style={{
-                            width: '100%',
-                            padding: '15px',
-                            border: '2px solid #e1e5e9',
-                            borderRadius: '8px',
-                            fontSize: '16px',
-                            transition: 'all 0.3s ease',
-                            background: '#f8f9fa'
-                          }}
-                          placeholder="Confirm password"
-                          name="confirmPassword"
-                          value={registerForm.confirmPassword}
-                          onChange={handleRegisterInputChange}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isRegistering}
-                      style={{
-                        width: '100%',
-                        padding: '18px',
-                        background: '#27ae60',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        fontSize: '18px',
-                        fontWeight: '600',
-                        cursor: isRegistering ? 'not-allowed' : 'pointer',
-                        opacity: isRegistering ? 0.7 : 1,
-                        transition: 'all 0.3s ease',
-                        marginBottom: '20px'
-                      }}
-                    >
-                      {isRegistering ? 'Creating Account...' : 'Create Account'}
-                    </button>
-                  </form>
-
-                  <div style={{ textAlign: 'center' }}>
-                    <p style={{ color: '#666', margin: 0, fontSize: '16px' }}>
-                      Already have an account?{' '}
-                      <button 
-                        onClick={() => {
-                          setShowRegisterModal(false);
-                          setShowLoginModal(true);
-                        }}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#3498db',
-                          cursor: 'pointer',
-                          textDecoration: 'underline',
-                          fontSize: '16px',
-                          fontWeight: '600'
-                        }}
-                      >
-                        Login here
-                      </button>
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <AwesomeSignup
+                onSignup={handleAwesomeSignup}
+                onSwitchToLogin={() => {
+                  setShowRegisterModal(false);
+                  setShowLoginModal(true);
+                }}
+                loading={isRegistering}
+                className="awesome-auth-modal"
+                showSocialSignup={false}
+                showAdditionalFields={true}
+              />
             </div>
           </div>
         )}
 
         {/* Mobile Menu Backdrop */}
-        <div 
-          className={`mobile-menu-backdrop ${isMenuOpen ? 'active' : ''}`} 
+        <div
+          className={`mobile-menu-backdrop ${isMenuOpen ? 'active' : ''}`}
           onClick={closeMenu}
           style={{
             position: 'fixed',
@@ -1292,11 +658,11 @@ const Header = () => {
             transition: 'all 0.3s ease-in-out'
           }}
         ></div>
-        
-        {/* ✅ FIXED: Mobile Menu - Proper Content Display */}
-        <nav 
+
+        {/* ✅ UPDATED: Mobile Menu with Awesome Modal Integration */}
+        <nav
           className={`mobile-menu ${isMenuOpen ? 'mobile-open' : ''}`}
-          style={{ 
+          style={{
             position: 'fixed',
             top: 0,
             left: isMenuOpen ? 0 : '-320px',
@@ -1311,19 +677,19 @@ const Header = () => {
         >
           <div style={{ padding: '20px' }}>
             {/* Mobile Menu Header */}
-            <div style={{ 
+            <div style={{
               marginBottom: '20px',
               paddingBottom: '15px',
               borderBottom: '1px solid #eee'
             }}>
               <h3 style={{ margin: 0, color: '#333', textAlign: 'center' }}>Menu</h3>
             </div>
-            
+
             {/* Navigation Links */}
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               <li style={{ marginBottom: '10px' }}>
-                <Link 
-                  href="/" 
+                <Link
+                  href="/"
                   onClick={closeMenu}
                   style={{
                     display: 'block',
@@ -1342,8 +708,8 @@ const Header = () => {
                 </Link>
               </li>
               <li style={{ marginBottom: '10px' }}>
-                <Link 
-                  href="/list-your-business" 
+                <Link
+                  href="/list-your-business"
                   onClick={closeMenu}
                   style={{
                     display: 'block',
@@ -1366,12 +732,12 @@ const Header = () => {
               </li>
             </ul>
 
-            {/* ✅ FIXED: User Section - Properly Shows Content */}
+            {/* ✅ UPDATED: User Section with Awesome Modal Integration */}
             <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
               {isLoggedIn ? (
                 <div style={{ textAlign: 'center' }}>
                   {/* User Welcome Message */}
-                  <div style={{ 
+                  <div style={{
                     padding: '15px',
                     background: '#f0f8ff',
                     borderRadius: '8px',
@@ -1387,9 +753,9 @@ const Header = () => {
                       {user?.mobile}
                     </p>
                   </div>
-                  
+
                   {/* Logout Button */}
-                  <button 
+                  <button
                     onClick={() => {
                       handleLogout();
                       closeMenu();
@@ -1416,7 +782,7 @@ const Header = () => {
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <button 
+                  <button
                     onClick={() => {
                       setShowLoginModal(true);
                       closeMenu();
@@ -1440,7 +806,7 @@ const Header = () => {
                     <i className="pe-7s-user" style={{ fontSize: '16px' }}></i>
                     Login
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
                       setShowRegisterModal(true);
                       closeMenu();
@@ -1470,7 +836,7 @@ const Header = () => {
           </div>
         </nav>
       </header>
-      
+
       {/* Main Content */}
       <main>
         {/* Hero Search Section */}
@@ -1482,52 +848,52 @@ const Header = () => {
               📍 List and Manage Your Business Online<br />
               🌟 Reach More People, Get More Leads
             </p>
-            
+
             <form onSubmit={handleSearchSubmit}>
               <div id="custom-search-input">
                 <div className="input-group">
-                  <input 
-                    type="text" 
-                    className="search-query" 
+                  <input
+                    type="text"
+                    className="search-query"
                     placeholder="Ex. Name, Specialization ...."
                     style={{ color: 'white' }}
                   />
-                  <input 
-                    type="submit" 
-                    className="btn_search" 
-                    value="Search" 
+                  <input
+                    type="submit"
+                    className="btn_search"
+                    value="Search"
                   />
                 </div>
-                
+
                 <ul>
                   <li>
-                    <input 
-                      type="radio" 
-                      id="all" 
-                      name="radio_search" 
-                      value="all" 
+                    <input
+                      type="radio"
+                      id="all"
+                      name="radio_search"
+                      value="all"
                       checked={searchType === 'all'}
                       onChange={() => handleSearchTypeChange('all')}
                     />
                     <label htmlFor="all" style={{ color: 'white' }}>All</label>
                   </li>
                   <li>
-                    <input 
-                      type="radio" 
-                      id="doctor" 
-                      name="radio_search" 
-                      value="doctor" 
+                    <input
+                      type="radio"
+                      id="doctor"
+                      name="radio_search"
+                      value="doctor"
                       checked={searchType === 'doctor'}
                       onChange={() => handleSearchTypeChange('doctor')}
                     />
                     <label htmlFor="doctor" style={{ color: 'white' }}>Doctor</label>
                   </li>
                   <li>
-                    <input 
-                      type="radio" 
-                      id="clinic" 
-                      name="radio_search" 
-                      value="clinic" 
+                    <input
+                      type="radio"
+                      id="clinic"
+                      name="radio_search"
+                      value="clinic"
                       checked={searchType === 'clinic'}
                       onChange={() => handleSearchTypeChange('clinic')}
                     />
@@ -1539,6 +905,40 @@ const Header = () => {
           </div>
         </div>
       </main>
+
+      {/* ✅ UPDATED: Custom CSS for Awesome Components */}
+      <style jsx>{`
+        .awesome-auth-modal {
+          animation: scaleUp 0.3s ease forwards;
+        }
+        
+        @keyframes scaleUp {
+          from {
+            opacity: 0;
+            transform: scale(0.9);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        /* Mobile responsiveness for awesome modals */
+        @media (max-width: 768px) {
+          .awesome-auth-modal {
+            margin: 10px;
+          }
+          
+          .modal-overlay {
+            padding: 10px !important;
+          }
+        }
+
+        /* Ensure proper scrolling */
+        .modal-overlay {
+          -webkit-overflow-scrolling: touch;
+        }
+      `}</style>
     </div>
   );
 };
