@@ -11,11 +11,11 @@ interface SignupData {
   mobile: string;
   password: string;
   confirmPassword: string;
-  pinCode?: string;
-  city?: string;
-  village?: string;
-  block?: string;
-  state?: string;
+  pinCode: string;
+  city: string;
+  village: string;
+  block: string;
+  state: string;
 }
 
 interface AwesomeSignupProps {
@@ -237,11 +237,11 @@ const AwesomeSignup: React.FC<AwesomeSignupProps> = ({
             />
             <button
               type="button"
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200 z-20 cursor-pointer"
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors duration-200 z-20 cursor-pointer bg-transparent border-none"
               onClick={() => setShowPassword(!showPassword)}
               style={{
                 top: 'calc(50% + 12px)',
-                cursor: 'pointer'
+                padding: '4px'
               }}
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -261,11 +261,11 @@ const AwesomeSignup: React.FC<AwesomeSignupProps> = ({
             />
             <button
               type="button"
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200 z-20 cursor-pointer"
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors duration-200 z-20 cursor-pointer bg-transparent border-none"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               style={{
                 top: 'calc(50% + 12px)',
-                cursor: 'pointer'
+                padding: '4px'
               }}
             >
               {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -318,36 +318,35 @@ const AwesomeSignup: React.FC<AwesomeSignupProps> = ({
       </div>
 
       {/* Custom CSS for cursor and spacing */}
-      <style jsx>{`
-        input {
-          padding-left: 3rem !important;
-          padding-right: 1rem !important;
-          cursor: text !important;
+      <style jsx global>{`
+        /* Force input styling to prevent overlap */
+        .awesome-auth-modal input {
+          padding-left: 3.5rem !important;
+          padding-right: 2.5rem !important;
         }
         
-        input[type="checkbox"] {
-          cursor: pointer !important;
-        }
-        
-        .relative > div:first-child {
+        /* Icon positioning - Left side */
+        .awesome-auth-modal .relative > div:first-child {
           left: 1rem !important;
+          z-index: 10 !important;
         }
         
-        .relative > button {
+        /* Password toggle button - Right side */
+        .awesome-auth-modal .relative > button {
           right: 1rem !important;
-          cursor: pointer !important;
+          z-index: 20 !important;
         }
         
-        button {
-          cursor: pointer !important;
+        /* Ensure placeholder text doesn't overlap with icon */
+        .awesome-auth-modal input::placeholder {
+          margin-left: 0 !important;
+          padding-left: 0 !important;
         }
         
-        label {
-          cursor: text !important;
-        }
-        
-        p, span:not(button span) {
-          cursor: text !important;
+        /* Specific fix for password fields */
+        .awesome-auth-modal .relative input[type="password"],
+        .awesome-auth-modal .relative input[type="text"] {
+          padding-right: 3rem !important;
         }
       `}</style>
     </div>
