@@ -10,16 +10,19 @@ interface AwesomeAuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultView?: 'login' | 'signup';
+  onLoginSuccess?: (userData: any) => void;
+  onSignupSuccess?: (userData: any) => void;
 }
 
 const AwesomeAuthModal: React.FC<AwesomeAuthModalProps> = ({
   isOpen,
   onClose,
-  defaultView = 'login'
+  defaultView = 'login',
+  onLoginSuccess,
+  onSignupSuccess
 }) => {
   const [isLogin, setIsLogin] = useState(defaultView === 'login');
   const [loading, setLoading] = useState(false);
-  const [shake, setShake] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -39,13 +42,16 @@ const AwesomeAuthModal: React.FC<AwesomeAuthModalProps> = ({
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Demo validation
-      if (loginData.email === 'demo@example.com' && loginData.password === 'password') {
-        alert('Login successful!');
+      // Demo validation - replace with actual API call
+      if (loginData.mobile === '1234567890' && loginData.password === 'password') {
+        const userData = {
+          name: 'Demo User',
+          mobile: loginData.mobile,
+          id: '1'
+        };
+        onLoginSuccess?.(userData);
         onClose();
       } else {
-        setShake(true);
-        setTimeout(() => setShake(false), 500);
         throw new Error('Invalid credentials');
       }
     } catch (error) {
@@ -59,11 +65,14 @@ const AwesomeAuthModal: React.FC<AwesomeAuthModalProps> = ({
     setLoading(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
-      alert('Account created successfully!');
+      const userData = {
+        name: signupData.fullName,
+        mobile: signupData.mobile,
+        id: '1'
+      };
+      onSignupSuccess?.(userData);
       onClose();
     } catch (error) {
-      setShake(true);
-      setTimeout(() => setShake(false), 500);
       alert('Signup failed. Please try again.');
     } finally {
       setLoading(false);
@@ -78,7 +87,7 @@ const AwesomeAuthModal: React.FC<AwesomeAuthModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-      <div className={`relative transition-transform duration-300 ${shake ? 'animate-shake' : ''}`}>
+      <div className="relative">
         <button
           onClick={onClose}
           className="absolute -top-12 right-0 text-white text-2xl hover:text-gray-300 transition-colors duration-200 z-20 hover:scale-110 transform"
@@ -97,6 +106,7 @@ const AwesomeAuthModal: React.FC<AwesomeAuthModalProps> = ({
             onSignup={handleSignup}
             onSwitchToLogin={() => setIsLogin(true)}
             loading={loading}
+            showAdditionalFields={false} // Set based on your requirement
           />
         )}
       </div>
