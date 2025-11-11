@@ -1,4 +1,4 @@
-// app/auth/page.tsx - Agar separate auth page chahiye
+// app/auth/page.tsx - Fixed version
 'use client';
 
 import { useState } from 'react';
@@ -55,7 +55,6 @@ export default function AuthPage() {
           onSignup={handleSignup}
           onSwitchToLogin={() => setIsLogin(true)}
           loading={loading}
-          showAdditionalFields={false}
         />
       )}
     </div>
