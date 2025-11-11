@@ -1,8 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import AwesomeLogin from './AwesomeLogin'; 
-import AwesomeSignup from './AwesomeSignup'; 
+import AwesomeLogin from './AwesomeLogin';
+import AwesomeSignup from './AwesomeSignup';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -48,10 +48,17 @@ const Header = () => {
       setShowLoginModal(true);
     };
 
+    const handleOpenLoginModalFromReview = () => {
+      console.log('✅ Login modal requested from Review Section - Opening login modal');
+      setShowLoginModal(true);
+    };
+
     window.addEventListener('openLoginModal', handleOpenLoginModal);
+    window.addEventListener('openLoginModalFromReview', handleOpenLoginModalFromReview);
 
     return () => {
       window.removeEventListener('openLoginModal', handleOpenLoginModal);
+      window.removeEventListener('openLoginModalFromReview', handleOpenLoginModalFromReview);
     };
   }, []);
 
@@ -92,10 +99,10 @@ const Header = () => {
   };
 
   // ✅ UPDATED: Awesome Login Handler - Mobile number field use karo
-  const handleAwesomeLogin = async (loginData: any) => {
+  const handleLoginSuccess  = async (loginData: any) => {
     setIsLoggingIn(true);
     console.log('🔐 Awesome Login data:', loginData);
-    
+
     try {
       // Mobile number directly use karo (ab mobile field hai)
       const mobileNumber = loginData.mobile;
@@ -118,37 +125,44 @@ const Header = () => {
       const data = await response.json();
       console.log('📥 Login response data:', data);
 
-      if (response.ok && data.status === 'success') {
-        console.log('✅ LOGIN SUCCESSFUL');
+ if (response.ok && data.status === 'success') {
+  console.log('✅ LOGIN SUCCESSFUL');
 
-        // Store token and user data
-        localStorage.setItem('authToken', data.token || data.id);
-        localStorage.setItem('userData', JSON.stringify({
-          id: data.id,
-          fullName: data.fullName || data.name || 'User',
-          mobile: data.mobile,
-          city: data.city,
-          village: data.village,
-          ...data
-        }));
+  // Store token and user data
+  localStorage.setItem('authToken', data.token || data.id);
+  localStorage.setItem('userData', JSON.stringify({
+    id: data.id,
+    fullName: data.fullName || data.name || 'User',
+    mobile: data.mobile,
+    city: data.city,
+    village: data.village,
+    ...data
+  }));
 
-        setIsLoggedIn(true);
-        setUser(data);
-        setShowLoginModal(false);
+  setIsLoggedIn(true);
+  setUser(data);
+  setShowLoginModal(false);
 
-        // ✅ DISPATCH EVENT AFTER MODAL CLOSE
-        setTimeout(() => {
-          console.log('🎯 Dispatching userLoggedIn event');
-          window.dispatchEvent(new CustomEvent('userLoggedIn', {
-            detail: {
-              user: data,
-              timestamp: new Date().toISOString()
-            }
-          }));
-        }, 100);
+  // ✅ IMPROVED EVENT with user data
+  setTimeout(() => {
+    console.log('🎯 Dispatching userLoggedIn event with data');
+    
+    // Multiple events for better reliability
+    window.dispatchEvent(new CustomEvent('userLoggedIn', {
+      detail: {
+        user: data,
+        userId: data.id,
+        timestamp: new Date().toISOString()
+      }
+    }));
+    
+    // Force storage event
+    window.dispatchEvent(new Event('storage'));
+    
+  }, 200);
 
-        alert('Login successful!');
-      } else {
+  alert('Login successful!');
+} else {
         console.log('❌ LOGIN FAILED:', data.message);
         alert(data.message || 'Login failed. Please try again.');
       }
@@ -165,7 +179,7 @@ const Header = () => {
   const handleAwesomeSignup = async (signupData: any) => {
     setIsRegistering(true);
     console.log('📝 Awesome Signup data:', signupData);
-    
+
     try {
       // Mobile number directly use karo (ab mobile field hai)
       const mobileNumber = signupData.mobile;
@@ -583,7 +597,7 @@ const Header = () => {
               }}
             >
               <AwesomeLogin
-                onLogin={handleAwesomeLogin}
+                onLogin={handleLoginSuccess }
                 onSwitchToSignup={() => {
                   setShowLoginModal(false);
                   setShowRegisterModal(true);

@@ -1,4 +1,3 @@
-// app/list/[...slug]/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,6 +6,8 @@ import SubHeader from "@/components/SubHeader";
 import Footer from "@/components/Footer";
 import ListingsContainer from "@/components/ListingsContainer";
 import ReviewModal from "@/components/ReviewModal";
+import AwesomeLogin from "@/components/AwesomeLogin";
+import AwesomeSignup from "@/components/AwesomeSignup";
 
 /**
  * ListPage Component
@@ -15,6 +16,7 @@ import ReviewModal from "@/components/ReviewModal";
  */
 export default function ListPage({ params }: { params: Promise<{ slug: string[] }> }) {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
   const [pageData, setPageData] = useState<any>(null);
   const [listings, setListings] = useState<any[]>([]);
@@ -25,58 +27,178 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   const [pageType, setPageType] = useState<'category' | 'business'>('category');
   const [businessData, setBusinessData] = useState<any>(null);
   const [selectedRating, setSelectedRating] = useState(0);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [breadcrumbPath, setBreadcrumbPath] = useState<{path: string, name: string, isClickable: boolean}[]>([]);
+  
+  const router = useRouter();
 
-  // Listen for login success
+  // Generate breadcrumb from slug array
   useEffect(() => {
-    const handleUserLoggedIn = (event: any) => {
-      if (shouldReopenReviewAfterLogin && !isReviewModalOpen) {
-        setTimeout(() => {
-          setIsReviewModalOpen(true);
-          setShouldReopenReviewAfterLogin(false);
-        }, 700);
+    const generateBreadcrumb = async () => {
+      try {
+        const { slug } = await params;
+        if (slug && Array.isArray(slug)) {
+          const breadcrumbs = [];
+          
+          // Add Home as first breadcrumb
+          breadcrumbs.push({ 
+            path: '', 
+            name: 'Home', 
+            isClickable: true 
+          });
+
+          // Generate breadcrumbs from slug
+          for (let i = 0; i < slug.length; i++) {
+            const pathSegment = slug.slice(0, i + 1).join('/');
+            const displayName = slug[i].split('-').map(word => 
+              word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+            
+            // Check if this is a business page (ends with numeric ID)
+            const isBusinessPage = i === slug.length - 1 && /^\d+$/.test(slug[i]);
+            
+            // For category pages, only make clickable if it's not the last segment
+            // For business pages, make all category segments clickable except the business ID
+            const isClickable = !isBusinessPage && i < slug.length - 1;
+            
+            breadcrumbs.push({ 
+              path: pathSegment, 
+              name: displayName, 
+              isClickable: isClickable
+            });
+          }
+          
+          setBreadcrumbPath(breadcrumbs);
+          console.log('🍞 Breadcrumb Path:', breadcrumbs);
+        }
+      } catch (error) {
+        console.error('Error generating breadcrumb:', error);
       }
     };
 
+    generateBreadcrumb();
+  }, [params]);
+
+  // Listen for login events
+  useEffect(() => {
+    const handleOpenLoginModal = () => {
+      console.log('✅ Login modal requested - Opening AwesomeLogin');
+      setIsLoginModalOpen(true);
+    };
+
+    const handleUserLoggedIn = (event: any) => {
+      console.log('✅ User logged in event received in ListPage:', event.detail);
+      
+      setTimeout(() => {
+        const userId = getCurrentUserId();
+        console.log('🎯 User ID after login event:', userId);
+        
+        if (userId) {
+          console.log('✅ User is logged in, opening review modal');
+          setIsLoginModalOpen(false);
+          if (shouldReopenReviewAfterLogin && !isReviewModalOpen) {
+            setTimeout(() => {
+              setIsReviewModalOpen(true);
+              setShouldReopenReviewAfterLogin(false);
+            }, 500);
+          }
+        } else {
+          console.log('❌ Still no user data found after login event');
+        }
+      }, 300);
+    };
+
+    window.addEventListener('openLoginModal', handleOpenLoginModal);
     window.addEventListener('userLoggedIn', handleUserLoggedIn);
-    return () => window.removeEventListener('userLoggedIn', handleUserLoggedIn);
+    
+    return () => {
+      window.removeEventListener('openLoginModal', handleOpenLoginModal);
+      window.removeEventListener('userLoggedIn', handleUserLoggedIn);
+    };
   }, [shouldReopenReviewAfterLogin, isReviewModalOpen]);
 
+  // Handle signup
+  const handleAwesomeSignup = async (signupData: any) => {
+    console.log('📝 Signup requested in ListPage:', signupData);
+    alert('Signup functionality will be available soon! For now, please use login.');
+    setShowRegisterModal(false);
+    setIsLoginModalOpen(true);
+  };
+
+  // Handle login request from review modal
   const handleLoginRequest = () => {
+    console.log('🔐 Login requested from review modal');
     setShouldReopenReviewAfterLogin(true);
+    setIsLoginModalOpen(true);
   };
 
   // Robust method to get current user id from localStorage
   const getCurrentUserId = (): string | null => {
     if (typeof window === 'undefined') return null;
+    
     try {
-      const keysToTry = ['currentUser', 'userData', 'user', 'authUser'];
-      for (const key of keysToTry) {
-        const item = localStorage.getItem(key);
-        if (!item) continue;
+      const userDataStr = localStorage.getItem('userData');
+      
+      if (userDataStr) {
         try {
-          const parsed = JSON.parse(item);
-          if (parsed?.id) return String(parsed.id);
-          if (parsed?.user_id) return String(parsed.user_id);
-          if (parsed?.uid) return String(parsed.uid);
-        } catch (e) {
-          const trimmed = item.trim();
-          if (/^\d+$/.test(trimmed)) return trimmed;
+          const userData = JSON.parse(userDataStr);
+          console.log('🔍 getCurrentUserId - Found userData:', userData);
+          
+          if (userData?.id) {
+            console.log('✅ User ID found:', userData.id);
+            return String(userData.id);
+          }
+        } catch (error) {
+          console.error('Error parsing userData:', error);
         }
       }
-    } catch (err) {
-      console.error('Error reading user id from localStorage', err);
+      
+      const authToken = localStorage.getItem('authToken');
+      if (authToken && /^\d+$/.test(authToken)) {
+        console.log('✅ Using authToken as ID:', authToken);
+        return authToken;
+      }
+      
+      console.log('❌ No user data found in getCurrentUserId');
+      return null;
+      
+    } catch (error) {
+      console.error('🚨 Error getting user ID:', error);
+      return null;
     }
-    return null;
   };
 
-  // -----------------------
+  // Handle star rating click
+  const handleStarClick = (rating: number, business: any = null) => {
+    const userId = getCurrentUserId();
+    
+    if (userId) {
+      console.log('✅ User logged in, opening review modal');
+      setSelectedRating(rating);
+      if (business) {
+        setSelectedBusiness(business);
+      }
+      setIsReviewModalOpen(true);
+      setShouldReopenReviewAfterLogin(false);
+    } else {
+      console.log('❌ User not logged in, opening login modal');
+      setSelectedRating(rating);
+      if (business) {
+        setSelectedBusiness(business);
+      }
+      setShouldReopenReviewAfterLogin(true);
+      setIsLoginModalOpen(true);
+    }
+  };
+
   // Review submit handler
-  // -----------------------
   const handleSubmitReview = async (data: any) => {
     const userId = getCurrentUserId();
     if (!userId) {
       alert("Please log in to submit a review!");
       setShouldReopenReviewAfterLogin(true);
+      setIsLoginModalOpen(true);
       return;
     }
 
@@ -140,7 +262,74 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
   const closeReviewModal = () => {
     setIsReviewModalOpen(false);
+    setSelectedRating(0);
     setShouldReopenReviewAfterLogin(false);
+  };
+
+  const closeLoginModal = () => {
+    setIsLoginModalOpen(false);
+    setShouldReopenReviewAfterLogin(false);
+  };
+
+  // Handle successful login from AwesomeLogin
+  const handleLoginSuccess = async (loginData: any) => {
+    console.log('🎉 Login successful in ListPage - Data received:', loginData);
+    
+    try {
+      const formData = new URLSearchParams();
+      formData.append('mobile', loginData.mobile);
+      formData.append('password', loginData.password);
+
+      console.log('📤 Making login API call from ListPage...');
+
+      const response = await fetch('https://allupipay.in/publicsewa/api/login.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData.toString()
+      });
+
+      console.log('📥 Login response status:', response.status);
+      const data = await response.json();
+      console.log('📥 Login response data:', data);
+
+      if (response.ok && data.status === 'success') {
+        console.log('✅ LOGIN SUCCESSFUL in ListPage');
+
+        localStorage.setItem('authToken', data.token || data.id);
+        localStorage.setItem('userData', JSON.stringify({
+          id: data.id,
+          fullName: data.fullName || data.name || 'User',
+          mobile: data.mobile,
+          city: data.city,
+          village: data.village,
+          ...data
+        }));
+
+        console.log('💾 Data stored in localStorage');
+        
+        closeLoginModal();
+        
+        setTimeout(() => {
+          const userId = getCurrentUserId();
+          console.log('🎯 Final User ID check:', userId);
+          
+          if (userId && shouldReopenReviewAfterLogin) {
+            console.log('✅ Opening review modal now');
+            setIsReviewModalOpen(true);
+            setShouldReopenReviewAfterLogin(false);
+          }
+        }, 500);
+        
+      } else {
+        console.log('❌ Login failed in ListPage:', data.message);
+        alert(data.message || 'Login failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('🚨 Login error in ListPage:', error);
+      alert('Login failed. Please check your connection and try again.');
+    }
   };
 
   const handleSearch = (query: string) => {
@@ -159,6 +348,46 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     setFilteredListings(filtered);
   };
 
+  // Navigation handlers
+  const handleBack = () => {
+    router.back();
+  };
+
+  const handleHome = () => {
+    router.push('/');
+  };
+
+  const handleBreadcrumbClick = (path: string, isClickable: boolean) => {
+    if (!isClickable) return;
+    
+    console.log('🔄 Navigating to:', path);
+    
+    if (path === '') {
+      // Home button
+      router.push('/');
+    } else {
+      // Navigate to the category path - use the same structure as your app
+      // This should match your Next.js dynamic routing
+      router.push(`/${path}`);
+    }
+  };
+
+  // For now, let's make a simpler version that only shows breadcrumb without clickable links
+  const SimpleBreadcrumb = () => {
+    return (
+      <div className="flex items-center gap-2 text-sm text-gray-600 flex-wrap">
+        {breadcrumbPath.map((crumb, index) => (
+          <div key={index} className="flex items-center gap-2">
+            {index > 0 && <span className="text-gray-400">›</span>}
+            <span className={index === breadcrumbPath.length - 1 ? 'text-gray-800 font-medium' : 'text-gray-600'}>
+              {crumb.name}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   // Determine if this is a category page or business details page
   useEffect(() => {
     const determinePageType = async () => {
@@ -175,7 +404,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         }
 
         // Check if this is a business details page
-        // Business URLs have pattern: /list/category-path/business-name/business-id
         if (slug.length >= 2) {
           const lastSegment = slug[slug.length - 1];
           const secondLastSegment = slug[slug.length - 2];
@@ -184,11 +412,10 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
           // Check if last segment is a numeric ID (business ID)
           if (/^\d+$/.test(lastSegment)) {
-            // This is a business details page
             setPageType('business');
             const businessId = lastSegment;
             const businessName = secondLastSegment;
-            const categorySlug = slug.slice(0, -2); // Remove business name and ID
+            const categorySlug = slug.slice(0, -2);
 
             console.log('🏢 Business page detected:', {
               businessId,
@@ -218,12 +445,11 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     determinePageType();
   }, [params]);
 
-  // Fetch business details - COMPLETELY DYNAMIC
+  // Fetch business details
   const fetchBusinessDetails = async (businessId: string, categorySlug: string[]) => {
     try {
       console.log('🔄 Fetching DYNAMIC business details for ID:', businessId);
 
-      // METHOD 1: Try to fetch business directly by ID
       const directBusinessData = await fetchBusinessDirectly(businessId);
       if (directBusinessData) {
         console.log('✅ Business found via direct API call');
@@ -231,13 +457,11 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         return;
       }
 
-      // METHOD 2: Fetch from category listings and search
       console.log('🔄 Trying category listings search...');
       const listingsData = await fetchListings(categorySlug);
       console.log('📊 Listings data received:', listingsData);
 
       if (listingsData && listingsData.length > 0) {
-        // Search through all possible ID fields
         const foundBusiness = listingsData.find(listing => {
           const possibleIds = [
             listing.id,
@@ -255,7 +479,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         }
       }
 
-      // METHOD 3: Try all categories search
       console.log('🔄 Trying all categories search...');
       const allCategoriesBusiness = await searchAllCategoriesForBusiness(businessId);
       if (allCategoriesBusiness) {
@@ -264,7 +487,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         return;
       }
 
-      // If all methods fail, show not found
       console.log('❌ Business not found in any data source');
       notFound();
 
@@ -277,7 +499,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   // METHOD 1: Fetch business directly by ID
   const fetchBusinessDirectly = async (businessId: string): Promise<any> => {
     try {
-      // Try your main business endpoint
       const formData = new FormData();
       formData.append('business_id', businessId);
 
@@ -297,7 +518,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         }
       }
 
-      // Try alternative endpoint
       const res2 = await fetch(
         `https://allupipay.in/publicsewa/api/users/business-details.php?id=${businessId}`,
         { cache: "no-store" }
@@ -320,11 +540,9 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   // METHOD 3: Search through all categories for the business
   const searchAllCategoriesForBusiness = async (businessId: string): Promise<any> => {
     try {
-      // Get all main categories first
       const categories = await fetchAndFormatCategories();
 
-      // Search in each category
-      for (const category of categories.slice(0, 5)) { // Limit to first 5 categories for performance
+      for (const category of categories.slice(0, 5)) {
         try {
           const categorySlug = category.fullPath.split('/');
           const listingsData = await fetchListings(categorySlug);
@@ -356,7 +574,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     }
   };
 
-  // Format and set business data - DYNAMIC ONLY
+  // Format and set business data
   const formatAndSetBusinessData = (business: any, categorySlug: string[]) => {
     if (!business) {
       console.log('❌ No business data to format');
@@ -366,7 +584,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
     console.log('🔄 Formatting business data:', business);
 
-    // Use ONLY dynamic data from API
     const businessDetails = {
       ...business,
       id: business.id || business.business_id || business.user_id,
@@ -385,7 +602,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
     setBusinessData(businessDetails);
 
-    // Set page data for breadcrumbs
     const { name, location, area } = getCategoryInfoSync(categorySlug);
     setPageData({
       name: name || "Category",
@@ -447,20 +663,27 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         <SubHeader />
 
         <main className="container mx-auto px-4 py-8">
-          {/* Breadcrumb */}
+          {/* Navigation Section */}
           <div className="mb-6">
-            <button
-              onClick={() => window.history.back()}
-              className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2 mb-4"
-            >
-              ← Back to {pageData?.name || 'listings'}
-            </button>
+            {/* Back and Home Buttons */}
+            <div className="flex items-center gap-4 mb-4">
+              <button
+                onClick={handleBack}
+                className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2"
+              >
+                ← Back
+              </button>
+              
+              <button
+                onClick={handleHome}
+                className="text-gray-600 hover:text-gray-800 font-medium flex items-center gap-2"
+              >
+                🏠 Home
+              </button>
+            </div>
 
-            {pageData && (
-              <div className="text-sm text-gray-600">
-                {pageData.location} › {pageData.area} › {pageData.name} › {businessData.displayName}
-              </div>
-            )}
+            {/* Simple Breadcrumb Navigation (Non-clickable) */}
+            <SimpleBreadcrumb />
           </div>
 
           {/* Business Header */}
@@ -487,7 +710,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
                   <div className="flex flex-col gap-3">
                     {businessData.phone ? (
                       <>
-                        {/* Call Now Button */}
                         <button
                           onClick={() => window.open(`tel:${businessData.phone}`)}
                           className="w-full bg-green-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
@@ -496,7 +718,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
                           Call Now
                         </button>
 
-                        {/* WhatsApp Button - Simple Green Style */}
                         <button
                           onClick={() => {
                             const cleanPhone = businessData.phone.replace(/\D/g, '');
@@ -515,7 +736,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
                       </div>
                     )}
 
-                    {/* Get Directions Button */}
                     <button
                       onClick={() => {
                         if (businessData.latitude && businessData.longitude) {
@@ -611,66 +831,52 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             </div>
           )}
 
-         {/* Rating & Review Section */}
-<div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-  <h3 className="font-semibold text-xl mb-6">Rate & Review</h3>
+          {/* Rating & Review Section */}
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h3 className="font-semibold text-xl mb-6">Rate & Review</h3>
 
-  {/* Big Star Rating */}
-  <div className="flex flex-col items-center justify-center mb-6">
-    <div className="flex items-center gap-2 mb-4">
-      {Array.from({ length: 5 }, (_, i) => (
-        <span
-          key={i}
-          onClick={() => {
-            const userId = getCurrentUserId();
-            if (userId) {
-              setSelectedRating(i + 1);
-              openReviewModal(businessData);
-            } else {
-              alert("Please log in to submit a review!");
-              setShouldReopenReviewAfterLogin(true);
-            }
-          }}
-          className={`cursor-pointer text-5xl transition-all duration-200 transform hover:scale-110 ${
-            i < selectedRating 
-              ? "text-yellow-500 drop-shadow-lg" 
-              : "text-gray-300 hover:text-yellow-300"
-          }`}
-        >
-          ★
-        </span>
-      ))}
-    </div>
-    <span className="text-gray-600 text-lg font-medium">
-      {selectedRating > 0 ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}` : 'Click stars to rate'}
-    </span>
-  </div>
+            {/* Big Star Rating */}
+            <div className="flex flex-col items-center justify-center mb-6">
+              <div className="flex items-center gap-2 mb-4">
+                {Array.from({ length: 5 }, (_, i) => (
+                  <span
+                    key={i}
+                    onClick={() => handleStarClick(i + 1, businessData)}
+                    className={`cursor-pointer text-5xl transition-all duration-200 transform hover:scale-110 ${i < selectedRating
+                        ? "text-yellow-500 drop-shadow-lg"
+                        : "text-gray-300 hover:text-yellow-300"
+                      }`}
+                  >
+                    ★
+                  </span>
+                ))}
+              </div>
+              <span className="text-gray-600 text-lg font-medium">
+                {selectedRating > 0 ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}` : 'Click stars to rate'}
+              </span>
+            </div>
 
-  {/* Current Rating Display */}
-  <div className="flex items-center justify-center gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
-    <div className="text-center">
-      <div className="text-4xl font-bold text-gray-900">{businessData.rating || 0}</div>
-      <div className="flex items-center gap-1">
-        {Array.from({ length: 5 }, (_, i) => (
-          <span
-            key={i}
-            className={`text-lg ${
-              i < Math.floor(businessData.rating || 0) ? "text-yellow-500" : "text-gray-300"
-            }`}
-          >
-            ★
-          </span>
-        ))}
-      </div>
-      <div className="text-gray-600 text-sm mt-1">
-        ({businessData.reviewCount || 0} reviews)
-      </div>
-    </div>
-  </div>
-
-
-</div>
-
+            {/* Current Rating Display */}
+            <div className="flex items-center justify-center gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+              <div className="text-center">
+                <div className="text-4xl font-bold text-gray-900">{businessData.rating || 0}</div>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <span
+                      key={i}
+                      className={`text-lg ${i < Math.floor(businessData.rating || 0) ? "text-yellow-500" : "text-gray-300"
+                        }`}
+                    >
+                      ★
+                    </span>
+                  ))}
+                </div>
+                <div className="text-gray-600 text-sm mt-1">
+                  ({businessData.reviewCount || 0} reviews)
+                </div>
+              </div>
+            </div>
+          </div>
         </main>
 
         <Footer />
@@ -685,6 +891,65 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           onLoginRequest={handleLoginRequest}
           initialRating={selectedRating}
         />
+
+        {/* Awesome Login Modal */}
+        {isLoginModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-md">
+              <AwesomeLogin
+                onLogin={handleLoginSuccess}
+                onSwitchToSignup={() => {
+                  console.log('🔄 Switching from login to signup modal');
+                  setIsLoginModalOpen(false);
+                  setShowRegisterModal(true);
+                }}
+                onForgotPassword={() => {
+                  alert('Password reset feature coming soon!');
+                }}
+                loading={false}
+                className="awesome-auth-modal"
+                showSocialLogin={false}
+              />
+
+              <div className="p-4 border-t">
+                <button
+                  onClick={closeLoginModal}
+                  className="w-full bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Awesome Signup Modal */}
+        {showRegisterModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-md">
+              <AwesomeSignup
+                onSignup={handleAwesomeSignup}
+                onSwitchToLogin={() => {
+                  console.log('🔄 Switching from signup to login modal');
+                  setShowRegisterModal(false);
+                  setIsLoginModalOpen(true);
+                }}
+                loading={isRegistering}
+                className="awesome-auth-modal"
+                showSocialSignup={false}
+              />
+
+              <div className="p-4 border-t">
+                <button
+                  onClick={() => setShowRegisterModal(false)}
+                  className="w-full bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -700,6 +965,29 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       <SubHeader />
       <main className="theia-exception">
         <div className="container mx-auto px-3 sm:px-4 py-6 md:py-8">
+          {/* Navigation Section */}
+          <div className="mb-6 px-4">
+            {/* Back and Home Buttons */}
+            <div className="flex items-center gap-4 mb-4">
+              <button
+                onClick={handleBack}
+                className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2"
+              >
+                ← Back
+              </button>
+              
+              <button
+                onClick={handleHome}
+                className="text-gray-600 hover:text-gray-800 font-medium flex items-center gap-2"
+              >
+                🏠 Home
+              </button>
+            </div>
+
+            {/* Simple Breadcrumb Navigation (Non-clickable) */}
+            <SimpleBreadcrumb />
+          </div>
+
           <ListingsContainer
             initialListings={filteredListings}
             categoryName={name}
@@ -718,6 +1006,65 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         businessImages={selectedBusiness?.images || []}
         onLoginRequest={handleLoginRequest}
       />
+
+      {/* Awesome Login Modal for category page */}
+      {isLoginModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-md">
+            <AwesomeLogin
+              onLogin={handleLoginSuccess}
+              onSwitchToSignup={() => {
+                console.log('🔄 Switching from login to signup modal');
+                setIsLoginModalOpen(false);
+                setShowRegisterModal(true);
+              }}
+              onForgotPassword={() => {
+                alert('Password reset feature coming soon!');
+              }}
+              loading={false}
+              className="awesome-auth-modal"
+              showSocialLogin={false}
+            />
+
+            <div className="p-4 border-t">
+              <button
+                onClick={closeLoginModal}
+                className="w-full bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Awesome Signup Modal for category page */}
+      {showRegisterModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-md">
+            <AwesomeSignup
+              onSignup={handleAwesomeSignup}
+              onSwitchToLogin={() => {
+                console.log('🔄 Switching from signup to login modal');
+                setShowRegisterModal(false);
+                setIsLoginModalOpen(true);
+              }}
+              loading={isRegistering}
+              className="awesome-auth-modal"
+              showSocialSignup={false}
+            />
+
+            <div className="p-4 border-t">
+              <button
+                onClick={() => setShowRegisterModal(false)}
+                className="w-full bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>
@@ -810,13 +1157,11 @@ function getCategoryInfoSync(slugArray: string[]) {
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
 
-  // Example defaults for location and area
-  const location = "Kisanpur"; 
+  const location = "Kisanpur";
   const area = "DefaultArea";
 
   return { id, name, path: slugArray.join("/"), location, area };
 }
-
 
 function getLocationInfo(slugArray: string[]) {
   const locationSlug = slugArray[0] || "kisanpur";
