@@ -106,7 +106,7 @@ const AwesomeAuthModal: React.FC<AwesomeAuthModalProps> = ({
             onSignup={handleSignup}
             onSwitchToLogin={() => setIsLogin(true)}
             loading={loading}
-            showAdditionalFields={false} // Set based on your requirement
+            
           />
         )}
       </div>

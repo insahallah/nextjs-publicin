@@ -649,7 +649,7 @@ const Header = () => {
                 loading={isRegistering}
                 className="awesome-auth-modal"
                 showSocialSignup={false}
-                showAdditionalFields={true}
+              
               />
             </div>
           </div>

@@ -30,6 +30,8 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [breadcrumbPath, setBreadcrumbPath] = useState<{path: string, name: string, isClickable: boolean}[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
   
   const router = useRouter();
 
@@ -248,9 +250,58 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
       alert("✅ Review submitted successfully!");
       closeReviewModal();
+      
+      // Refresh reviews after submitting new review
+      if (businessData?.id) {
+        fetchReviews(businessData.id);
+      }
     } catch (err: any) {
       console.error("❌ Error submitting review:", err);
       alert("Failed to submit review: " + err.message);
+    }
+  };
+
+  // Fetch reviews function
+  const fetchReviews = async (businessId: string) => {
+    try {
+      setReviewsLoading(true);
+      console.log('🔄 Fetching reviews for business ID:', businessId);
+      
+      const params = new URLSearchParams();
+      params.append('business_id', businessId);
+
+      const res = await fetch(
+        `https://allupipay.in/publicsewa/api/users/get_reviews_for_one_bussiness.php?${params}`,
+        {
+          method: "GET",
+          cache: "no-store"
+        }
+      );
+
+      console.log('📝 Reviews API Response status:', res.status);
+
+      if (res.ok) {
+        const data = await res.json();
+        console.log('📝 Reviews API Response data:', data);
+        
+        // Handle both response formats
+        if (data && (data.status === "success" || data.reviews)) {
+          const reviewsData = data.data || data.reviews || [];
+          setReviews(reviewsData);
+          console.log('✅ Reviews loaded:', reviewsData.length);
+        } else {
+          setReviews([]);
+          console.log('ℹ️ No reviews found or API returned error');
+        }
+      } else {
+        setReviews([]);
+        console.log('❌ Failed to fetch reviews');
+      }
+    } catch (error) {
+      console.error('🚨 Error fetching reviews:', error);
+      setReviews([]);
+    } finally {
+      setReviewsLoading(false);
     }
   };
 
@@ -609,6 +660,11 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       area: area || "Lakhisarai",
       categorySlug: categorySlug.join('/')
     });
+
+    // Fetch reviews after setting business data
+    if (businessDetails.id) {
+      fetchReviews(businessDetails.id);
+    }
   };
 
   // Fetch category data
@@ -831,7 +887,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             </div>
           )}
 
-          {/* Rating & Review Section */}
+          {/* Rating & Review Section with Messages */}
           <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
             <h3 className="font-semibold text-xl mb-6">Rate & Review</h3>
 
@@ -842,38 +898,128 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
                   <span
                     key={i}
                     onClick={() => handleStarClick(i + 1, businessData)}
-                    className={`cursor-pointer text-5xl transition-all duration-200 transform hover:scale-110 ${i < selectedRating
+                    className={`cursor-pointer text-5xl transition-all duration-200 transform hover:scale-110 ${
+                      i < selectedRating
                         ? "text-yellow-500 drop-shadow-lg"
                         : "text-gray-300 hover:text-yellow-300"
-                      }`}
+                    }`}
                   >
                     ★
                   </span>
                 ))}
               </div>
               <span className="text-gray-600 text-lg font-medium">
-                {selectedRating > 0 ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}` : 'Click stars to rate'}
+                {selectedRating > 0 
+                  ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}` 
+                  : 'Click stars to rate'
+                }
               </span>
             </div>
 
-            {/* Current Rating Display */}
-            <div className="flex items-center justify-center gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
-              <div className="text-center">
-                <div className="text-4xl font-bold text-gray-900">{businessData.rating || 0}</div>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <span
-                      key={i}
-                      className={`text-lg ${i < Math.floor(businessData.rating || 0) ? "text-yellow-500" : "text-gray-300"
+            {/* Current Rating Display and Reviews Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+              {/* Rating Summary */}
+              <div className="lg:col-span-1">
+                <div className="bg-gray-50 rounded-lg p-6 text-center">
+                  <div className="text-4xl font-bold text-gray-900 mb-2">
+                    {businessData.rating || 0}
+                  </div>
+                  <div className="flex items-center justify-center gap-1 mb-2">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <span
+                        key={i}
+                        className={`text-xl ${
+                          i < Math.floor(businessData.rating || 0) 
+                            ? "text-yellow-500" 
+                            : "text-gray-300"
                         }`}
-                    >
-                      ★
-                    </span>
-                  ))}
+                      >
+                        ★
+                      </span>
+                    ))}
+                  </div>
+                  <div className="text-gray-600 text-sm">
+                    ({businessData.reviewCount || 0} reviews)
+                  </div>
                 </div>
-                <div className="text-gray-600 text-sm mt-1">
-                  ({businessData.reviewCount || 0} reviews)
-                </div>
+              </div>
+
+              {/* Review Messages */}
+              <div className="lg:col-span-2">
+                <h4 className="font-semibold text-lg mb-4 text-gray-800">Customer Reviews</h4>
+                
+                {reviewsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading reviews...</p>
+                  </div>
+                ) : reviews.length > 0 ? (
+                  <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                    {reviews.map((review, index) => (
+                      <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            {/* User Avatar */}
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-md">
+                              {review.username ? review.username.charAt(0).toUpperCase() : 'U'}
+                            </div>
+                            <div>
+                              <div className="font-medium text-gray-900">
+                                {review.username || 'Anonymous User'}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {Array.from({ length: 5 }, (_, i) => (
+                                  <span
+                                    key={i}
+                                    className={`text-sm ${
+                                      i < Math.floor(review.rating || 0) 
+                                        ? "text-yellow-500" 
+                                        : "text-gray-300"
+                                    }`}
+                                  >
+                                    ★
+                                  </span>
+                                ))}
+                                <span className="text-sm text-gray-500 ml-1">
+                                  {review.rating || 0}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {review.created_at 
+                              ? new Date(review.created_at).toLocaleDateString('en-IN', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                })
+                              : 'Recently'
+                            }
+                          </div>
+                        </div>
+                        
+                        {/* Review Comment */}
+                        {review.review && review.review.trim() !== '' ? (
+                          <p className="text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-3 border-l-4 border-blue-500">
+                            "{review.review}"
+                          </p>
+                        ) : (
+                          <p className="text-gray-500 italic bg-gray-50 rounded-lg p-3">
+                            No comment provided
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <div className="text-gray-400 text-6xl mb-4">💬</div>
+                    <h4 className="text-lg font-medium text-gray-600 mb-2">No Reviews Yet</h4>
+                    <p className="text-gray-500 max-w-md mx-auto">
+                      Be the first to share your experience with this business! Click the stars above to leave a review.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -923,7 +1069,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           </div>
         )}
 
-        {/* Awesome Signup Modal - FIXED: removed showAdditionalFields prop */}
+        {/* Awesome Signup Modal */}
         {showRegisterModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg w-full max-w-md">
@@ -1038,7 +1184,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         </div>
       )}
 
-      {/* Awesome Signup Modal for category page - FIXED: removed showAdditionalFields prop */}
+      {/* Awesome Signup Modal for category page */}
       {showRegisterModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-md">
