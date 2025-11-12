@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Swal from 'sweetalert2';
 import AwesomeLogin from './AwesomeLogin';
 import AwesomeSignup from './AwesomeSignup';
 
@@ -19,6 +20,36 @@ const Header = () => {
   // API endpoints
   const API_BASE_URL = 'https://allupipay.in/publicsewa/api';
   const LOGIN_ENDPOINT = `${API_BASE_URL}/login.php`;
+
+  // helper: non-blocking toast (replaces console.log)
+  const toast = (message: string, icon: 'info' | 'success' | 'error' | 'warning' = 'info') => {
+    try {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon,
+        title: message,
+        showConfirmButton: false,
+        timer: 1500,
+        background: '#ffffff',
+      });
+    } catch (e) {
+      // fallback to console if Swal fails
+      // eslint-disable-next-line no-console
+      console.log(message, e);
+    }
+  };
+
+  // helper: modal (replaces alert)
+  const modal = (opts: { icon?: 'success' | 'error' | 'info' | 'warning'; title?: string; text?: string }) => {
+    Swal.fire({
+      icon: opts.icon || 'info',
+      title: opts.title || '',
+      text: opts.text || '',
+      confirmButtonColor: opts.icon === 'error' ? '#ef4444' : '#10b981',
+      background: '#ffffff',
+    });
+  };
 
   // Check screen size function
   const checkScreenSize = () => {
@@ -44,12 +75,12 @@ const Header = () => {
   // Event listeners for modal coordination
   useEffect(() => {
     const handleOpenLoginModal = () => {
-      console.log('✅ Login modal requested from ReviewModal - Opening login modal');
+      toast('Login modal requested from ReviewModal', 'info');
       setShowLoginModal(true);
     };
 
     const handleOpenLoginModalFromReview = () => {
-      console.log('✅ Login modal requested from Review Section - Opening login modal');
+      toast('Login modal requested from Review Section', 'info');
       setShowLoginModal(true);
     };
 
@@ -60,6 +91,7 @@ const Header = () => {
       window.removeEventListener('openLoginModal', handleOpenLoginModal);
       window.removeEventListener('openLoginModalFromReview', handleOpenLoginModalFromReview);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Check screen size and auth status
@@ -75,9 +107,11 @@ const Header = () => {
 
         // Small delay to ensure everything is loaded properly
         await new Promise(resolve => setTimeout(resolve, 100));
-
       } catch (error) {
+        // keep console.error for unexpected internal errors
+        // eslint-disable-next-line no-console
         console.error('Initialization error:', error);
+        modal({ icon: 'error', title: 'Initialization error', text: String(error) });
       } finally {
         setIsLoading(false);
       }
@@ -88,6 +122,7 @@ const Header = () => {
     return () => {
       window.removeEventListener('resize', checkScreenSize);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleMenu = () => {
@@ -98,11 +133,10 @@ const Header = () => {
     setIsMenuOpen(false);
   };
 
-  // ✅ UPDATED: Awesome Login Handler - Mobile number field use karo
-  const handleLoginSuccess  = async (loginData: any) => {
+  // ✅ FIXED: Awesome Login Handler - अब error message properly show होगा
+  const handleLoginSuccess = async (loginData: any) => {
     setIsLoggingIn(true);
-    console.log('🔐 Awesome Login data:', loginData);
-
+    
     try {
       // Mobile number directly use karo (ab mobile field hai)
       const mobileNumber = loginData.mobile;
@@ -110,8 +144,6 @@ const Header = () => {
       const formData = new URLSearchParams();
       formData.append('mobile', mobileNumber);
       formData.append('password', loginData.password);
-
-      console.log('📤 Sending login request to:', LOGIN_ENDPOINT);
 
       const response = await fetch(LOGIN_ENDPOINT, {
         method: 'POST',
@@ -121,56 +153,69 @@ const Header = () => {
         body: formData.toString()
       });
 
-      console.log('📥 Login response status:', response.status);
       const data = await response.json();
-      console.log('📥 Login response data:', data);
 
- if (response.ok && data.status === 'success') {
-  console.log('✅ LOGIN SUCCESSFUL');
+      // ✅ FIXED: यहाँ error handling improve की है
+      if (response.ok && data.status === 'success') {
+        toast('Login successful!', 'success');
 
-  // Store token and user data
-  localStorage.setItem('authToken', data.token || data.id);
-  localStorage.setItem('userData', JSON.stringify({
-    id: data.id,
-    fullName: data.fullName || data.name || 'User',
-    mobile: data.mobile,
-    city: data.city,
-    village: data.village,
-    ...data
-  }));
+        // Store token and user data
+        localStorage.setItem('authToken', data.token || data.id);
+        localStorage.setItem('userData', JSON.stringify({
+          id: data.id,
+          fullName: data.fullName || data.name || 'User',
+          mobile: data.mobile,
+          city: data.city,
+          village: data.village,
+          ...data
+        }));
 
-  setIsLoggedIn(true);
-  setUser(data);
-  setShowLoginModal(false);
+        setIsLoggedIn(true);
+        setUser(data);
+        setShowLoginModal(false);
 
-  // ✅ IMPROVED EVENT with user data
-  setTimeout(() => {
-    console.log('🎯 Dispatching userLoggedIn event with data');
-    
-    // Multiple events for better reliability
-    window.dispatchEvent(new CustomEvent('userLoggedIn', {
-      detail: {
-        user: data,
-        userId: data.id,
-        timestamp: new Date().toISOString()
-      }
-    }));
-    
-    // Force storage event
-    window.dispatchEvent(new Event('storage'));
-    
-  }, 200);
+        // Dispatch events
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('userLoggedIn', {
+            detail: {
+              user: data,
+              userId: data.id,
+              timestamp: new Date().toISOString()
+            }
+          }));
+          window.dispatchEvent(new Event('storage'));
+        }, 200);
 
-  alert('Login successful!');
-} else {
-        console.log('❌ LOGIN FAILED:', data.message);
-        alert(data.message || 'Login failed. Please try again.');
+        modal({ icon: 'success', title: 'Login successful!', text: 'Welcome back!' });
+      } else {
+        // ✅ FIXED: अब error message properly show होगा
+        const errorMessage = data.message || 'Login failed. Please check your credentials and try again.';
+        
+        // Show error in modal (main error message)
+        modal({ 
+          icon: 'error', 
+          title: 'Login failed', 
+          text: errorMessage 
+        });
+        
+        // Also show as toast for immediate feedback
+        toast(errorMessage, 'error');
       }
     } catch (error) {
-      console.error('🚨 Login error:', error);
-      alert('Login failed. Please check your connection and try again.');
+      // ✅ FIXED: Network errors के लिए भी proper message
+      const errorMessage = 'Network error: Please check your internet connection and try again.';
+      
+      // eslint-disable-next-line no-console
+      console.error('Login error:', error);
+      
+      modal({ 
+        icon: 'error', 
+        title: 'Login failed', 
+        text: errorMessage 
+      });
+      
+      toast(errorMessage, 'error');
     } finally {
-      console.log('🏁 Login process finished');
       setIsLoggingIn(false);
     }
   };
@@ -178,7 +223,7 @@ const Header = () => {
   // ✅ UPDATED: Awesome Signup Handler - Mobile number field use karo
   const handleAwesomeSignup = async (signupData: any) => {
     setIsRegistering(true);
-    console.log('📝 Awesome Signup data:', signupData);
+    toast(`Signup data received: ${typeof signupData === 'object' ? (signupData.mobile || 'mobile') : String(signupData)}`, 'info');
 
     try {
       // Mobile number directly use karo (ab mobile field hai)
@@ -202,7 +247,7 @@ const Header = () => {
       });
 
       const data = await response.json();
-      console.log('📥 Registration response:', data);
+      toast('Registration response received', 'info');
 
       if (response.ok && data.status === 'success') {
         // Store token and user data
@@ -230,7 +275,7 @@ const Header = () => {
 
         // Dispatch event after registration
         setTimeout(() => {
-          console.log('🎯 Dispatching userLoggedIn event after registration');
+          toast('Dispatching userLoggedIn event after registration', 'info');
           window.dispatchEvent(new CustomEvent('userLoggedIn', {
             detail: {
               user: {
@@ -245,13 +290,31 @@ const Header = () => {
           }));
         }, 100);
 
-        alert('Registration successful!');
+        modal({ icon: 'success', title: 'Registration successful!', text: 'Welcome!' });
       } else {
-        alert(data.message || 'Registration failed. Please try again.');
+        // ✅ FIXED: Signup errors के लिए भी proper message
+        const errorMessage = data.message || 'Registration failed. Please try again.';
+        modal({ 
+          icon: 'error', 
+          title: 'Registration failed', 
+          text: errorMessage 
+        });
+        toast(errorMessage, 'error');
       }
     } catch (error) {
+      // ✅ FIXED: Network errors के लिए भी proper message
+      const errorMessage = 'Network error: Please check your internet connection and try again.';
+      
+      // eslint-disable-next-line no-console
       console.error('Registration error:', error);
-      alert('Registration failed. Please check your connection and try again.');
+      
+      modal({ 
+        icon: 'error', 
+        title: 'Registration failed', 
+        text: errorMessage 
+      });
+      
+      toast(errorMessage, 'error');
     } finally {
       setIsRegistering(false);
     }
@@ -269,7 +332,7 @@ const Header = () => {
     // Close mobile menu if open
     closeMenu();
 
-    alert('Logged out successfully!');
+    modal({ icon: 'info', title: 'Logged out successfully!', text: '' });
   };
 
   // ESC key press par menu close
@@ -299,7 +362,7 @@ const Header = () => {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Search submitted:', searchType);
+    toast(`Search submitted: ${searchType}`, 'info');
   };
 
   const handleSearchTypeChange = (type: string) => {
@@ -308,7 +371,7 @@ const Header = () => {
 
   // ✅ ADDED: Forgot Password Handler for AwesomeLogin
   const handleForgotPassword = () => {
-    alert('Password reset feature coming soon!');
+    modal({ icon: 'info', title: 'Password reset feature coming soon!' , text: ''});
   };
 
   return (
@@ -597,7 +660,7 @@ const Header = () => {
               }}
             >
               <AwesomeLogin
-                onLogin={handleLoginSuccess }
+                onLogin={handleLoginSuccess}
                 onSwitchToSignup={() => {
                   setShowLoginModal(false);
                   setShowRegisterModal(true);
@@ -649,7 +712,6 @@ const Header = () => {
                 loading={isRegistering}
                 className="awesome-auth-modal"
                 showSocialSignup={false}
-              
               />
             </div>
           </div>
