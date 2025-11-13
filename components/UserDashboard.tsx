@@ -20,7 +20,6 @@ declare global {
 
 export default function UserDashboard() {
   const router = useRouter()
-  const chartRef = useRef<HTMLCanvasElement>(null)
   const isInitialized = useRef(false)
 
   useEffect(() => {
@@ -49,66 +48,6 @@ export default function UserDashboard() {
           }
         })
 
-        // Initialize chart with COMPATIBLE configuration
-        if (chartRef.current) {
-          const Chart = (await import('chart.js/auto')).default
-          const ctx = chartRef.current.getContext('2d')
-          if (ctx) {
-            new Chart(ctx, {
-              type: 'line',
-              data: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                datasets: [{
-                  label: 'Revenue',
-                  data: [40000, 30000, 20000, 25000, 22000, 35000, 40000, 38000, 42000, 45000, 48000, 50000],
-                  backgroundColor: 'rgba(78, 115, 223, 0.1)',
-                  borderColor: 'rgba(78, 115, 223, 1)',
-                  borderWidth: 2,
-                  tension: 0.4,
-                  fill: true
-                }]
-              },
-              options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    // ✅ COMPATIBLE CONFIG: Remove problematic properties
-                    grid: {
-                      // Chart.js v4 compatible properties only
-                      color: 'rgba(0, 0, 0, 0.1)',
-                      drawTicks: false,
-                    },
-                    ticks: {
-                      callback: function(this: any, value: any) {
-                        return '$' + value.toLocaleString()
-                      }
-                    }
-                  },
-                  x: {
-                    grid: {
-                      display: false
-                    }
-                  }
-                },
-                plugins: {
-                  legend: {
-                    display: false
-                  },
-                  tooltip: {
-                    callbacks: {
-                      label: function(context: any) {
-                        return '$' + context.parsed.y.toLocaleString()
-                      }
-                    }
-                  }
-                }
-              }
-            })
-          }
-        }
-
         console.log('Dashboard initialized successfully')
 
       } catch (error) {
@@ -127,66 +66,6 @@ export default function UserDashboard() {
       }
     }
   }, [])
-
-  // ✅ ALTERNATIVE: SIMPLIFIED Chart configuration (most compatible)
-  const initializeSimpleChart = async () => {
-    if (!chartRef.current) return
-    
-    try {
-      const Chart = (await import('chart.js/auto')).default
-      const ctx = chartRef.current.getContext('2d')
-      if (!ctx) return
-
-      // ✅ SIMPLEST CONFIG: Only essential properties
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-          datasets: [{
-            label: 'Revenue',
-            data: [40000, 30000, 20000, 25000, 22000, 35000, 40000, 38000, 42000, 45000, 48000, 50000],
-            backgroundColor: 'rgba(78, 115, 223, 0.1)',
-            borderColor: 'rgba(78, 115, 223, 1)',
-            borderWidth: 2,
-            tension: 0.4,
-            fill: true
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              // ✅ MINIMAL CONFIG: No grid customization
-              ticks: {
-                callback: function(this: any, value: any) {
-                  return '$' + value.toLocaleString()
-                }
-              }
-            },
-            x: {
-              // ✅ MINIMAL CONFIG: No grid customization
-            }
-          },
-          plugins: {
-            legend: {
-              display: false
-            },
-            tooltip: {
-              callbacks: {
-                label: function(context: any) {
-                  return '$' + context.parsed.y.toLocaleString()
-                }
-              }
-            }
-          }
-        }
-      })
-    } catch (error) {
-      console.error('Simple chart initialization error:', error)
-    }
-  }
 
   const handleLogout = () => {
     // Clear localStorage and redirect
@@ -397,19 +276,47 @@ export default function UserDashboard() {
               ))}
             </div>
 
-            {/* Statistics Chart */}
+            {/* Statistics Section - Chart Removed */}
             <div className="card mb-4">
               <div className="card-header">
                 <h5 className="card-title mb-0">
-                  <i className="fas fa-chart-bar mr-2"></i>Revenue Statistics
+                  <i className="fas fa-chart-bar mr-2"></i>Business Overview
                 </h5>
               </div>
               <div className="card-body">
-                <div style={{ height: '300px' }}>
-                  <canvas 
-                    ref={chartRef}
-                    id="myAreaChart"
-                  ></canvas>
+                <div className="row text-center">
+                  <div className="col-md-3 mb-3">
+                    <div className="card bg-light">
+                      <div className="card-body">
+                        <h3 className="text-primary">₹2,45,000</h3>
+                        <p className="text-muted">Total Revenue</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-md-3 mb-3">
+                    <div className="card bg-light">
+                      <div className="card-body">
+                        <h3 className="text-success">156</h3>
+                        <p className="text-muted">Total Customers</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-md-3 mb-3">
+                    <div className="card bg-light">
+                      <div className="card-body">
+                        <h3 className="text-warning">89%</h3>
+                        <p className="text-muted">Satisfaction Rate</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-md-3 mb-3">
+                    <div className="card bg-light">
+                      <div className="card-body">
+                        <h3 className="text-info">45</h3>
+                        <p className="text-muted">Active Listings</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
