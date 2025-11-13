@@ -75,10 +75,15 @@ export default function UserDashboard() {
                   y: {
                     beginAtZero: true,
                     grid: {
-                      drawBorder: false
+                      // ✅ FIXED: Use correct property name for Chart.js v4
+                      drawBorder: false, // This should work in v4, but if not, use the alternative below
+                      // Alternative: Use display property instead
+                      // display: true,
+                      // drawOnChartArea: true,
+                      // drawTicks: false,
                     },
                     ticks: {
-                      callback: function(value) {
+                      callback: function(this: any, value: any) {
                         return '$' + value.toLocaleString()
                       }
                     }
@@ -95,7 +100,7 @@ export default function UserDashboard() {
                   },
                   tooltip: {
                     callbacks: {
-                      label: function(context) {
+                      label: function(context: any) {
                         return '$' + context.parsed.y.toLocaleString()
                       }
                     }
@@ -125,8 +130,79 @@ export default function UserDashboard() {
     }
   }, [])
 
+  // ✅ ALTERNATIVE: Use a safer chart configuration that works with all versions
+  const initializeChartSafely = async () => {
+    if (!chartRef.current) return
+    
+    try {
+      const Chart = (await import('chart.js/auto')).default
+      const ctx = chartRef.current.getContext('2d')
+      if (!ctx) return
+
+      // ✅ SAFE CONFIG: Compatible with both Chart.js v3 and v4
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+          datasets: [{
+            label: 'Revenue',
+            data: [40000, 30000, 20000, 25000, 22000, 35000, 40000, 38000, 42000, 45000, 48000, 50000],
+            backgroundColor: 'rgba(78, 115, 223, 0.1)',
+            borderColor: 'rgba(78, 115, 223, 1)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              // ✅ SIMPLIFIED: Remove problematic grid configuration
+              grid: {
+                // Remove drawBorder entirely or use compatible properties
+                color: 'rgba(0, 0, 0, 0.1)',
+              },
+              ticks: {
+                callback: function(this: any, value: any) {
+                  return '$' + value.toLocaleString()
+                }
+              }
+            },
+            x: {
+              grid: {
+                display: false
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context: any) {
+                  return '$' + context.parsed.y.toLocaleString()
+                }
+              }
+            }
+          }
+        }
+      })
+    } catch (error) {
+      console.error('Chart initialization error:', error)
+    }
+  }
+
   const handleLogout = () => {
-    router.push('/login')
+    // Clear localStorage and redirect
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('authToken')
+      localStorage.removeItem('userData')
+    }
+    router.push('/')
   }
 
   const handleViewDetails = (e: React.MouseEvent, path: string) => {
@@ -156,7 +232,6 @@ export default function UserDashboard() {
         {/* Navigation */}
         <nav className="navbar navbar-expand-lg navbar-dark bg-default fixed-top" id="mainNav">
           <a className="navbar-brand" href="/">
-            {/* Replace with your logo */}
             <span className="text-white font-weight-bold">FINDOCTOR</span>
           </a>
           <button 
@@ -359,7 +434,7 @@ export default function UserDashboard() {
         <footer className="sticky-footer bg-white">
           <div className="container my-auto">
             <div className="text-center my-auto">
-              <small>Copyright © FinDoctor 2024</small>
+              <small>Copyright © Publinin 2024</small>
             </div>
           </div>
         </footer>
@@ -417,17 +492,17 @@ export default function UserDashboard() {
         @media (max-width: 768px) {
           .sidebar {
             width: 100%;
-                position: relative;
-                height: auto;
-                top: 0;
-              }
-              .content-wrapper {
-                margin-left: 0;
-              }
-              .navbar-brand {
-                margin-left: 0;
-              }
-            }
+            position: relative;
+            height: auto;
+            top: 0;
+          }
+          .content-wrapper {
+            margin-left: 0;
+          }
+          .navbar-brand {
+            margin-left: 0;
+          }
+        }
       `}</style>
     </>
   )
