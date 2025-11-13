@@ -1,42 +1,111 @@
-// components/LayoutWithSidebar.tsx
+// components/Sidebar.tsx
 'use client'
 
 import { ReactNode } from 'react'
-import Sidebar from './Sidebar'
 
-interface LayoutProps {
-  children: ReactNode
+// ✅ Option A: Agar children required nahi hai to interface update karein
+interface SidebarProps {
+  children?: ReactNode  // ✅ Optional bana dein
 }
 
-export default function LayoutWithSidebar({ children }: LayoutProps) {
+// ✅ Option B: Ya fir children ko completely hata dein
+// interface SidebarProps {
+//   // koi specific props agar chahiye
+// }
+
+export default function Sidebar({ children }: SidebarProps) {
   return (
-    <div className="layout-wrapper">
-      <Sidebar />
-      <div className="main-content">
+    <aside className="sidebar" style={{
+      width: '280px',
+      background: 'white',
+      boxShadow: '2px 0 10px rgba(0,0,0,0.1)',
+      position: 'fixed',
+      left: 0,
+      top: 0,
+      height: '100vh',
+      overflowY: 'auto',
+      zIndex: 100
+    }}>
+      {/* Sidebar content */}
+      <div style={{ padding: '20px' }}>
+        <h3 style={{ margin: '0 0 20px 0', color: '#333' }}>Dashboard</h3>
+        
+        {/* Navigation Links */}
+        <nav>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            <li style={{ marginBottom: '8px' }}>
+              <a href="/UserDashboard" style={{
+                display: 'block',
+                padding: '12px 15px',
+                color: '#333',
+                textDecoration: 'none',
+                borderRadius: '8px',
+                transition: 'all 0.3s ease'
+              }}>
+                📊 Overview
+              </a>
+            </li>
+            <li style={{ marginBottom: '8px' }}>
+              <a href="/my-businesses" style={{
+                display: 'block',
+                padding: '12px 15px',
+                color: '#333',
+                textDecoration: 'none',
+                borderRadius: '8px',
+                transition: 'all 0.3s ease'
+              }}>
+                🏢 My Businesses
+              </a>
+            </li>
+            <li style={{ marginBottom: '8px' }}>
+              <a href="/profile" style={{
+                display: 'block',
+                padding: '12px 15px',
+                color: '#333',
+                textDecoration: 'none',
+                borderRadius: '8px',
+                transition: 'all 0.3s ease'
+              }}>
+                👤 Profile
+              </a>
+            </li>
+          </ul>
+        </nav>
+
+        {/* Agar children hai to display karein */}
         {children}
       </div>
 
       <style jsx>{`
-        .layout-wrapper {
-          display: flex;
-          min-height: 100vh;
-          background: #f8fafc;
+        .sidebar {
+          scrollbar-width: thin;
+          scrollbar-color: #cbd5e0 transparent;
         }
         
-        .main-content {
-          flex: 1;
-          margin-left: 280px;
-          padding: 0;
-          transition: margin-left 0.3s ease;
-          min-height: 100vh;
+        .sidebar::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .sidebar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb {
+          background: #cbd5e0;
+          border-radius: 3px;
         }
         
         @media (max-width: 768px) {
-          .main-content {
-            margin-left: 0;
+          .sidebar {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+          }
+          
+          .sidebar.mobile-open {
+            transform: translateX(0);
           }
         }
       `}</style>
-    </div>
+    </aside>
   )
 }
