@@ -16,7 +16,7 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
       <div className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
         {/* Sidebar Header */}
         <div className="sidebar-header">
-          {!sidebarCollapsed && <h3 className="brand">FINDOCTOR</h3>}
+          {!sidebarCollapsed && <h3 className="brand">PUBLICIN</h3>}
           <button 
             className="collapse-btn"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}

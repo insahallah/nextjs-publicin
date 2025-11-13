@@ -103,7 +103,7 @@ export default function UserDashboard() {
         {/* Navigation */}
         <nav className="navbar navbar-expand-lg navbar-dark bg-default fixed-top" id="mainNav">
           <a className="navbar-brand" href="/">
-            <span className="text-white font-weight-bold">FINDOCTOR</span>
+            <span className="text-white font-weight-bold">PUBLICIN</span>
           </a>
           <button 
             className="navbar-toggler" 
@@ -391,7 +391,7 @@ export default function UserDashboard() {
         <footer className="sticky-footer bg-white">
           <div className="container my-auto">
             <div className="text-center my-auto">
-              <small>Copyright © FinDoctor 2024</small>
+              <small>Copyright © Publicin 2024</small>
             </div>
           </div>
         </footer>
