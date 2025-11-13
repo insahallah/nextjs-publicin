@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import 'bootstrap/dist/css/bootstrap.min.css';
 
 
 
@@ -42,4 +43,35 @@ body {
 .app_buttons {
   opacity: 1 !important;
   visibility: visible !important;
+}
+
+#__next {
+  height: 100%;
+}
+
+.sidebar {
+  background-color: #343a40;
+}
+
+.bg-dark {
+  background-color: #343a40 !important;
+}
+
+.topbar {
+  background-color: #fff;
+}
+
+.sticky-footer {
+  background-color: #fff;
+}
+
+/* Ensure proper sidebar visibility */
+.navbar-nav.sidebar {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Chart container */
+canvas {
+  max-width: 100%;
 }

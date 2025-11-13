@@ -10,6 +10,8 @@
     "export": "next export"
   },
   "devDependencies": {
+    "@types/chart.js": "^2.9.41",
+    "@types/jquery": "^3.5.33",
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
@@ -21,6 +23,12 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.1.0",
+    "bootstrap": "^5.3.8",
+    "chart.js": "^4.5.1",
+    "datatables.net": "^2.3.4",
+    "datatables.net-bs4": "^2.3.4",
+    "jquery": "^3.7.1",
     "lucide-react": "^0.553.0",
     "next": "^13.4.19",
     "react": "^18.2.0",
