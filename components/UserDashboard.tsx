@@ -49,7 +49,7 @@ export default function UserDashboard() {
           }
         })
 
-        // Initialize chart
+        // Initialize chart with COMPATIBLE configuration
         if (chartRef.current) {
           const Chart = (await import('chart.js/auto')).default
           const ctx = chartRef.current.getContext('2d')
@@ -74,13 +74,11 @@ export default function UserDashboard() {
                 scales: {
                   y: {
                     beginAtZero: true,
+                    // ✅ COMPATIBLE CONFIG: Remove problematic properties
                     grid: {
-                      // ✅ FIXED: Use correct property name for Chart.js v4
-                      drawBorder: false, // This should work in v4, but if not, use the alternative below
-                      // Alternative: Use display property instead
-                      // display: true,
-                      // drawOnChartArea: true,
-                      // drawTicks: false,
+                      // Chart.js v4 compatible properties only
+                      color: 'rgba(0, 0, 0, 0.1)',
+                      drawTicks: false,
                     },
                     ticks: {
                       callback: function(this: any, value: any) {
@@ -130,8 +128,8 @@ export default function UserDashboard() {
     }
   }, [])
 
-  // ✅ ALTERNATIVE: Use a safer chart configuration that works with all versions
-  const initializeChartSafely = async () => {
+  // ✅ ALTERNATIVE: SIMPLIFIED Chart configuration (most compatible)
+  const initializeSimpleChart = async () => {
     if (!chartRef.current) return
     
     try {
@@ -139,7 +137,7 @@ export default function UserDashboard() {
       const ctx = chartRef.current.getContext('2d')
       if (!ctx) return
 
-      // ✅ SAFE CONFIG: Compatible with both Chart.js v3 and v4
+      // ✅ SIMPLEST CONFIG: Only essential properties
       new Chart(ctx, {
         type: 'line',
         data: {
@@ -160,11 +158,7 @@ export default function UserDashboard() {
           scales: {
             y: {
               beginAtZero: true,
-              // ✅ SIMPLIFIED: Remove problematic grid configuration
-              grid: {
-                // Remove drawBorder entirely or use compatible properties
-                color: 'rgba(0, 0, 0, 0.1)',
-              },
+              // ✅ MINIMAL CONFIG: No grid customization
               ticks: {
                 callback: function(this: any, value: any) {
                   return '$' + value.toLocaleString()
@@ -172,9 +166,7 @@ export default function UserDashboard() {
               }
             },
             x: {
-              grid: {
-                display: false
-              }
+              // ✅ MINIMAL CONFIG: No grid customization
             }
           },
           plugins: {
@@ -192,7 +184,7 @@ export default function UserDashboard() {
         }
       })
     } catch (error) {
-      console.error('Chart initialization error:', error)
+      console.error('Simple chart initialization error:', error)
     }
   }
 
@@ -247,7 +239,7 @@ export default function UserDashboard() {
             {/* Sidebar Navigation */}
             <ul className="navbar-nav sidebar">
               {[
-                { icon: 'tachometer-alt', text: 'Dashboard', href: '/dashboard', active: true },
+                { icon: 'tachometer-alt', text: 'Dashboard', href: '/UserDashboard', active: true },
                 { icon: 'envelope', text: 'Messages', href: '/messages' },
                 { 
                   icon: 'calendar-check', 
@@ -257,7 +249,7 @@ export default function UserDashboard() {
                 },
                 { icon: 'star', text: 'Reviews', href: '/reviews' },
                 { icon: 'heart', text: 'Bookmarks', href: '/bookmarks' },
-                { icon: 'plus-circle', text: 'Add listing', href: '/add-listing' }
+                { icon: 'plus-circle', text: 'Add listing', href: '/list-your-business' }
               ].map((item, index) => (
                 <li key={index} className="nav-item" data-toggle="tooltip" data-placement="right" title={item.text}>
                   <a className={`nav-link ${item.active ? 'active' : ''}`} href={item.href}>
@@ -275,24 +267,24 @@ export default function UserDashboard() {
               {/* Profile Dropdown */}
               <li className="nav-item" data-toggle="tooltip" data-placement="right" title="My profile">
                 <a className="nav-link nav-link-collapse collapsed" data-toggle="collapse" href="#collapseProfile">
-                  <i className="fas fa-wrench fa-fw"></i>
-                  <span className="nav-link-text">My profile</span>
+                  <i className="fas fa-user fa-fw"></i>
+                  <span className="nav-link-text">My Profile</span>
                 </a>
                 <ul className="sidenav-second-level collapse" id="collapseProfile">
-                  <li><a href="/user-profile">User profile</a></li>
-                  <li><a href="/doctor-profile">Doctor profile</a></li>
+                  <li><a href="/profile">User Profile</a></li>
+                  <li><a href="/business-profile">Business Profile</a></li>
                 </ul>
               </li>
 
-              {/* Components Dropdown */}
-              <li className="nav-item" data-toggle="tooltip" data-placement="right" title="Components">
-                <a className="nav-link nav-link-collapse collapsed" data-toggle="collapse" href="#collapseComponents">
+              {/* Settings Dropdown */}
+              <li className="nav-item" data-toggle="tooltip" data-placement="right" title="Settings">
+                <a className="nav-link nav-link-collapse collapsed" data-toggle="collapse" href="#collapseSettings">
                   <i className="fas fa-cog fa-fw"></i>
-                  <span className="nav-link-text">Components</span>
+                  <span className="nav-link-text">Settings</span>
                 </a>
-                <ul className="sidenav-second-level collapse" id="collapseComponents">
-                  <li><a href="/charts">Charts</a></li>
-                  <li><a href="/tables">Tables</a></li>
+                <ul className="sidenav-second-level collapse" id="collapseSettings">
+                  <li><a href="/settings">Account Settings</a></li>
+                  <li><a href="/notifications">Notifications</a></li>
                 </ul>
               </li>
             </ul>
@@ -343,25 +335,19 @@ export default function UserDashboard() {
                 </div>
               </li>
 
-              {/* Search */}
-              <li className="nav-item">
-                <form className="form-inline my-2 my-lg-0 mr-lg-2">
-                  <div className="input-group">
-                    <input className="form-control" type="text" placeholder="Search for..." />
-                    <div className="input-group-append">
-                      <button className="btn btn-primary" type="button">
-                        <i className="fas fa-search"></i>
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              </li>
-
-              {/* Logout */}
-              <li className="nav-item">
-                <a className="nav-link" data-toggle="modal" data-target="#exampleModal">
-                  <i className="fas fa-sign-out-alt fa-fw"></i>Logout
+              {/* User Dropdown */}
+              <li className="nav-item dropdown">
+                <a className="nav-link dropdown-toggle" href="#" id="userDropdown" data-toggle="dropdown">
+                  <i className="fas fa-user-circle fa-fw"></i>
                 </a>
+                <div className="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
+                  <a className="dropdown-item" href="/profile">Profile</a>
+                  <a className="dropdown-item" href="/settings">Settings</a>
+                  <div className="dropdown-divider"></div>
+                  <a className="dropdown-item" href="#" data-toggle="modal" data-target="#exampleModal">
+                    Logout
+                  </a>
+                </div>
               </li>
             </ul>
           </div>
@@ -373,7 +359,7 @@ export default function UserDashboard() {
             {/* Breadcrumbs */}
             <ol className="breadcrumb">
               <li className="breadcrumb-item">
-                <a href="#">Dashboard</a>
+                <a href="/UserDashboard">Dashboard</a>
               </li>
               <li className="breadcrumb-item active">My Dashboard</li>
             </ol>
@@ -415,7 +401,7 @@ export default function UserDashboard() {
             <div className="card mb-4">
               <div className="card-header">
                 <h5 className="card-title mb-0">
-                  <i className="fas fa-chart-bar mr-2"></i>Statistic
+                  <i className="fas fa-chart-bar mr-2"></i>Revenue Statistics
                 </h5>
               </div>
               <div className="card-body">
@@ -427,6 +413,70 @@ export default function UserDashboard() {
                 </div>
               </div>
             </div>
+
+            {/* Recent Activity */}
+            <div className="row">
+              <div className="col-lg-6">
+                <div className="card mb-4">
+                  <div className="card-header">
+                    <h5 className="card-title mb-0">
+                      <i className="fas fa-history mr-2"></i>Recent Activity
+                    </h5>
+                  </div>
+                  <div className="card-body">
+                    <div className="list-group list-group-flush">
+                      {[
+                        { text: 'New booking received', time: '5 mins ago', type: 'success' },
+                        { text: 'New review submitted', time: '15 mins ago', type: 'warning' },
+                        { text: 'Profile updated', time: '1 hour ago', type: 'info' },
+                        { text: 'Payment received', time: '2 hours ago', type: 'success' }
+                      ].map((activity, index) => (
+                        <div key={index} className="list-group-item d-flex align-items-center">
+                          <div className={`bg-${activity.type} rounded-circle p-2 mr-3`}>
+                            <i className="fas fa-circle text-white" style={{ fontSize: '8px' }}></i>
+                          </div>
+                          <div className="flex-grow-1">
+                            <div className="text-dark">{activity.text}</div>
+                            <small className="text-muted">{activity.time}</small>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-lg-6">
+                <div className="card mb-4">
+                  <div className="card-header">
+                    <h5 className="card-title mb-0">
+                      <i className="fas fa-tasks mr-2"></i>Quick Actions
+                    </h5>
+                  </div>
+                  <div className="card-body">
+                    <div className="row">
+                      {[
+                        { icon: 'plus-circle', text: 'Add Business', href: '/list-your-business', color: 'primary' },
+                        { icon: 'edit', text: 'Edit Profile', href: '/profile', color: 'success' },
+                        { icon: 'chart-line', text: 'View Reports', href: '/reports', color: 'info' },
+                        { icon: 'cog', text: 'Settings', href: '/settings', color: 'warning' }
+                      ].map((action, index) => (
+                        <div key={index} className="col-6 mb-3">
+                          <a 
+                            href={action.href}
+                            className={`btn btn-${action.color} btn-block`}
+                            onClick={(e) => handleViewDetails(e, action.href)}
+                          >
+                            <i className={`fas fa-${action.icon} mr-2`}></i>
+                            {action.text}
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -434,7 +484,7 @@ export default function UserDashboard() {
         <footer className="sticky-footer bg-white">
           <div className="container my-auto">
             <div className="text-center my-auto">
-              <small>Copyright © Publinin 2024</small>
+              <small>Copyright © FinDoctor 2024</small>
             </div>
           </div>
         </footer>
