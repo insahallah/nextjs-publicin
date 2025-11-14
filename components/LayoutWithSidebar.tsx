@@ -1,7 +1,7 @@
 // components/LayoutWithSidebar.tsx
 'use client'
 
-import { ReactNode, useState } from 'react'
+import { ReactNode, useState, useEffect } from 'react'
 
 interface LayoutProps {
   children: ReactNode
@@ -9,19 +9,79 @@ interface LayoutProps {
 
 export default function LayoutWithSidebar({ children }: LayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+
+  // Check if mobile on mount and resize
+  useEffect(() => {
+    const checkScreenSize = () => {
+      const mobile = window.innerWidth <= 768
+      setIsMobile(mobile)
+      if (!mobile) {
+        setMobileSidebarOpen(false)
+      }
+    }
+
+    checkScreenSize()
+    window.addEventListener('resize', checkScreenSize)
+    
+    return () => window.removeEventListener('resize', checkScreenSize)
+  }, [])
+
+  const toggleSidebar = () => {
+    if (isMobile) {
+      setMobileSidebarOpen(!mobileSidebarOpen)
+    } else {
+      setSidebarCollapsed(!sidebarCollapsed)
+    }
+  }
+
+  const closeMobileSidebar = () => {
+    if (isMobile) {
+      setMobileSidebarOpen(false)
+    }
+  }
 
   return (
     <div className="layout-wrapper">
+      {/* Mobile Header */}
+      {isMobile && (
+        <div className="mobile-header">
+          <button 
+            className="menu-toggle-btn"
+            onClick={toggleSidebar}
+          >
+            ☰
+          </button>
+          <h3 className="mobile-brand">PUBLICIN</h3>
+        </div>
+      )}
+
+      {/* Sidebar Overlay for Mobile */}
+      {isMobile && mobileSidebarOpen && (
+        <div 
+          className="sidebar-overlay"
+          onClick={closeMobileSidebar}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+      <div 
+        className={`
+          sidebar 
+          ${sidebarCollapsed ? 'collapsed' : ''}
+          ${isMobile ? 'mobile' : ''}
+          ${isMobile && mobileSidebarOpen ? 'mobile-open' : ''}
+        `}
+      >
         {/* Sidebar Header */}
         <div className="sidebar-header">
-          {!sidebarCollapsed && <h3 className="brand">PUBLICIN</h3>}
+          {(!sidebarCollapsed || isMobile) && <h3 className="brand">PUBLICIN</h3>}
           <button 
             className="collapse-btn"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            onClick={toggleSidebar}
           >
-            {sidebarCollapsed ? '→' : '←'}
+            {sidebarCollapsed && !isMobile ? '→' : '←'}
           </button>
         </div>
 
@@ -30,25 +90,25 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
           <ul className="nav-list">
             {/* Dashboard */}
             <li className="nav-item active">
-              <a href="#" className="nav-link">
+              <a href="#" className="nav-link" onClick={closeMobileSidebar}>
                 <span className="nav-icon">📊</span>
-                {!sidebarCollapsed && <span className="nav-text">Dashboard</span>}
+                {(!sidebarCollapsed || isMobile) && <span className="nav-text">Dashboard</span>}
               </a>
             </li>
 
             {/* Messages */}
             <li className="nav-item">
-              <a href="#" className="nav-link">
+              <a href="#" className="nav-link" onClick={closeMobileSidebar}>
                 <span className="nav-icon">✉️</span>
-                {!sidebarCollapsed && <span className="nav-text">Messages</span>}
+                {(!sidebarCollapsed || isMobile) && <span className="nav-text">Messages</span>}
               </a>
             </li>
 
             {/* Bookings */}
             <li className="nav-item">
-              <a href="#" className="nav-link">
+              <a href="#" className="nav-link" onClick={closeMobileSidebar}>
                 <span className="nav-icon">📅</span>
-                {!sidebarCollapsed && (
+                {(!sidebarCollapsed || isMobile) && (
                   <>
                     <span className="nav-text">Bookings</span>
                     <span className="nav-badge">6 New</span>
@@ -59,25 +119,25 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
 
             {/* Reviews */}
             <li className="nav-item">
-              <a href="#" className="nav-link">
+              <a href="#" className="nav-link" onClick={closeMobileSidebar}>
                 <span className="nav-icon">⭐</span>
-                {!sidebarCollapsed && <span className="nav-text">Reviews</span>}
+                {(!sidebarCollapsed || isMobile) && <span className="nav-text">Reviews</span>}
               </a>
             </li>
 
             {/* Bookmarks */}
             <li className="nav-item">
-              <a href="#" className="nav-link">
+              <a href="#" className="nav-link" onClick={closeMobileSidebar}>
                 <span className="nav-icon">❤️</span>
-                {!sidebarCollapsed && <span className="nav-text">Bookmarks</span>}
+                {(!sidebarCollapsed || isMobile) && <span className="nav-text">Bookmarks</span>}
               </a>
             </li>
 
             {/* Add Listing */}
             <li className="nav-item">
-              <a href="#" className="nav-link">
+              <a href="#" className="nav-link" onClick={closeMobileSidebar}>
                 <span className="nav-icon">➕</span>
-                {!sidebarCollapsed && <span className="nav-text">Add listing</span>}
+                {(!sidebarCollapsed || isMobile) && <span className="nav-text">Add listing</span>}
               </a>
             </li>
 
@@ -86,9 +146,9 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
 
             {/* My Profile Dropdown */}
             <li className="nav-item dropdown">
-              <a href="#" className="nav-link">
+              <a href="#" className="nav-link" onClick={closeMobileSidebar}>
                 <span className="nav-icon">🔧</span>
-                {!sidebarCollapsed && (
+                {(!sidebarCollapsed || isMobile) && (
                   <>
                     <span className="nav-text">My profile</span>
                     <span className="dropdown-arrow">▼</span>
@@ -99,9 +159,9 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
 
             {/* Components Dropdown */}
             <li className="nav-item dropdown">
-              <a href="#" className="nav-link">
+              <a href="#" className="nav-link" onClick={closeMobileSidebar}>
                 <span className="nav-icon">⚙️</span>
-                {!sidebarCollapsed && (
+                {(!sidebarCollapsed || isMobile) && (
                   <>
                     <span className="nav-text">Components</span>
                     <span className="dropdown-arrow">▼</span>
@@ -114,7 +174,13 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
       </div>
 
       {/* Main Content */}
-      <div className={`main-content ${sidebarCollapsed ? 'collapsed' : ''}`}>
+      <div 
+        className={`
+          main-content 
+          ${sidebarCollapsed && !isMobile ? 'collapsed' : ''}
+          ${isMobile ? 'mobile' : ''}
+        `}
+      >
         {children}
       </div>
 
@@ -123,6 +189,55 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
           display: flex;
           min-height: 100vh;
           background: #f8f9fa;
+          position: relative;
+        }
+        
+        /* Mobile Header */
+        .mobile-header {
+          display: none;
+          align-items: center;
+          padding: 16px 20px;
+          background: white;
+          border-bottom: 1px solid #e2e8f0;
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 999;
+          height: 60px;
+        }
+        
+        .menu-toggle-btn {
+          background: none;
+          border: none;
+          font-size: 20px;
+          cursor: pointer;
+          padding: 8px;
+          margin-right: 16px;
+          border-radius: 6px;
+          transition: background 0.2s;
+        }
+        
+        .menu-toggle-btn:hover {
+          background: #f1f5f9;
+        }
+        
+        .mobile-brand {
+          margin: 0;
+          font-size: 18px;
+          font-weight: bold;
+          color: #1e293b;
+        }
+        
+        /* Sidebar Overlay */
+        .sidebar-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 998;
         }
         
         /* Sidebar Styles */
@@ -141,6 +256,15 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
         
         .sidebar.collapsed {
           width: 70px;
+        }
+        
+        .sidebar.mobile {
+          transform: translateX(-100%);
+          width: 280px;
+        }
+        
+        .sidebar.mobile.mobile-open {
+          transform: translateX(0);
         }
         
         .sidebar-header {
@@ -264,6 +388,11 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
           margin-left: 70px;
         }
         
+        .main-content.mobile {
+          margin-left: 0;
+          margin-top: 60px; /* Account for mobile header */
+        }
+        
         /* Scrollbar */
         .sidebar-nav::-webkit-scrollbar {
           width: 4px;
@@ -280,21 +409,51 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
         
         /* Mobile Responsive */
         @media (max-width: 768px) {
-          .sidebar {
-            transform: translateX(-100%);
-          }
-          
-          .sidebar.collapsed {
-            transform: translateX(-100%);
-            width: 280px;
-          }
-          
-          .main-content {
-            margin-left: 0;
+          .mobile-header {
+            display: flex;
           }
           
           .main-content.collapsed {
             margin-left: 0;
+          }
+        }
+        
+        /* Small Mobile */
+        @media (max-width: 480px) {
+          .sidebar {
+            width: 100%;
+          }
+          
+          .sidebar-header {
+            padding: 16px 20px;
+            height: 60px;
+          }
+          
+          .brand {
+            font-size: 18px;
+          }
+          
+          .nav-link {
+            padding: 16px 20px;
+          }
+        }
+        
+        /* Tablet */
+        @media (min-width: 769px) and (max-width: 1024px) {
+          .sidebar {
+            width: 240px;
+          }
+          
+          .sidebar.collapsed {
+            width: 70px;
+          }
+          
+          .main-content {
+            margin-left: 240px;
+          }
+          
+          .main-content.collapsed {
+            margin-left: 70px;
           }
         }
       `}</style>
