@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Swal from 'sweetalert2';
 import AwesomeLogin from './AwesomeLogin';
 import AwesomeSignup from './AwesomeSignup';
 
@@ -15,10 +16,41 @@ const Header = () => {
     const [isRegistering, setIsRegistering] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [showUserDropdown, setShowUserDropdown] = useState(false); // ✅ NEW: Dropdown state
 
     // API endpoints
     const API_BASE_URL = 'https://allupipay.in/publicsewa/api';
     const LOGIN_ENDPOINT = `${API_BASE_URL}/login.php`;
+
+    // helper: non-blocking toast (replaces console.log)
+    const toast = (message: string, icon: 'info' | 'success' | 'error' | 'warning' = 'info') => {
+        try {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon,
+                title: message,
+                showConfirmButton: false,
+                timer: 1500,
+                background: '#ffffff',
+            });
+        } catch (e) {
+            // fallback to console if Swal fails
+            // eslint-disable-next-line no-console
+            console.log(message, e);
+        }
+    };
+
+    // helper: modal (replaces alert)
+    const modal = (opts: { icon?: 'success' | 'error' | 'info' | 'warning'; title?: string; text?: string }) => {
+        Swal.fire({
+            icon: opts.icon || 'info',
+            title: opts.title || '',
+            text: opts.text || '',
+            confirmButtonColor: opts.icon === 'error' ? '#ef4444' : '#10b981',
+            background: '#ffffff',
+        });
+    };
 
     // Check screen size function
     const checkScreenSize = () => {
@@ -44,12 +76,12 @@ const Header = () => {
     // Event listeners for modal coordination
     useEffect(() => {
         const handleOpenLoginModal = () => {
-            console.log('✅ Login modal requested from ReviewModal - Opening login modal');
+            toast('Login modal requested from ReviewModal', 'info');
             setShowLoginModal(true);
         };
 
         const handleOpenLoginModalFromReview = () => {
-            console.log('✅ Login modal requested from Review Section - Opening login modal');
+            toast('Login modal requested from Review Section', 'info');
             setShowLoginModal(true);
         };
 
@@ -60,6 +92,7 @@ const Header = () => {
             window.removeEventListener('openLoginModal', handleOpenLoginModal);
             window.removeEventListener('openLoginModalFromReview', handleOpenLoginModalFromReview);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Check screen size and auth status
@@ -75,9 +108,11 @@ const Header = () => {
 
                 // Small delay to ensure everything is loaded properly
                 await new Promise(resolve => setTimeout(resolve, 100));
-
             } catch (error) {
+                // keep console.error for unexpected internal errors
+                // eslint-disable-next-line no-console
                 console.error('Initialization error:', error);
+                modal({ icon: 'error', title: 'Initialization error', text: String(error) });
             } finally {
                 setIsLoading(false);
             }
@@ -88,7 +123,22 @@ const Header = () => {
         return () => {
             window.removeEventListener('resize', checkScreenSize);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // ✅ NEW: Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (showUserDropdown) {
+                setShowUserDropdown(false);
+            }
+        };
+
+        document.addEventListener('click', handleClickOutside);
+        return () => {
+            document.removeEventListener('click', handleClickOutside);
+        };
+    }, [showUserDropdown]);
 
     const toggleMenu = () => {
         setIsMenuOpen(!isMenuOpen);
@@ -98,10 +148,15 @@ const Header = () => {
         setIsMenuOpen(false);
     };
 
-    // ✅ UPDATED: Awesome Login Handler - Mobile number field use karo
+    // ✅ NEW: Toggle user dropdown
+    const toggleUserDropdown = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setShowUserDropdown(!showUserDropdown);
+    };
+
+    // ✅ FIXED: Awesome Login Handler - अब error message properly show होगा
     const handleLoginSuccess = async (loginData: any) => {
         setIsLoggingIn(true);
-        console.log('🔐 Awesome Login data:', loginData);
 
         try {
             // Mobile number directly use karo (ab mobile field hai)
@@ -111,8 +166,6 @@ const Header = () => {
             formData.append('mobile', mobileNumber);
             formData.append('password', loginData.password);
 
-            console.log('📤 Sending login request to:', LOGIN_ENDPOINT);
-
             const response = await fetch(LOGIN_ENDPOINT, {
                 method: 'POST',
                 headers: {
@@ -121,12 +174,11 @@ const Header = () => {
                 body: formData.toString()
             });
 
-            console.log('📥 Login response status:', response.status);
             const data = await response.json();
-            console.log('📥 Login response data:', data);
 
+            // ✅ FIXED: यहाँ error handling improve की है
             if (response.ok && data.status === 'success') {
-                console.log('✅ LOGIN SUCCESSFUL');
+                toast('Login successful!', 'success');
 
                 // Store token and user data
                 localStorage.setItem('authToken', data.token || data.id);
@@ -142,12 +194,10 @@ const Header = () => {
                 setIsLoggedIn(true);
                 setUser(data);
                 setShowLoginModal(false);
+                setShowUserDropdown(false); // ✅ Close dropdown after login
 
-                // ✅ IMPROVED EVENT with user data
+                // Dispatch events
                 setTimeout(() => {
-                    console.log('🎯 Dispatching userLoggedIn event with data');
-
-                    // Multiple events for better reliability
                     window.dispatchEvent(new CustomEvent('userLoggedIn', {
                         detail: {
                             user: data,
@@ -155,22 +205,39 @@ const Header = () => {
                             timestamp: new Date().toISOString()
                         }
                     }));
-
-                    // Force storage event
                     window.dispatchEvent(new Event('storage'));
-
                 }, 200);
 
-                alert('Login successful!');
+                modal({ icon: 'success', title: 'Login successful!', text: 'Welcome back!' });
             } else {
-                console.log('❌ LOGIN FAILED:', data.message);
-                alert(data.message || 'Login failed. Please try again.');
+                // ✅ FIXED: अब error message properly show होगा
+                const errorMessage = data.message || 'Login failed. Please check your credentials and try again.';
+
+                // Show error in modal (main error message)
+                modal({
+                    icon: 'error',
+                    title: 'Login failed',
+                    text: errorMessage
+                });
+
+                // Also show as toast for immediate feedback
+                toast(errorMessage, 'error');
             }
         } catch (error) {
-            console.error('🚨 Login error:', error);
-            alert('Login failed. Please check your connection and try again.');
+            // ✅ FIXED: Network errors के लिए भी proper message
+            const errorMessage = 'Network error: Please check your internet connection and try again.';
+
+            // eslint-disable-next-line no-console
+            console.error('Login error:', error);
+
+            modal({
+                icon: 'error',
+                title: 'Login failed',
+                text: errorMessage
+            });
+
+            toast(errorMessage, 'error');
         } finally {
-            console.log('🏁 Login process finished');
             setIsLoggingIn(false);
         }
     };
@@ -178,7 +245,7 @@ const Header = () => {
     // ✅ UPDATED: Awesome Signup Handler - Mobile number field use karo
     const handleAwesomeSignup = async (signupData: any) => {
         setIsRegistering(true);
-        console.log('📝 Awesome Signup data:', signupData);
+        toast(`Signup data received: ${typeof signupData === 'object' ? (signupData.mobile || 'mobile') : String(signupData)}`, 'info');
 
         try {
             // Mobile number directly use karo (ab mobile field hai)
@@ -202,7 +269,7 @@ const Header = () => {
             });
 
             const data = await response.json();
-            console.log('📥 Registration response:', data);
+            toast('Registration response received', 'info');
 
             if (response.ok && data.status === 'success') {
                 // Store token and user data
@@ -227,10 +294,11 @@ const Header = () => {
                 });
 
                 setShowRegisterModal(false);
+                setShowUserDropdown(false); // ✅ Close dropdown after signup
 
                 // Dispatch event after registration
                 setTimeout(() => {
-                    console.log('🎯 Dispatching userLoggedIn event after registration');
+                    toast('Dispatching userLoggedIn event after registration', 'info');
                     window.dispatchEvent(new CustomEvent('userLoggedIn', {
                         detail: {
                             user: {
@@ -245,13 +313,31 @@ const Header = () => {
                     }));
                 }, 100);
 
-                alert('Registration successful!');
+                modal({ icon: 'success', title: 'Registration successful!', text: 'Welcome!' });
             } else {
-                alert(data.message || 'Registration failed. Please try again.');
+                // ✅ FIXED: Signup errors के लिए भी proper message
+                const errorMessage = data.message || 'Registration failed. Please try again.';
+                modal({
+                    icon: 'error',
+                    title: 'Registration failed',
+                    text: errorMessage
+                });
+                toast(errorMessage, 'error');
             }
         } catch (error) {
+            // ✅ FIXED: Network errors के लिए भी proper message
+            const errorMessage = 'Network error: Please check your internet connection and try again.';
+
+            // eslint-disable-next-line no-console
             console.error('Registration error:', error);
-            alert('Registration failed. Please check your connection and try again.');
+
+            modal({
+                icon: 'error',
+                title: 'Registration failed',
+                text: errorMessage
+            });
+
+            toast(errorMessage, 'error');
         } finally {
             setIsRegistering(false);
         }
@@ -262,6 +348,7 @@ const Header = () => {
         localStorage.removeItem('userData');
         setIsLoggedIn(false);
         setUser(null);
+        setShowUserDropdown(false); // ✅ Close dropdown after logout
 
         // Dispatch event when user logs out
         window.dispatchEvent(new CustomEvent('userLoggedOut'));
@@ -269,7 +356,7 @@ const Header = () => {
         // Close mobile menu if open
         closeMenu();
 
-        alert('Logged out successfully!');
+        modal({ icon: 'info', title: 'Logged out successfully!', text: '' });
     };
 
     // ESC key press par menu close
@@ -279,10 +366,11 @@ const Header = () => {
                 closeMenu();
                 setShowLoginModal(false);
                 setShowRegisterModal(false);
+                setShowUserDropdown(false); // ✅ Close dropdown on ESC
             }
         };
 
-        if (isMenuOpen || showLoginModal || showRegisterModal) {
+        if (isMenuOpen || showLoginModal || showRegisterModal || showUserDropdown) {
             document.addEventListener('keydown', handleEscKey);
             if (showLoginModal || showRegisterModal) {
                 document.body.style.overflow = 'hidden';
@@ -295,11 +383,11 @@ const Header = () => {
             document.removeEventListener('keydown', handleEscKey);
             document.body.style.overflow = 'auto';
         };
-    }, [isMenuOpen, showLoginModal, showRegisterModal]);
+    }, [isMenuOpen, showLoginModal, showRegisterModal, showUserDropdown]);
 
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Search submitted:', searchType);
+        toast(`Search submitted: ${searchType}`, 'info');
     };
 
     const handleSearchTypeChange = (type: string) => {
@@ -308,7 +396,7 @@ const Header = () => {
 
     // ✅ ADDED: Forgot Password Handler for AwesomeLogin
     const handleForgotPassword = () => {
-        alert('Password reset feature coming soon!');
+        modal({ icon: 'info', title: 'Password reset feature coming soon!', text: '' });
     };
 
     return (
@@ -368,44 +456,182 @@ const Header = () => {
                                 }}>
                                     {isLoggedIn ? (
                                         <>
-                                            <li className="user-welcome">
-                                                <span style={{
-                                                    color: '#333',
-                                                    fontSize: '16px',
-                                                    fontWeight: '500'
-                                                }}>
-                                                    Welcome, {user?.fullName}
-                                                </span>
-                                            </li>
-                                            <li>
+                                            {/* ✅ UPDATED: User Welcome with Dropdown */}
+                                            <li className="user-welcome" style={{ position: 'relative' }}>
                                                 <button
-                                                    onClick={handleLogout}
+                                                    onClick={toggleUserDropdown}
                                                     style={{
                                                         background: 'none',
                                                         border: 'none',
-                                                        color: '#666',
+                                                        color: '#333',
                                                         cursor: 'pointer',
-                                                        padding: '12px',
+                                                        padding: '12px 16px',
                                                         borderRadius: '8px',
                                                         transition: 'all 0.3s ease',
                                                         display: 'flex',
-                                                        flexDirection: 'column',
                                                         alignItems: 'center',
-                                                        gap: '4px'
+                                                        gap: '8px',
+                                                        fontSize: '16px',
+                                                        fontWeight: '500'
                                                     }}
                                                     onMouseEnter={(e) => {
-                                                        e.currentTarget.style.color = '#e74c3c';
-                                                        e.currentTarget.style.backgroundColor = '#fdf2f2';
+                                                        e.currentTarget.style.color = '#3498db';
+                                                        e.currentTarget.style.backgroundColor = '#f0f8ff';
                                                     }}
                                                     onMouseLeave={(e) => {
-                                                        e.currentTarget.style.color = '#666';
+                                                        e.currentTarget.style.color = '#333';
                                                         e.currentTarget.style.backgroundColor = 'transparent';
                                                     }}
-                                                    title="Logout"
+                                                    title="User Menu"
                                                 >
-                                                    <i className="pe-7s-power" style={{ fontSize: '28px' }}></i>
-                                                    <span style={{ fontSize: '12px', fontWeight: '500' }}>Logout</span>
+                                                    <i className="pe-7s-user" style={{ fontSize: '20px' }}></i>
+                                                    Welcome, {user?.fullName}
+                                                    <i
+                                                        className={`pe-7s-angle-down`}
+                                                        style={{
+                                                            fontSize: '14px',
+                                                            transition: 'transform 0.3s ease',
+                                                            transform: showUserDropdown ? 'rotate(180deg)' : 'rotate(0deg)'
+                                                        }}
+                                                    ></i>
                                                 </button>
+
+                                                {/* ✅ NEW: User Dropdown Menu */}
+                                                {showUserDropdown && (
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        top: '100%',
+                                                        right: 0,
+                                                        background: 'white',
+                                                        border: '1px solid #e0e0e0',
+                                                        borderRadius: '8px',
+                                                        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                                                        minWidth: '200px',
+                                                        zIndex: 1002,
+                                                        marginTop: '5px'
+                                                    }}>
+                                                        {/* User Info */}
+                                                        <div style={{
+                                                            padding: '15px',
+                                                            borderBottom: '1px solid #f0f0f0',
+                                                            background: '#f8f9fa'
+                                                        }}>
+                                                            <div style={{
+                                                                fontWeight: '600',
+                                                                color: '#333',
+                                                                marginBottom: '4px'
+                                                            }}>
+                                                                {user?.fullName}
+                                                            </div>
+                                                            <div style={{
+                                                                fontSize: '12px',
+                                                                color: '#666'
+                                                            }}>
+                                                                {user?.mobile}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Dropdown Links */}
+                                                        <div style={{ padding: '8px 0' }}>
+                                                            <Link
+                                                                href="/UserDashboard"
+                                                                onClick={() => setShowUserDropdown(false)}
+                                                                style={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '10px',
+                                                                    padding: '10px 15px',
+                                                                    color: '#333',
+                                                                    textDecoration: 'none',
+                                                                    transition: 'all 0.3s ease',
+                                                                    fontSize: '14px'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.background = '#f0f8ff';
+                                                                    e.currentTarget.style.color = '#3498db';
+                                                                }}
+                                                            >
+                                                                <i className="pe-7s-graph1" style={{ fontSize: '16px' }}></i>
+                                                                Dashboard
+                                                            </Link>
+
+                                                            <Link
+                                                                href="/profile"
+                                                                onClick={() => setShowUserDropdown(false)}
+                                                                style={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '10px',
+                                                                    padding: '10px 15px',
+                                                                    color: '#333',
+                                                                    textDecoration: 'none',
+                                                                    transition: 'all 0.3s ease',
+                                                                    fontSize: '14px'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.background = '#f0f8ff';
+                                                                    e.currentTarget.style.color = '#3498db';
+                                                                }}
+                                                            >
+                                                                <i className="pe-7s-user" style={{ fontSize: '16px' }}></i>
+                                                                My Profile
+                                                            </Link>
+
+                                                            <Link
+                                                                href="/my-businesses"
+                                                                onClick={() => setShowUserDropdown(false)}
+                                                                style={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '10px',
+                                                                    padding: '10px 15px',
+                                                                    color: '#333',
+                                                                    textDecoration: 'none',
+                                                                    transition: 'all 0.3s ease',
+                                                                    fontSize: '14px'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.background = '#f0f8ff';
+                                                                    e.currentTarget.style.color = '#3498db';
+                                                                }}
+                                                            >
+                                                                <i className="pe-7s-shopbag" style={{ fontSize: '16px' }}></i>
+                                                                My Businesses
+                                                            </Link>
+
+                                                            <div style={{
+                                                                height: '1px',
+                                                                background: '#f0f0f0',
+                                                                margin: '8px 0'
+                                                            }}></div>
+
+                                                            <button
+                                                                onClick={handleLogout}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '10px',
+                                                                    padding: '10px 15px',
+                                                                    background: 'none',
+                                                                    border: 'none',
+                                                                    color: '#e74c3c',
+                                                                    cursor: 'pointer',
+                                                                    transition: 'all 0.3s ease',
+                                                                    fontSize: '14px',
+                                                                    textAlign: 'left'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.background = '#fdf2f2';
+                                                                    e.currentTarget.style.color = '#c0392b';
+                                                                }}
+                                                            >
+                                                                <i className="pe-7s-power" style={{ fontSize: '16px' }}></i>
+                                                                Logout
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </li>
                                         </>
                                     ) : (
@@ -720,6 +946,33 @@ const Header = () => {
                                     🏠 Home
                                 </Link>
                             </li>
+
+                            {/* ✅ NEW: Dashboard Link in Mobile Menu */}
+                            {isLoggedIn && (
+                                <li style={{ marginBottom: '10px' }}>
+                                    <Link
+                                        href="/UserDashboard"
+                                        onClick={closeMenu}
+                                        style={{
+                                            display: 'block',
+                                            padding: '12px 15px',
+                                            color: '#3498db',
+                                            textDecoration: 'none',
+                                            borderRadius: '6px',
+                                            transition: 'all 0.3s ease',
+                                            background: '#f0f8ff',
+                                            fontWeight: '500'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = '#3498db';
+                                            e.currentTarget.style.color = 'white';
+                                        }}
+                                    >
+                                        📊 Dashboard
+                                    </Link>
+                                </li>
+                            )}
+
                             <li style={{ marginBottom: '10px' }}>
                                 <Link
                                     href="/list-your-business"
@@ -850,127 +1103,41 @@ const Header = () => {
                 </nav>
             </header>
 
+           
+
             {/* ✅ UPDATED: Custom CSS for Awesome Components */}
             <style jsx>{`
-                .awesome-auth-modal {
-                    animation: scaleUp 0.3s ease forwards;
-                }
-                
-                @keyframes scaleUp {
-                    from {
-                        opacity: 0;
-                        transform: scale(0.9);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: scale(1);
-                    }
-                }
+        .awesome-auth-modal {
+          animation: scaleUp 0.3s ease forwards;
+        }
+        
+        @keyframes scaleUp {
+          from {
+            opacity: 0;
+            transform: scale(0.9);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
 
-                /* Mobile responsiveness for awesome modals */
-                @media (max-width: 768px) {
-                    .awesome-auth-modal {
-                        margin: 10px;
-                    }
-                    
-                    .modal-overlay {
-                        padding: 10px !important;
-                    }
-                }
+        /* Mobile responsiveness for awesome modals */
+        @media (max-width: 768px) {
+          .awesome-auth-modal {
+            margin: 10px;
+          }
+          
+          .modal-overlay {
+            padding: 10px !important;
+          }
+        }
 
-                /* Ensure proper scrolling */
-                .modal-overlay {
-                    -webkit-overflow-scrolling: touch;
-                }
-
-                /* Hamburger menu styles */
-                .hamburger {
-                    padding: 15px 15px;
-                    display: inline-block;
-                    cursor: pointer;
-                    transition-property: opacity, filter;
-                    transition-duration: 0.15s;
-                    transition-timing-function: linear;
-                    font: inherit;
-                    color: inherit;
-                    text-transform: none;
-                    background-color: transparent;
-                    border: 0;
-                    margin: 0;
-                    overflow: visible;
-                }
-
-                .hamburger-box {
-                    width: 30px;
-                    height: 24px;
-                    display: inline-block;
-                    position: relative;
-                }
-
-                .hamburger-inner {
-                    display: block;
-                    top: 50%;
-                    margin-top: -2px;
-                }
-
-                .hamburger-inner,
-                .hamburger-inner::before,
-                .hamburger-inner::after {
-                    width: 30px;
-                    height: 3px;
-                    background-color: #333;
-                    border-radius: 4px;
-                    position: absolute;
-                    transition-property: transform;
-                    transition-duration: 0.15s;
-                    transition-timing-function: ease;
-                }
-
-                .hamburger-inner::before,
-                .hamburger-inner::after {
-                    content: "";
-                    display: block;
-                }
-
-                .hamburger-inner::before {
-                    top: -10px;
-                }
-
-                .hamburger-inner::after {
-                    bottom: -10px;
-                }
-
-                .hamburger--spin .hamburger-inner {
-                    transition-duration: 0.22s;
-                    transition-timing-function: cubic-bezier(0.55, 0.055, 0.675, 0.19);
-                }
-
-                .hamburger--spin .hamburger-inner::before {
-                    transition: top 0.1s 0.25s ease-in, opacity 0.1s ease-in;
-                }
-
-                .hamburger--spin .hamburger-inner::after {
-                    transition: bottom 0.1s 0.25s ease-in, transform 0.22s cubic-bezier(0.55, 0.055, 0.675, 0.19);
-                }
-
-                .hamburger--spin.is-active .hamburger-inner {
-                    transform: rotate(225deg);
-                    transition-delay: 0.12s;
-                    transition-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
-                }
-
-                .hamburger--spin.is-active .hamburger-inner::before {
-                    top: 0;
-                    opacity: 0;
-                    transition: top 0.1s ease-out, opacity 0.1s 0.12s ease-out;
-                }
-
-                .hamburger--spin.is-active .hamburger-inner::after {
-                    bottom: 0;
-                    transform: rotate(-90deg);
-                    transition: bottom 0.1s ease-out, transform 0.22s 0.12s cubic-bezier(0.215, 0.61, 0.355, 1);
-                }
-            `}</style>
+        /* Ensure proper scrolling */
+        .modal-overlay {
+          -webkit-overflow-scrolling: touch;
+        }
+      `}</style>
         </div>
     );
 };
