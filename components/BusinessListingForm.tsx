@@ -180,56 +180,61 @@ const BusinessListingForm = () => {
     validateField(name as keyof BusinessFormData, value);
   };
 
-  const validateField = (name: keyof BusinessFormData, value: string) => {
+  const validateField = (name: keyof BusinessFormData, value: string | number | string[] | null) => {
     let error = '';
+
+    // Convert value to string for validation
+    const stringValue = typeof value === 'string' ? value : 
+                       Array.isArray(value) ? '' : 
+                       value === null ? '' : String(value);
 
     switch (name) {
       case 'businessName':
-        if (!value.trim()) error = 'Business name is required';
-        else if (value.trim().length < 2) error = 'Business name must be at least 2 characters';
+        if (!stringValue.trim()) error = 'Business name is required';
+        else if (stringValue.trim().length < 2) error = 'Business name must be at least 2 characters';
         break;
       
       case 'pincode':
-        if (!value.trim()) error = 'Pincode is required';
-        else if (!/^\d{6}$/.test(value)) error = 'Pincode must be exactly 6 digits';
+        if (!stringValue.trim()) error = 'Pincode is required';
+        else if (!/^\d{6}$/.test(stringValue)) error = 'Pincode must be exactly 6 digits';
         break;
       
       case 'buildingNumber':
-        if (!value.trim()) error = 'Building number is required';
+        if (!stringValue.trim()) error = 'Building number is required';
         break;
       
       case 'buildingName':
-        if (!value.trim()) error = 'Building name is required';
+        if (!stringValue.trim()) error = 'Building name is required';
         break;
       
       case 'street':
-        if (!value.trim()) error = 'Street name is required';
+        if (!stringValue.trim()) error = 'Street name is required';
         break;
       
       case 'landmark':
-        if (!value.trim()) error = 'Landmark is required';
+        if (!stringValue.trim()) error = 'Landmark is required';
         break;
       
       case 'village':
-        if (!value.trim()) error = 'Village is required';
+        if (!stringValue.trim()) error = 'Village is required';
         break;
       
       case 'city':
-        if (!value.trim()) error = 'City is required';
+        if (!stringValue.trim()) error = 'City is required';
         break;
       
       case 'state':
-        if (!value.trim()) error = 'State is required';
+        if (!stringValue.trim()) error = 'State is required';
         break;
       
       case 'password':
-        if (!value.trim()) error = 'Password is required';
-        else if (value.length < 6) error = 'Password must be at least 6 characters';
+        if (!stringValue.trim()) error = 'Password is required';
+        else if (stringValue.length < 6) error = 'Password must be at least 6 characters';
         break;
       
       case 'confirmPassword':
-        if (!value.trim()) error = 'Please confirm your password';
-        else if (value !== formData.password) error = 'Passwords do not match';
+        if (!stringValue.trim()) error = 'Please confirm your password';
+        else if (stringValue !== formData.password) error = 'Passwords do not match';
         break;
     }
 
@@ -249,8 +254,10 @@ const BusinessListingForm = () => {
     // Validate all required fields
     requiredFields.forEach(field => {
       const value = formData[field];
-      // Convert to string for validation
-      const stringValue = typeof value === 'string' ? value : String(value || '');
+      // Convert to string for validation - handle null and array cases
+      const stringValue = typeof value === 'string' ? value : 
+                         Array.isArray(value) ? '' : 
+                         value === null ? '' : String(value);
       validateField(field, stringValue);
     });
 
