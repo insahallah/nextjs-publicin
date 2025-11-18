@@ -404,25 +404,24 @@ const Header = () => {
       {/* Header Section */}
       <header className="header_sticky">
         {/* Mobile Menu Button */}
-        <button
-          className="btn_mobile"
-          onClick={toggleMenu}
-          type="button"
-          aria-label="Toggle menu"
-          style={{
-            position: 'absolute',
-            left: '15px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            zIndex: 1001
-          }}
-        >
-          <div className={`hamburger hamburger--spin ${isMenuOpen ? 'is-active' : ''}`}>
-            <div className="hamburger-box">
-              <div className="hamburger-inner"></div>
-            </div>
-          </div>
-        </button>
+       <button
+  className="btn_mobile"
+  onClick={toggleMenu}
+  type="button"
+  aria-label="Toggle menu"
+  style={{
+    position: 'fixed',   // <== FIXED KAR DIYA
+    left: '15px',
+    top: '15px',
+    zIndex: 1001
+  }}
+>
+  <div className={`hamburger hamburger--spin ${isMenuOpen ? 'is-active' : ''}`}>
+    <div className="hamburger-box">
+      <div className="hamburger-inner"></div>
+    </div>
+  </div>
+</button>
 
         <div className="container">
           <div className="row">

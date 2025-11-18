@@ -16,7 +16,8 @@ const Header = () => {
     const [isRegistering, setIsRegistering] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-    const [showUserDropdown, setShowUserDropdown] = useState(false); // ✅ NEW: Dropdown state
+    const [showUserDropdown, setShowUserDropdown] = useState(false);
+    const [isSticky, setIsSticky] = useState(false);
 
     // API endpoints
     const API_BASE_URL = 'https://allupipay.in/publicsewa/api';
@@ -35,7 +36,6 @@ const Header = () => {
                 background: '#ffffff',
             });
         } catch (e) {
-            // fallback to console if Swal fails
             // eslint-disable-next-line no-console
             console.log(message, e);
         }
@@ -73,6 +73,15 @@ const Header = () => {
         }
     };
 
+    // Handle scroll for sticky header
+    const handleScroll = () => {
+        if (window.scrollY > 50) {
+            setIsSticky(true);
+        } else {
+            setIsSticky(false);
+        }
+    };
+
     // Event listeners for modal coordination
     useEffect(() => {
         const handleOpenLoginModal = () => {
@@ -99,17 +108,12 @@ const Header = () => {
     useEffect(() => {
         const initializeApp = async () => {
             try {
-                // Check screen size
                 checkScreenSize();
                 window.addEventListener('resize', checkScreenSize);
-
-                // Check if user is logged in
+                window.addEventListener('scroll', handleScroll);
                 checkAuthStatus();
-
-                // Small delay to ensure everything is loaded properly
                 await new Promise(resolve => setTimeout(resolve, 100));
             } catch (error) {
-                // keep console.error for unexpected internal errors
                 // eslint-disable-next-line no-console
                 console.error('Initialization error:', error);
                 modal({ icon: 'error', title: 'Initialization error', text: String(error) });
@@ -122,11 +126,12 @@ const Header = () => {
 
         return () => {
             window.removeEventListener('resize', checkScreenSize);
+            window.removeEventListener('scroll', handleScroll);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // ✅ NEW: Close dropdown when clicking outside
+    // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (showUserDropdown) {
@@ -148,18 +153,17 @@ const Header = () => {
         setIsMenuOpen(false);
     };
 
-    // ✅ NEW: Toggle user dropdown
+    // Toggle user dropdown
     const toggleUserDropdown = (e: React.MouseEvent) => {
         e.stopPropagation();
         setShowUserDropdown(!showUserDropdown);
     };
 
-    // ✅ FIXED: Awesome Login Handler - अब error message properly show होगा
+    // Login Handler
     const handleLoginSuccess = async (loginData: any) => {
         setIsLoggingIn(true);
 
         try {
-            // Mobile number directly use karo (ab mobile field hai)
             const mobileNumber = loginData.mobile;
 
             const formData = new URLSearchParams();
@@ -176,11 +180,9 @@ const Header = () => {
 
             const data = await response.json();
 
-            // ✅ FIXED: यहाँ error handling improve की है
             if (response.ok && data.status === 'success') {
                 toast('Login successful!', 'success');
 
-                // Store token and user data
                 localStorage.setItem('authToken', data.token || data.id);
                 localStorage.setItem('userData', JSON.stringify({
                     id: data.id,
@@ -194,9 +196,8 @@ const Header = () => {
                 setIsLoggedIn(true);
                 setUser(data);
                 setShowLoginModal(false);
-                setShowUserDropdown(false); // ✅ Close dropdown after login
+                setShowUserDropdown(false);
 
-                // Dispatch events
                 setTimeout(() => {
                     window.dispatchEvent(new CustomEvent('userLoggedIn', {
                         detail: {
@@ -210,45 +211,35 @@ const Header = () => {
 
                 modal({ icon: 'success', title: 'Login successful!', text: 'Welcome back!' });
             } else {
-                // ✅ FIXED: अब error message properly show होगा
                 const errorMessage = data.message || 'Login failed. Please check your credentials and try again.';
-
-                // Show error in modal (main error message)
                 modal({
                     icon: 'error',
                     title: 'Login failed',
                     text: errorMessage
                 });
-
-                // Also show as toast for immediate feedback
                 toast(errorMessage, 'error');
             }
         } catch (error) {
-            // ✅ FIXED: Network errors के लिए भी proper message
             const errorMessage = 'Network error: Please check your internet connection and try again.';
-
             // eslint-disable-next-line no-console
             console.error('Login error:', error);
-
             modal({
                 icon: 'error',
                 title: 'Login failed',
                 text: errorMessage
             });
-
             toast(errorMessage, 'error');
         } finally {
             setIsLoggingIn(false);
         }
     };
 
-    // ✅ UPDATED: Awesome Signup Handler - Mobile number field use karo
+    // Signup Handler
     const handleAwesomeSignup = async (signupData: any) => {
         setIsRegistering(true);
         toast(`Signup data received: ${typeof signupData === 'object' ? (signupData.mobile || 'mobile') : String(signupData)}`, 'info');
 
         try {
-            // Mobile number directly use karo (ab mobile field hai)
             const mobileNumber = signupData.mobile;
 
             const response = await fetch(`${API_BASE_URL}/register.php`, {
@@ -272,7 +263,6 @@ const Header = () => {
             toast('Registration response received', 'info');
 
             if (response.ok && data.status === 'success') {
-                // Store token and user data
                 localStorage.setItem('authToken', data.token || data.id);
                 localStorage.setItem('userData', JSON.stringify({
                     id: data.id,
@@ -294,9 +284,8 @@ const Header = () => {
                 });
 
                 setShowRegisterModal(false);
-                setShowUserDropdown(false); // ✅ Close dropdown after signup
+                setShowUserDropdown(false);
 
-                // Dispatch event after registration
                 setTimeout(() => {
                     toast('Dispatching userLoggedIn event after registration', 'info');
                     window.dispatchEvent(new CustomEvent('userLoggedIn', {
@@ -315,7 +304,6 @@ const Header = () => {
 
                 modal({ icon: 'success', title: 'Registration successful!', text: 'Welcome!' });
             } else {
-                // ✅ FIXED: Signup errors के लिए भी proper message
                 const errorMessage = data.message || 'Registration failed. Please try again.';
                 modal({
                     icon: 'error',
@@ -325,18 +313,14 @@ const Header = () => {
                 toast(errorMessage, 'error');
             }
         } catch (error) {
-            // ✅ FIXED: Network errors के लिए भी proper message
             const errorMessage = 'Network error: Please check your internet connection and try again.';
-
             // eslint-disable-next-line no-console
             console.error('Registration error:', error);
-
             modal({
                 icon: 'error',
                 title: 'Registration failed',
                 text: errorMessage
             });
-
             toast(errorMessage, 'error');
         } finally {
             setIsRegistering(false);
@@ -348,14 +332,9 @@ const Header = () => {
         localStorage.removeItem('userData');
         setIsLoggedIn(false);
         setUser(null);
-        setShowUserDropdown(false); // ✅ Close dropdown after logout
-
-        // Dispatch event when user logs out
+        setShowUserDropdown(false);
         window.dispatchEvent(new CustomEvent('userLoggedOut'));
-
-        // Close mobile menu if open
         closeMenu();
-
         modal({ icon: 'info', title: 'Logged out successfully!', text: '' });
     };
 
@@ -366,7 +345,7 @@ const Header = () => {
                 closeMenu();
                 setShowLoginModal(false);
                 setShowRegisterModal(false);
-                setShowUserDropdown(false); // ✅ Close dropdown on ESC
+                setShowUserDropdown(false);
             }
         };
 
@@ -394,249 +373,333 @@ const Header = () => {
         setSearchType(type);
     };
 
-    // ✅ ADDED: Forgot Password Handler for AwesomeLogin
+    // Forgot Password Handler
     const handleForgotPassword = () => {
         modal({ icon: 'info', title: 'Password reset feature coming soon!', text: '' });
     };
 
+    // Get App Handler
+    const handleGetApp = () => {
+        modal({ 
+            icon: 'info', 
+            title: 'Download Our App!', 
+            text: 'Our mobile app is coming soon! Stay tuned for updates.' 
+        });
+    };
+
     return (
         <div id="page" className={isMenuOpen ? 'menu-open' : ''}>
-            {/* Header Section */}
-            <header className="header_sticky">
-                {/* Mobile Menu Button */}
-                <button
-                    className="btn_mobile"
-                    onClick={toggleMenu}
-                    type="button"
-                    aria-label="Toggle menu"
-                    style={{
-                        position: 'absolute',
-                        left: '15px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        zIndex: 1001
-                    }}
-                >
-                    <div className={`hamburger hamburger--spin ${isMenuOpen ? 'is-active' : ''}`}>
-                        <div className="hamburger-box">
-                            <div className="hamburger-inner"></div>
-                        </div>
-                    </div>
-                </button>
+            {/* ✅ STICKY HEADER SECTION */}
+            <header className={`header_sticky ${isSticky ? 'sticky-active' : ''}`} style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                width: '100%',
+                background: 'white',
+                boxShadow: isSticky ? '0 2px 20px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.3s ease',
+                zIndex: 1000,
+                borderBottom: '1px solid #f0f0f0'
+            }}>
+                <div className="container" style={{ 
+                    maxWidth: '1200px', 
+                    margin: '0 auto',
+                    padding: isSticky ? '10px 15px' : '15px'
+                }}>
+                    <div className="row" style={{ alignItems: 'center', minHeight: '60px' }}>
+                        {/* ✅ DESKTOP LAYOUT */}
+                        {!isMobile ? (
+                            <>
+                                {/* Logo - Left Side */}
+                                <div className="col-lg-2 col-6" style={{
+                                    display: 'flex',
+                                    alignItems: 'center'
+                                }}>
+                                    <div id="logo_home">
+                                        <h1 style={{ margin: 0 }}>
+                                            <Link href="/" title="Findoctor" style={{
+                                                fontSize: '24px',
+                                                textDecoration: 'none',
+                                                color: '#333',
+                                                fontWeight: 'bold'
+                                            }}>
+                                                Findoctor
+                                            </Link>
+                                        </h1>
+                                    </div>
+                                </div>
 
-                <div className="container">
-                    <div className="row">
-                        <div className="col-lg-3 col-6">
-                            <div id="logo_home">
-                                <h1>
-                                    <Link href="/" title="Findoctor" style={{
-                                        fontSize: isMobile ? '20px' : '24px',
-                                        textDecoration: 'none',
-                                        color: '#333'
-                                    }}>
-                                        Findoctor
-                                    </Link>
-                                </h1>
-                            </div>
-                        </div>
-
-                        {/* Desktop - Show Login/Signup only when not loading */}
-                        {!isMobile && !isLoading && (
-                            <div className="col-lg-9 col-6">
-                                {/* Centered User Access Section with Larger Icons */}
-                                <ul id="top_access" style={{
+                                {/* Navigation Links - Center */}
+                                <div className="col-lg-6" style={{
                                     display: 'flex',
                                     justifyContent: 'center',
-                                    alignItems: 'center',
-                                    gap: '20px',
-                                    margin: 0,
-                                    padding: 0,
-                                    listStyle: 'none',
-                                    height: '100%'
+                                    alignItems: 'center'
                                 }}>
-                                    {isLoggedIn ? (
-                                        <>
-                                            {/* ✅ UPDATED: User Welcome with Dropdown */}
-                                            <li className="user-welcome" style={{ position: 'relative' }}>
-                                                <button
-                                                    onClick={toggleUserDropdown}
-                                                    style={{
-                                                        background: 'none',
-                                                        border: 'none',
-                                                        color: '#333',
-                                                        cursor: 'pointer',
-                                                        padding: '12px 16px',
-                                                        borderRadius: '8px',
-                                                        transition: 'all 0.3s ease',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '8px',
-                                                        fontSize: '16px',
-                                                        fontWeight: '500'
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        e.currentTarget.style.color = '#3498db';
-                                                        e.currentTarget.style.backgroundColor = '#f0f8ff';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        e.currentTarget.style.color = '#333';
-                                                        e.currentTarget.style.backgroundColor = 'transparent';
-                                                    }}
-                                                    title="User Menu"
-                                                >
-                                                    <i className="pe-7s-user" style={{ fontSize: '20px' }}></i>
-                                                    Welcome, {user?.fullName}
-                                                    <i
-                                                        className={`pe-7s-angle-down`}
+                                    <nav style={{
+                                        display: 'flex',
+                                        gap: '30px',
+                                        alignItems: 'center'
+                                    }}>
+                                        <Link href="/" style={{
+                                            textDecoration: 'none',
+                                            color: '#333',
+                                            fontWeight: '500',
+                                            fontSize: '15px',
+                                            padding: '8px 16px',
+                                            borderRadius: '6px',
+                                            transition: 'all 0.3s ease'
+                                        }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.color = '#3498db';
+                                                e.currentTarget.style.backgroundColor = '#f0f8ff';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.color = '#333';
+                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                            }}>
+                                            🏠 Home
+                                        </Link>
+
+                                        <Link
+                                            href="/list-your-business"
+                                            style={{
+                                                color: '#27ae60',
+                                                fontWeight: 'bold',
+                                                background: '#f0fff4',
+                                                padding: '8px 16px',
+                                                borderRadius: '20px',
+                                                border: '2px solid #27ae60',
+                                                textDecoration: 'none',
+                                                fontSize: '14px',
+                                                transition: 'all 0.3s ease',
+                                                display: 'inline-block'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.background = '#27ae60';
+                                                e.currentTarget.style.color = 'white';
+                                                e.currentTarget.style.transform = 'translateY(-1px)';
+                                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(39, 174, 96, 0.3)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.background = '#f0fff4';
+                                                e.currentTarget.style.color = '#27ae60';
+                                                e.currentTarget.style.transform = 'translateY(0)';
+                                                e.currentTarget.style.boxShadow = 'none';
+                                            }}
+                                        >
+                                            📍 List Business FREE
+                                        </Link>
+                                    </nav>
+                                </div>
+
+                                {/* Get App & User Access - Fully Right Side */}
+                                <div className="col-lg-4 col-6" style={{
+                                    display: 'flex',
+                                    justifyContent: 'flex-end',
+                                    alignItems: 'center',
+                                    gap: '20px'
+                                }}>
+                                    {/* Get App Button - Desktop (Fully Right) */}
+                                    <button
+                                        onClick={handleGetApp}
+                                        style={{
+                                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                            border: 'none',
+                                            color: 'white',
+                                            cursor: 'pointer',
+                                            padding: '10px 20px',
+                                            borderRadius: '25px',
+                                            transition: 'all 0.3s ease',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            fontSize: '14px',
+                                            fontWeight: '600',
+                                            boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+                                            marginRight: '10px'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.transform = 'translateY(-2px)';
+                                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.transform = 'translateY(0)';
+                                            e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.3)';
+                                        }}
+                                        title="Get Our App"
+                                    >
+                                        <i className="pe-7s-cloud-download" style={{ fontSize: '16px' }}></i>
+                                        Get App
+                                    </button>
+
+                                    {/* User Access Buttons */}
+                                    <div style={{
+                                        display: 'flex',
+                                        gap: '10px',
+                                        alignItems: 'center'
+                                    }}>
+                                        {isLoggedIn ? (
+                                            <>
+                                                {/* User Welcome with Dropdown */}
+                                                <div className="user-welcome" style={{ position: 'relative' }}>
+                                                    <button
+                                                        onClick={toggleUserDropdown}
                                                         style={{
+                                                            background: 'none',
+                                                            border: 'none',
+                                                            color: '#333',
+                                                            cursor: 'pointer',
+                                                            padding: '8px 16px',
+                                                            borderRadius: '6px',
+                                                            transition: 'all 0.3s ease',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '6px',
                                                             fontSize: '14px',
-                                                            transition: 'transform 0.3s ease',
-                                                            transform: showUserDropdown ? 'rotate(180deg)' : 'rotate(0deg)'
+                                                            fontWeight: '500'
                                                         }}
-                                                    ></i>
-                                                </button>
-
-                                                {/* ✅ NEW: User Dropdown Menu */}
-                                                {showUserDropdown && (
-                                                    <div style={{
-                                                        position: 'absolute',
-                                                        top: '100%',
-                                                        right: 0,
-                                                        background: 'white',
-                                                        border: '1px solid #e0e0e0',
-                                                        borderRadius: '8px',
-                                                        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-                                                        minWidth: '200px',
-                                                        zIndex: 1002,
-                                                        marginTop: '5px'
-                                                    }}>
-                                                        {/* User Info */}
-                                                        <div style={{
-                                                            padding: '15px',
-                                                            borderBottom: '1px solid #f0f0f0',
-                                                            background: '#f8f9fa'
-                                                        }}>
-                                                            <div style={{
-                                                                fontWeight: '600',
-                                                                color: '#333',
-                                                                marginBottom: '4px'
-                                                            }}>
-                                                                {user?.fullName}
-                                                            </div>
-                                                            <div style={{
+                                                        onMouseEnter={(e) => {
+                                                            e.currentTarget.style.color = '#3498db';
+                                                            e.currentTarget.style.backgroundColor = '#f0f8ff';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.style.color = '#333';
+                                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                                        }}
+                                                        title="User Menu"
+                                                    >
+                                                        <i className="pe-7s-user" style={{ fontSize: '18px' }}></i>
+                                                        {user?.fullName?.split(' ')[0] || 'User'}
+                                                        <i
+                                                            className={`pe-7s-angle-down`}
+                                                            style={{
                                                                 fontSize: '12px',
-                                                                color: '#666'
+                                                                transition: 'transform 0.3s ease',
+                                                                transform: showUserDropdown ? 'rotate(180deg)' : 'rotate(0deg)'
+                                                            }}
+                                                        ></i>
+                                                    </button>
+
+                                                    {/* User Dropdown Menu */}
+                                                    {showUserDropdown && (
+                                                        <div style={{
+                                                            position: 'absolute',
+                                                            top: '100%',
+                                                            right: 0,
+                                                            background: 'white',
+                                                            border: '1px solid #e0e0e0',
+                                                            borderRadius: '8px',
+                                                            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                                                            minWidth: '180px',
+                                                            zIndex: 1002,
+                                                            marginTop: '5px'
+                                                        }}>
+                                                            {/* User Info */}
+                                                            <div style={{
+                                                                padding: '12px',
+                                                                borderBottom: '1px solid #f0f0f0',
+                                                                background: '#f8f9fa'
                                                             }}>
-                                                                {user?.mobile}
+                                                                <div style={{
+                                                                    fontWeight: '600',
+                                                                    color: '#333',
+                                                                    marginBottom: '2px',
+                                                                    fontSize: '14px'
+                                                                }}>
+                                                                    {user?.fullName}
+                                                                </div>
+                                                                <div style={{
+                                                                    fontSize: '11px',
+                                                                    color: '#666'
+                                                                }}>
+                                                                    {user?.mobile}
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Dropdown Links */}
+                                                            <div style={{ padding: '6px 0' }}>
+                                                                <Link
+                                                                    href="/UserDashboard"
+                                                                    onClick={() => setShowUserDropdown(false)}
+                                                                    style={{
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '8px',
+                                                                        padding: '8px 12px',
+                                                                        color: '#333',
+                                                                        textDecoration: 'none',
+                                                                        transition: 'all 0.3s ease',
+                                                                        fontSize: '13px'
+                                                                    }}
+                                                                    onMouseEnter={(e) => {
+                                                                        e.currentTarget.style.background = '#f0f8ff';
+                                                                        e.currentTarget.style.color = '#3498db';
+                                                                    }}
+                                                                >
+                                                                    <i className="pe-7s-graph1" style={{ fontSize: '14px' }}></i>
+                                                                    Dashboard
+                                                                </Link>
+
+                                                                <Link
+                                                                    href="/profile"
+                                                                    onClick={() => setShowUserDropdown(false)}
+                                                                    style={{
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '8px',
+                                                                        padding: '8px 12px',
+                                                                        color: '#333',
+                                                                        textDecoration: 'none',
+                                                                        transition: 'all 0.3s ease',
+                                                                        fontSize: '13px'
+                                                                    }}
+                                                                    onMouseEnter={(e) => {
+                                                                        e.currentTarget.style.background = '#f0f8ff';
+                                                                        e.currentTarget.style.color = '#3498db';
+                                                                    }}
+                                                                >
+                                                                    <i className="pe-7s-user" style={{ fontSize: '14px' }}></i>
+                                                                    My Profile
+                                                                </Link>
+
+                                                                <div style={{
+                                                                    height: '1px',
+                                                                    background: '#f0f0f0',
+                                                                    margin: '6px 0'
+                                                                }}></div>
+
+                                                                <button
+                                                                    onClick={handleLogout}
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '8px',
+                                                                        padding: '8px 12px',
+                                                                        background: 'none',
+                                                                        border: 'none',
+                                                                        color: '#e74c3c',
+                                                                        cursor: 'pointer',
+                                                                        transition: 'all 0.3s ease',
+                                                                        fontSize: '13px',
+                                                                        textAlign: 'left'
+                                                                    }}
+                                                                    onMouseEnter={(e) => {
+                                                                        e.currentTarget.style.background = '#fdf2f2';
+                                                                        e.currentTarget.style.color = '#c0392b';
+                                                                    }}
+                                                                >
+                                                                    <i className="pe-7s-power" style={{ fontSize: '14px' }}></i>
+                                                                    Logout
+                                                                </button>
                                                             </div>
                                                         </div>
-
-                                                        {/* Dropdown Links */}
-                                                        <div style={{ padding: '8px 0' }}>
-                                                            <Link
-                                                                href="/UserDashboard"
-                                                                onClick={() => setShowUserDropdown(false)}
-                                                                style={{
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    gap: '10px',
-                                                                    padding: '10px 15px',
-                                                                    color: '#333',
-                                                                    textDecoration: 'none',
-                                                                    transition: 'all 0.3s ease',
-                                                                    fontSize: '14px'
-                                                                }}
-                                                                onMouseEnter={(e) => {
-                                                                    e.currentTarget.style.background = '#f0f8ff';
-                                                                    e.currentTarget.style.color = '#3498db';
-                                                                }}
-                                                            >
-                                                                <i className="pe-7s-graph1" style={{ fontSize: '16px' }}></i>
-                                                                Dashboard
-                                                            </Link>
-
-                                                            <Link
-                                                                href="/profile"
-                                                                onClick={() => setShowUserDropdown(false)}
-                                                                style={{
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    gap: '10px',
-                                                                    padding: '10px 15px',
-                                                                    color: '#333',
-                                                                    textDecoration: 'none',
-                                                                    transition: 'all 0.3s ease',
-                                                                    fontSize: '14px'
-                                                                }}
-                                                                onMouseEnter={(e) => {
-                                                                    e.currentTarget.style.background = '#f0f8ff';
-                                                                    e.currentTarget.style.color = '#3498db';
-                                                                }}
-                                                            >
-                                                                <i className="pe-7s-user" style={{ fontSize: '16px' }}></i>
-                                                                My Profile
-                                                            </Link>
-
-                                                            <Link
-                                                                href="/my-businesses"
-                                                                onClick={() => setShowUserDropdown(false)}
-                                                                style={{
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    gap: '10px',
-                                                                    padding: '10px 15px',
-                                                                    color: '#333',
-                                                                    textDecoration: 'none',
-                                                                    transition: 'all 0.3s ease',
-                                                                    fontSize: '14px'
-                                                                }}
-                                                                onMouseEnter={(e) => {
-                                                                    e.currentTarget.style.background = '#f0f8ff';
-                                                                    e.currentTarget.style.color = '#3498db';
-                                                                }}
-                                                            >
-                                                                <i className="pe-7s-shopbag" style={{ fontSize: '16px' }}></i>
-                                                                My Businesses
-                                                            </Link>
-
-                                                            <div style={{
-                                                                height: '1px',
-                                                                background: '#f0f0f0',
-                                                                margin: '8px 0'
-                                                            }}></div>
-
-                                                            <button
-                                                                onClick={handleLogout}
-                                                                style={{
-                                                                    width: '100%',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    gap: '10px',
-                                                                    padding: '10px 15px',
-                                                                    background: 'none',
-                                                                    border: 'none',
-                                                                    color: '#e74c3c',
-                                                                    cursor: 'pointer',
-                                                                    transition: 'all 0.3s ease',
-                                                                    fontSize: '14px',
-                                                                    textAlign: 'left'
-                                                                }}
-                                                                onMouseEnter={(e) => {
-                                                                    e.currentTarget.style.background = '#fdf2f2';
-                                                                    e.currentTarget.style.color = '#c0392b';
-                                                                }}
-                                                            >
-                                                                <i className="pe-7s-power" style={{ fontSize: '16px' }}></i>
-                                                                Logout
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </li>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <li>
+                                                    )}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
                                                 <button
                                                     onClick={() => setShowLoginModal(true)}
                                                     style={{
@@ -644,13 +707,14 @@ const Header = () => {
                                                         border: 'none',
                                                         color: '#666',
                                                         cursor: 'pointer',
-                                                        padding: '12px',
-                                                        borderRadius: '8px',
+                                                        padding: '8px 16px',
+                                                        borderRadius: '6px',
                                                         transition: 'all 0.3s ease',
                                                         display: 'flex',
-                                                        flexDirection: 'column',
                                                         alignItems: 'center',
-                                                        gap: '4px'
+                                                        gap: '6px',
+                                                        fontSize: '14px',
+                                                        fontWeight: '500'
                                                     }}
                                                     onMouseEnter={(e) => {
                                                         e.currentTarget.style.color = '#3498db';
@@ -662,11 +726,9 @@ const Header = () => {
                                                     }}
                                                     title="Login"
                                                 >
-                                                    <i className="pe-7s-user" style={{ fontSize: '28px' }}></i>
-                                                    <span style={{ fontSize: '12px', fontWeight: '500' }}>Login</span>
+                                                    <i className="pe-7s-user" style={{ fontSize: '16px' }}></i>
+                                                    Login
                                                 </button>
-                                            </li>
-                                            <li>
                                                 <button
                                                     onClick={() => setShowRegisterModal(true)}
                                                     style={{
@@ -674,13 +736,14 @@ const Header = () => {
                                                         border: 'none',
                                                         color: '#666',
                                                         cursor: 'pointer',
-                                                        padding: '12px',
-                                                        borderRadius: '8px',
+                                                        padding: '8px 16px',
+                                                        borderRadius: '6px',
                                                         transition: 'all 0.3s ease',
                                                         display: 'flex',
-                                                        flexDirection: 'column',
                                                         alignItems: 'center',
-                                                        gap: '4px'
+                                                        gap: '6px',
+                                                        fontSize: '14px',
+                                                        fontWeight: '500'
                                                     }}
                                                     onMouseEnter={(e) => {
                                                         e.currentTarget.style.color = '#27ae60';
@@ -692,98 +755,101 @@ const Header = () => {
                                                     }}
                                                     title="Sign Up"
                                                 >
-                                                    <i className="pe-7s-add-user" style={{ fontSize: '28px' }}></i>
-                                                    <span style={{ fontSize: '12px', fontWeight: '500' }}>Sign Up</span>
+                                                    <i className="pe-7s-add-user" style={{ fontSize: '16px' }}></i>
+                                                    Sign Up
                                                 </button>
-                                            </li>
-                                        </>
-                                    )}
-                                </ul>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            /* ✅ MOBILE LAYOUT */
+                            <div className="col-12" style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                            }}>
+                                {/* Menu Button - Left Side */}
+                                <button 
+                                    type="button" 
+                                    aria-label="Toggle menu" 
+                                    className="btn_mobile"
+                                    onClick={toggleMenu}
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        padding: '10px',
+                                        cursor: 'pointer',
+                                        flex: '0 0 auto'
+                                    }}
+                                >
+                                    <div className={`hamburger hamburger--spin ${isMenuOpen ? 'is-active' : ''}`}>
+                                        <div className="hamburger-box">
+                                            <div className="hamburger-inner"></div>
+                                        </div>
+                                    </div>
+                                </button>
 
-                                {/* Simplified Desktop Menu - Centered */}
-                                <nav id="menu" className="main-menu desktop-menu" style={{
+                                {/* Logo - Center */}
+                                <div id="logo_home" style={{
+                                    flex: '1',
                                     display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    height: '100%'
+                                    justifyContent: 'center'
                                 }}>
-                                    <ul style={{
-                                        display: 'flex',
-                                        gap: '30px',
-                                        margin: 0,
-                                        padding: 0,
-                                        listStyle: 'none',
-                                        alignItems: 'center'
-                                    }}>
-                                        <li>
-                                            <Link href="/" style={{
-                                                textDecoration: 'none',
-                                                color: '#333',
-                                                fontWeight: '500',
-                                                fontSize: '16px',
-                                                padding: '8px 16px',
-                                                borderRadius: '6px',
-                                                transition: 'all 0.3s ease'
-                                            }}
-                                                onMouseEnter={(e) => {
-                                                    e.currentTarget.style.color = '#3498db';
-                                                    e.currentTarget.style.backgroundColor = '#f0f8ff';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    e.currentTarget.style.color = '#333';
-                                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                                }}>
-                                                🏠 Home
-                                            </Link>
-                                        </li>
-                                        <li>
-                                            <Link
-                                                href="/list-your-business"
-                                                style={{
-                                                    color: '#27ae60',
-                                                    fontWeight: 'bold',
-                                                    background: '#f0fff4',
-                                                    padding: '12px 24px',
-                                                    borderRadius: '25px',
-                                                    border: '2px solid #27ae60',
-                                                    textDecoration: 'none',
-                                                    fontSize: '16px',
-                                                    transition: 'all 0.3s ease',
-                                                    display: 'inline-block'
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    e.currentTarget.style.background = '#27ae60';
-                                                    e.currentTarget.style.color = 'white';
-                                                    e.currentTarget.style.transform = 'translateY(-2px)';
-                                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(39, 174, 96, 0.3)';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    e.currentTarget.style.background = '#f0fff4';
-                                                    e.currentTarget.style.color = '#27ae60';
-                                                    e.currentTarget.style.transform = 'translateY(0)';
-                                                    e.currentTarget.style.boxShadow = 'none';
-                                                }}
-                                            >
-                                                📍 List Your Business FREE
-                                            </Link>
-                                        </li>
-                                    </ul>
-                                </nav>
+                                    <h1 style={{ margin: 0 }}>
+                                        <Link href="/" title="Findoctor" style={{
+                                            fontSize: '20px',
+                                            textDecoration: 'none',
+                                            color: '#333',
+                                            fontWeight: 'bold'
+                                        }}>
+                                            Findoctor
+                                        </Link>
+                                    </h1>
+                                </div>
+
+                                {/* Get App Button - Right Side */}
+                                <div style={{
+                                    flex: '0 0 auto'
+                                }}>
+                                    <button
+                                        onClick={handleGetApp}
+                                        style={{
+                                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                            border: 'none',
+                                            color: 'white',
+                                            cursor: 'pointer',
+                                            padding: '8px 16px',
+                                            borderRadius: '20px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            boxShadow: '0 3px 10px rgba(102, 126, 234, 0.3)'
+                                        }}
+                                        title="Get Our App"
+                                    >
+                                        <i className="pe-7s-cloud-download" style={{ fontSize: '14px' }}></i>
+                                        Get App
+                                    </button>
+                                </div>
                             </div>
                         )}
 
-                        {/* Loading State - Show simple placeholder while loading */}
+                        {/* Loading State */}
                         {!isMobile && isLoading && (
-                            <div className="col-lg-9 col-6">
+                            <div className="col-lg-4 col-6">
                                 <div style={{
                                     display: 'flex',
-                                    justifyContent: 'center',
+                                    justifyContent: 'flex-end',
                                     alignItems: 'center',
                                     height: '100%'
                                 }}>
                                     <div style={{
-                                        width: '100px',
-                                        height: '20px',
+                                        width: '80px',
+                                        height: '16px',
                                         background: '#f0f0f0',
                                         borderRadius: '4px'
                                     }}></div>
@@ -793,7 +859,7 @@ const Header = () => {
                     </div>
                 </div>
 
-                {/* ✅ UPDATED: Awesome Login Modal with Scroll Fix */}
+                {/* Login Modal */}
                 {showLoginModal && (
                     <div
                         className="modal-overlay"
@@ -811,7 +877,7 @@ const Header = () => {
                             zIndex: 10001,
                             padding: '20px',
                             backdropFilter: 'blur(5px)',
-                            overflow: 'auto' // ✅ Scroll enable for overlay
+                            overflow: 'auto'
                         }}
                     >
                         <div
@@ -819,7 +885,7 @@ const Header = () => {
                             style={{
                                 width: '100%',
                                 maxWidth: '450px',
-                                margin: 'auto' // ✅ Center the modal
+                                margin: 'auto'
                             }}
                         >
                             <AwesomeLogin
@@ -837,7 +903,7 @@ const Header = () => {
                     </div>
                 )}
 
-                {/* ✅ UPDATED: Awesome Signup Modal with Scroll Fix */}
+                {/* Signup Modal */}
                 {showRegisterModal && (
                     <div
                         className="modal-overlay"
@@ -850,12 +916,12 @@ const Header = () => {
                             bottom: 0,
                             background: 'rgba(0, 0, 0, 0.6)',
                             display: 'flex',
-                            alignItems: 'flex-start', // ✅ Changed to flex-start for scroll
+                            alignItems: 'flex-start',
                             justifyContent: 'center',
                             zIndex: 10001,
                             padding: '20px',
                             backdropFilter: 'blur(5px)',
-                            overflow: 'auto' // ✅ Scroll enable for overlay
+                            overflow: 'auto'
                         }}
                     >
                         <div
@@ -863,7 +929,7 @@ const Header = () => {
                             style={{
                                 width: '100%',
                                 maxWidth: '500px',
-                                margin: '20px auto' // ✅ Margin for better spacing
+                                margin: '20px auto'
                             }}
                         >
                             <AwesomeSignup
@@ -898,7 +964,7 @@ const Header = () => {
                     }}
                 ></div>
 
-                {/* ✅ UPDATED: Mobile Menu with Awesome Modal Integration */}
+                {/* Mobile Menu */}
                 <nav
                     className={`mobile-menu ${isMenuOpen ? 'mobile-open' : ''}`}
                     style={{
@@ -914,16 +980,7 @@ const Header = () => {
                         boxShadow: '2px 0 10px rgba(0, 0, 0, 0.1)'
                     }}
                 >
-                    <div style={{ padding: '20px' }}>
-                        {/* Mobile Menu Header */}
-                        <div style={{
-                            marginBottom: '20px',
-                            paddingBottom: '15px',
-                            borderBottom: '1px solid #eee'
-                        }}>
-                            <h3 style={{ margin: 0, color: '#333', textAlign: 'center' }}>Menu</h3>
-                        </div>
-
+                    <div style={{ padding: '20px', marginTop: '60px' }}>
                         {/* Navigation Links */}
                         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                             <li style={{ marginBottom: '10px' }}>
@@ -947,7 +1004,6 @@ const Header = () => {
                                 </Link>
                             </li>
 
-                            {/* ✅ NEW: Dashboard Link in Mobile Menu */}
                             {isLoggedIn && (
                                 <li style={{ marginBottom: '10px' }}>
                                     <Link
@@ -998,8 +1054,37 @@ const Header = () => {
                             </li>
                         </ul>
 
-                        {/* ✅ UPDATED: User Section with Awesome Modal Integration */}
-                        <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
+                        {/* Get App Button in Mobile Menu */}
+                        <div style={{ margin: '20px 0' }}>
+                            <button
+                                onClick={() => {
+                                    handleGetApp();
+                                    closeMenu();
+                                }}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px',
+                                    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
+                                }}
+                            >
+                                <i className="pe-7s-cloud-download" style={{ fontSize: '16px' }}></i>
+                                Download Our App
+                            </button>
+                        </div>
+
+                        {/* User Section */}
+                        <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
                             {isLoggedIn ? (
                                 <div style={{ textAlign: 'center' }}>
                                     {/* User Welcome Message */}
@@ -1103,9 +1188,13 @@ const Header = () => {
                 </nav>
             </header>
 
-           
+            {/* ✅ ADDED: Spacer for fixed header */}
+            <div style={{ 
+                height: isSticky ? '80px' : '100px', 
+                transition: 'height 0.3s ease' 
+            }}></div>
 
-            {/* ✅ UPDATED: Custom CSS for Awesome Components */}
+            {/* Custom CSS */}
             <style jsx>{`
         .awesome-auth-modal {
           animation: scaleUp 0.3s ease forwards;
@@ -1122,7 +1211,17 @@ const Header = () => {
           }
         }
 
-        /* Mobile responsiveness for awesome modals */
+        /* Sticky header animation */
+        .header_sticky {
+          transition: all 0.3s ease;
+        }
+
+        .sticky-active {
+          box-shadow: 0 2px 20px rgba(0,0,0,0.1) !important;
+          background: white !important;
+        }
+
+        /* Mobile responsiveness */
         @media (max-width: 768px) {
           .awesome-auth-modal {
             margin: 10px;
@@ -1133,9 +1232,89 @@ const Header = () => {
           }
         }
 
-        /* Ensure proper scrolling */
-        .modal-overlay {
-          -webkit-overflow-scrolling: touch;
+        /* Hamburger animation */
+        .hamburger {
+          padding: 0;
+          display: inline-block;
+          cursor: pointer;
+          transition-property: opacity, filter;
+          transition-duration: 0.15s;
+          transition-timing-function: linear;
+          font: inherit;
+          color: inherit;
+          text-transform: none;
+          background-color: transparent;
+          border: 0;
+          margin: 0;
+          overflow: visible;
+        }
+
+        .hamburger-box {
+          width: 24px;
+          height: 24px;
+          display: inline-block;
+          position: relative;
+        }
+
+        .hamburger-inner {
+          display: block;
+          top: 50%;
+          margin-top: -2px;
+        }
+
+        .hamburger-inner, .hamburger-inner::before, .hamburger-inner::after {
+          width: 24px;
+          height: 3px;
+          background-color: #333;
+          border-radius: 4px;
+          position: absolute;
+          transition-property: transform;
+          transition-duration: 0.15s;
+          transition-timing-function: ease;
+        }
+
+        .hamburger-inner::before, .hamburger-inner::after {
+          content: "";
+          display: block;
+        }
+
+        .hamburger-inner::before {
+          top: -8px;
+        }
+
+        .hamburger-inner::after {
+          bottom: -8px;
+        }
+
+        .hamburger--spin .hamburger-inner {
+          transition-duration: 0.22s;
+          transition-timing-function: cubic-bezier(0.55, 0.055, 0.675, 0.19);
+        }
+
+        .hamburger--spin .hamburger-inner::before {
+          transition: top 0.1s 0.25s ease-in, opacity 0.1s ease-in;
+        }
+
+        .hamburger--spin .hamburger-inner::after {
+          transition: bottom 0.1s 0.25s ease-in, transform 0.22s cubic-bezier(0.55, 0.055, 0.675, 0.19);
+        }
+
+        .hamburger--spin.is-active .hamburger-inner {
+          transform: rotate(225deg);
+          transition-delay: 0.12s;
+          transition-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+        }
+
+        .hamburger--spin.is-active .hamburger-inner::before {
+          top: 0;
+          opacity: 0;
+          transition: top 0.1s ease-out, opacity 0.1s 0.12s ease-out;
+        }
+
+        .hamburger--spin.is-active .hamburger-inner::after {
+          bottom: 0;
+          transform: rotate(-90deg);
+          transition: bottom 0.1s ease-out, transform 0.22s 0.12s cubic-bezier(0.215, 0.61, 0.355, 1);
         }
       `}</style>
         </div>

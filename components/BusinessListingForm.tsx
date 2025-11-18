@@ -34,6 +34,7 @@ const BusinessListingForm = () => {
   const [locationError, setLocationError] = useState("");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationPermission, setLocationPermission] = useState<'prompt' | 'granted' | 'denied'>('prompt');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [formData, setFormData] = useState<BusinessFormData>({
     businessName: '',
@@ -73,42 +74,17 @@ const BusinessListingForm = () => {
     'Entertainment'
   ];
 
-  // Check location permission on component mount
-  useEffect(() => {
-    checkLocationPermission();
-  }, []);
-
-  // Check current location permission status
-  const checkLocationPermission = async () => {
-    if (!navigator.permissions) {
-      setLocationPermission('prompt');
-      return;
-    }
-
-    try {
-      const result = await navigator.permissions.query({ name: 'geolocation' });
-      setLocationPermission(result.state);
-      
-      result.onchange = () => {
-        setLocationPermission(result.state);
-      };
-    } catch (error) {
-      setLocationPermission('prompt');
-    }
-  };
-
   // Automatically get location when user moves to step 2
   useEffect(() => {
-    if (currentStep === 2 && isMobileVerified && locationPermission === 'prompt') {
+    if (currentStep === 2 && isMobileVerified) {
       getCurrentLocation();
     }
-  }, [currentStep, isMobileVerified, locationPermission]);
+  }, [currentStep, isMobileVerified]);
 
   // Get user location automatically
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
       setLocationError("Geolocation not supported in this browser");
-      alert('Geolocation is not supported by this browser.');
       return;
     }
 
@@ -132,8 +108,6 @@ const BusinessListingForm = () => {
           longitude: newLocation.longitude,
           address: `Location: ${newLocation.latitude.toFixed(6)}, ${newLocation.longitude.toFixed(6)}`
         }));
-        
-        console.log('Location detected successfully!');
       },
       (err) => {
         setLocationError(err.message);
@@ -163,14 +137,9 @@ const BusinessListingForm = () => {
     );
   };
 
-  // Retry location access
-  const retryLocationAccess = () => {
-    if (locationPermission === 'denied') {
-      // Guide user to enable location manually
-      alert('Please enable location access from your browser settings and then retry.');
-      return;
-    }
-    getCurrentLocation();
+  // Toggle mobile menu
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
   // Step 1: Mobile Number Verification
@@ -312,12 +281,6 @@ const BusinessListingForm = () => {
       return typeof value === 'string' ? value.trim() !== '' : false;
     });
 
-    // Also check if location is available
-    if (!location) {
-      alert('Location access is required to continue. Please allow location access.');
-      return false;
-    }
-
     return !hasErrors && allFieldsFilled;
   };
 
@@ -326,8 +289,7 @@ const BusinessListingForm = () => {
     
     // Check if location is available
     if (!location) {
-      alert('Location access is required to register your business. Please allow location access.');
-      getCurrentLocation();
+      alert('Location access is required to register your business. Please allow location access and try again.');
       return;
     }
 
@@ -501,9 +463,63 @@ const BusinessListingForm = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-      {/* Progress Steps - Fixed Navigation Bar */}
-      <div className="bg-white shadow-sm border-b fixed top-0 left-0 right-0 z-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 relative">
+{/* Responsive Mobile Menu Button (Only One Button) */}
+
+
+
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          <div 
+            className="fixed left-4 top-1/2 transform -translate-y-1/2 bg-white rounded-lg shadow-xl p-4 min-w-48 z-50"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  goToStep(1);
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
+                  currentStep === 1 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+                }`}
+              >
+                Mobile Verification
+              </button>
+              <button
+                onClick={() => {
+                  goToStep(2);
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
+                  currentStep === 2 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+                }`}
+              >
+                Business Details
+              </button>
+              <button
+                onClick={() => {
+                  goToStep(3);
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
+                  currentStep === 3 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+                }`}
+              >
+                Categories
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Progress Steps - Fixed Navigation Bar - Large screens pe visible */}
+      <div className="bg-white shadow-sm border-b fixed top-0 left-0 right-0 z-40 hidden lg:block">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex justify-center py-4 sm:py-6">
             <div className="flex items-center space-x-4 sm:space-x-6 lg:space-x-8 w-full max-w-md sm:max-w-lg justify-between">
@@ -563,7 +579,7 @@ const BusinessListingForm = () => {
       </div>
 
       {/* Main Form Section - Added padding top for fixed nav */}
-      <div className="pt-20 sm:pt-24 py-4 sm:py-8">
+      <div className="pt-20 sm:pt-24 py-4 sm:py-8 lg:pt-24">
         <div className="max-w-6xl mx-auto px-3 sm:px-4">
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
             <div className="grid grid-cols-1 lg:grid-cols-2">
@@ -733,82 +749,30 @@ const BusinessListingForm = () => {
                       </p>
                     </div>
 
-                    {/* Location Detection Status */}
-                    <div className={`mb-6 p-4 rounded-lg ${
+                    {/* Location Detection Status - Hidden from users */}
+                    <div className={`mb-4 p-3 rounded-lg ${
                       location ? 'bg-green-50 border border-green-200' : 
                       locationError ? 'bg-red-50 border border-red-200' : 
                       'bg-blue-50 border border-blue-200'
                     }`}>
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div className="flex-1">
-                          <h3 className={`font-medium ${
-                            location ? 'text-green-900' : 
-                            locationError ? 'text-red-900' : 
-                            'text-blue-900'
-                          }`}>
-                            {location ? 'Location Access Granted' : 
-                             locationError ? 'Location Access Required' : 
-                             'Requesting Location Access'}
-                          </h3>
-                          <p className={`text-sm ${
-                            location ? 'text-green-700' : 
-                            locationError ? 'text-red-700' : 
-                            'text-blue-700'
-                          }`}>
-                            {location ? 'Your location has been detected successfully' : 
-                             locationError ? 'Please allow location access to continue' : 
-                             'Please allow location access when prompted'}
-                          </p>
-                        </div>
-                        
-                        {!location && (
-                          <button
-                            type="button"
-                            onClick={retryLocationAccess}
-                            disabled={isGettingLocation}
-                            className={`px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 w-full sm:w-auto ${
-                              locationError ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-blue-600 text-white hover:bg-blue-700'
-                            }`}
-                          >
-                            {isGettingLocation ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                Detecting...
-                              </>
-                            ) : (
-                              <>
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                {locationError ? 'Retry Location' : 'Get Location'}
-                              </>
-                            )}
-                          </button>
+                      <div className="flex items-center gap-3">
+                        {isGettingLocation ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                            <span className="text-blue-700 text-sm">Detecting your location...</span>
+                          </>
+                        ) : location ? (
+                          <>
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-green-700 text-sm">Location detected successfully</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                            <span className="text-red-700 text-sm">{locationError}</span>
+                          </>
                         )}
                       </div>
-                      
-                      {location && (
-                        <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded">
-                          <p className="text-sm text-green-800">
-                            <strong>Location detected:</strong> Coordinates captured successfully
-                          </p>
-                          <p className="text-xs text-green-600 mt-1">
-                            Latitude: {location.latitude.toFixed(6)}, Longitude: {location.longitude.toFixed(6)}
-                          </p>
-                        </div>
-                      )}
-                      
-                      {locationError && (
-                        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded">
-                          <p className="text-sm text-red-800">
-                            <strong>Error:</strong> {locationError}
-                          </p>
-                          <p className="text-xs text-red-600 mt-1">
-                            Please allow location access from your browser settings to continue.
-                          </p>
-                        </div>
-                      )}
                     </div>
 
                     <form onSubmit={handleStep2Submit} className="space-y-4 sm:space-y-6">

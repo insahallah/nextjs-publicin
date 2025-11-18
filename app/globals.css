@@ -94,3 +94,11 @@ canvas {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+.btn_mobile {
+  position: fixed !important;
+  top: 15px !important;
+  left: 15px !important;
+  z-index: 99999 !important;
+  margin: 0 !important;
+  transform: none !important;
+}
