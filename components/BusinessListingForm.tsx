@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // Types
 interface BusinessFormData {
@@ -33,6 +33,7 @@ const BusinessListingForm = () => {
   const [location, setLocation] = useState<LocationData | null>(null);
   const [locationError, setLocationError] = useState("");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [locationPermission, setLocationPermission] = useState<'prompt' | 'granted' | 'denied'>('prompt');
 
   const [formData, setFormData] = useState<BusinessFormData>({
     businessName: '',
@@ -72,7 +73,38 @@ const BusinessListingForm = () => {
     'Entertainment'
   ];
 
-  // Get user location
+  // Check location permission on component mount
+  useEffect(() => {
+    checkLocationPermission();
+  }, []);
+
+  // Check current location permission status
+  const checkLocationPermission = async () => {
+    if (!navigator.permissions) {
+      setLocationPermission('prompt');
+      return;
+    }
+
+    try {
+      const result = await navigator.permissions.query({ name: 'geolocation' });
+      setLocationPermission(result.state);
+      
+      result.onchange = () => {
+        setLocationPermission(result.state);
+      };
+    } catch (error) {
+      setLocationPermission('prompt');
+    }
+  };
+
+  // Automatically get location when user moves to step 2
+  useEffect(() => {
+    if (currentStep === 2 && isMobileVerified && locationPermission === 'prompt') {
+      getCurrentLocation();
+    }
+  }, [currentStep, isMobileVerified, locationPermission]);
+
+  // Get user location automatically
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
       setLocationError("Geolocation not supported in this browser");
@@ -91,6 +123,7 @@ const BusinessListingForm = () => {
         };
         setLocation(newLocation);
         setIsGettingLocation(false);
+        setLocationPermission('granted');
         
         // Update form data with coordinates
         setFormData(prev => ({
@@ -100,33 +133,44 @@ const BusinessListingForm = () => {
           address: `Location: ${newLocation.latitude.toFixed(6)}, ${newLocation.longitude.toFixed(6)}`
         }));
         
-        alert('Location detected successfully! You can now fill the address fields manually.');
+        console.log('Location detected successfully!');
       },
       (err) => {
         setLocationError(err.message);
         setIsGettingLocation(false);
+        setLocationPermission('denied');
         
         switch (err.code) {
           case err.PERMISSION_DENIED:
-            alert('Location access denied. Please allow location access to get your coordinates.');
+            setLocationError("Location access denied. Please allow location access to continue.");
             break;
           case err.POSITION_UNAVAILABLE:
-            alert('Location information unavailable.');
+            setLocationError("Location information unavailable.");
             break;
           case err.TIMEOUT:
-            alert('Location request timed out.');
+            setLocationError("Location request timed out.");
             break;
           default:
-            alert('An unknown error occurred while getting location.');
+            setLocationError("An unknown error occurred while getting location.");
             break;
         }
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 15000,
         maximumAge: 60000
       }
     );
+  };
+
+  // Retry location access
+  const retryLocationAccess = () => {
+    if (locationPermission === 'denied') {
+      // Guide user to enable location manually
+      alert('Please enable location access from your browser settings and then retry.');
+      return;
+    }
+    getCurrentLocation();
   };
 
   // Step 1: Mobile Number Verification
@@ -268,12 +312,25 @@ const BusinessListingForm = () => {
       return typeof value === 'string' ? value.trim() !== '' : false;
     });
 
+    // Also check if location is available
+    if (!location) {
+      alert('Location access is required to continue. Please allow location access.');
+      return false;
+    }
+
     return !hasErrors && allFieldsFilled;
   };
 
   const handleStep2Submit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check if location is available
+    if (!location) {
+      alert('Location access is required to register your business. Please allow location access.');
+      getCurrentLocation();
+      return;
+    }
+
     // Mark all fields as touched
     const allTouched = Object.keys(formData).reduce((acc, key) => {
       acc[key as keyof BusinessFormData] = true;
@@ -317,6 +374,12 @@ const BusinessListingForm = () => {
     
     if (formData.categories.length === 0) {
       alert('Please select at least one category');
+      return;
+    }
+
+    // Final location check
+    if (!location) {
+      alert('Location access is required to complete registration.');
       return;
     }
 
@@ -665,37 +728,66 @@ const BusinessListingForm = () => {
                       <p className="text-sm text-gray-600">
                         All fields marked with * are required
                       </p>
+                      <p className="text-sm text-blue-600 font-medium mt-2">
+                        📍 Location access is required to register your business
+                      </p>
                     </div>
 
-                    {/* Location Detection Button */}
-                    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    {/* Location Detection Status */}
+                    <div className={`mb-6 p-4 rounded-lg ${
+                      location ? 'bg-green-50 border border-green-200' : 
+                      locationError ? 'bg-red-50 border border-red-200' : 
+                      'bg-blue-50 border border-blue-200'
+                    }`}>
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div className="flex-1">
-                          <h3 className="font-medium text-blue-900">Get Coordinates</h3>
-                          <p className="text-sm text-blue-700">Use your current location to get latitude and longitude</p>
+                          <h3 className={`font-medium ${
+                            location ? 'text-green-900' : 
+                            locationError ? 'text-red-900' : 
+                            'text-blue-900'
+                          }`}>
+                            {location ? 'Location Access Granted' : 
+                             locationError ? 'Location Access Required' : 
+                             'Requesting Location Access'}
+                          </h3>
+                          <p className={`text-sm ${
+                            location ? 'text-green-700' : 
+                            locationError ? 'text-red-700' : 
+                            'text-blue-700'
+                          }`}>
+                            {location ? 'Your location has been detected successfully' : 
+                             locationError ? 'Please allow location access to continue' : 
+                             'Please allow location access when prompted'}
+                          </p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={getCurrentLocation}
-                          disabled={isGettingLocation}
-                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 w-full sm:w-auto"
-                        >
-                          {isGettingLocation ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                              Detecting...
-                            </>
-                          ) : (
-                            <>
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                              </svg>
-                              Get Location
-                            </>
-                          )}
-                        </button>
+                        
+                        {!location && (
+                          <button
+                            type="button"
+                            onClick={retryLocationAccess}
+                            disabled={isGettingLocation}
+                            className={`px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 w-full sm:w-auto ${
+                              locationError ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-blue-600 text-white hover:bg-blue-700'
+                            }`}
+                          >
+                            {isGettingLocation ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                Detecting...
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                {locationError ? 'Retry Location' : 'Get Location'}
+                              </>
+                            )}
+                          </button>
+                        )}
                       </div>
+                      
                       {location && (
                         <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded">
                           <p className="text-sm text-green-800">
@@ -706,10 +798,14 @@ const BusinessListingForm = () => {
                           </p>
                         </div>
                       )}
+                      
                       {locationError && (
                         <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded">
                           <p className="text-sm text-red-800">
                             <strong>Error:</strong> {locationError}
+                          </p>
+                          <p className="text-xs text-red-600 mt-1">
+                            Please allow location access from your browser settings to continue.
                           </p>
                         </div>
                       )}
@@ -1050,9 +1146,10 @@ const BusinessListingForm = () => {
                         </button>
                         <button
                           type="submit"
-                          className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                          disabled={!location}
+                          className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Continue to Categories
+                          {location ? 'Continue to Categories' : 'Allow Location to Continue'}
                         </button>
                       </div>
                     </form>
@@ -1175,7 +1272,7 @@ const BusinessListingForm = () => {
               <div className="space-y-3">
                 <h3 className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-green-600 transition-colors">Business Details</h3>
                 <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
-                  Add name, address, and business information
+                  Add name, address, and allow location access
                 </p>
               </div>
             </div>
