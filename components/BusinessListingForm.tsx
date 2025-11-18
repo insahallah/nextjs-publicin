@@ -248,12 +248,18 @@ const BusinessListingForm = () => {
 
     // Validate all required fields
     requiredFields.forEach(field => {
-      validateField(field, formData[field]);
+      const value = formData[field];
+      // Convert to string for validation
+      const stringValue = typeof value === 'string' ? value : String(value || '');
+      validateField(field, stringValue);
     });
 
     // Check if any errors exist and all fields are filled
     const hasErrors = Object.values(errors).some(error => error);
-    const allFieldsFilled = requiredFields.every(field => formData[field].trim() !== '');
+    const allFieldsFilled = requiredFields.every(field => {
+      const value = formData[field];
+      return typeof value === 'string' ? value.trim() !== '' : false;
+    });
 
     return !hasErrors && allFieldsFilled;
   };
