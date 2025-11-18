@@ -403,11 +403,7 @@ const Header = () => {
                 borderBottom: '1px solid #f0f0f0',
                 height: isMobile ? '70px' : '85px'
             }}>
-                <div className="container" style={{ 
-                    maxWidth: '1200px', 
-                    margin: '0 auto',
-                    padding: isSticky ? '12px 15px' : '15px 15px'
-                }}>
+                <div className="container">
                     <div className="row" style={{ alignItems: 'center', minHeight: '55px' }}>
                         {/* ✅ DESKTOP LAYOUT - LOGO LEFT, ALL OTHERS RIGHT */}
                         {!isMobile ? (
@@ -419,12 +415,7 @@ const Header = () => {
                                 }}>
                                     <div id="logo_home">
                                         <h1 style={{ margin: 0 }}>
-                                            <Link href="/" title="Findoctor" style={{
-                                                fontSize: '26px',
-                                                textDecoration: 'none',
-                                                color: '#333',
-                                                fontWeight: 'bold'
-                                            }}>
+                                            <Link href="/" title="Publicin">
                                                 Publicin
                                             </Link>
                                         </h1>
@@ -449,7 +440,7 @@ const Header = () => {
                                             color: '#333',
                                             fontWeight: '500',
                                             fontSize: '16px',
-                                            padding: '8px 16px',
+                                            padding: '12px 20px', // ✅ PADDING INCREASED
                                             borderRadius: '8px',
                                             transition: 'all 0.3s ease'
                                         }}
@@ -470,7 +461,7 @@ const Header = () => {
                                                 color: '#27ae60',
                                                 fontWeight: 'bold',
                                                 background: '#f0fff4',
-                                                padding: '8px 16px',
+                                                padding: '12px 20px', // ✅ PADDING INCREASED
                                                 borderRadius: '25px',
                                                 border: '2px solid #27ae60',
                                                 textDecoration: 'none',
@@ -512,7 +503,7 @@ const Header = () => {
                                                             border: 'none',
                                                             color: '#333',
                                                             cursor: 'pointer',
-                                                            padding: '8px 16px',
+                                                            padding: '12px 16px', // ✅ PADDING INCREASED
                                                             borderRadius: '8px',
                                                             transition: 'all 0.3s ease',
                                                             display: 'flex',
@@ -588,7 +579,7 @@ const Header = () => {
                                                                         display: 'flex',
                                                                         alignItems: 'center',
                                                                         gap: '8px',
-                                                                        padding: '8px 12px',
+                                                                        padding: '10px 16px', // ✅ PADDING INCREASED
                                                                         color: '#333',
                                                                         textDecoration: 'none',
                                                                         transition: 'all 0.3s ease',
@@ -610,7 +601,7 @@ const Header = () => {
                                                                         display: 'flex',
                                                                         alignItems: 'center',
                                                                         gap: '8px',
-                                                                        padding: '8px 12px',
+                                                                        padding: '10px 16px', // ✅ PADDING INCREASED
                                                                         color: '#333',
                                                                         textDecoration: 'none',
                                                                         transition: 'all 0.3s ease',
@@ -638,7 +629,7 @@ const Header = () => {
                                                                         display: 'flex',
                                                                         alignItems: 'center',
                                                                         gap: '8px',
-                                                                        padding: '8px 12px',
+                                                                        padding: '10px 16px', // ✅ PADDING INCREASED
                                                                         background: 'none',
                                                                         border: 'none',
                                                                         color: '#e74c3c',
@@ -669,7 +660,7 @@ const Header = () => {
                                                         border: 'none',
                                                         color: '#666',
                                                         cursor: 'pointer',
-                                                        padding: '8px 16px',
+                                                        padding: '12px 16px', // ✅ PADDING INCREASED
                                                         borderRadius: '8px',
                                                         transition: 'all 0.3s ease',
                                                         display: 'flex',
@@ -698,7 +689,7 @@ const Header = () => {
                                                         border: 'none',
                                                         color: '#666',
                                                         cursor: 'pointer',
-                                                        padding: '8px 16px',
+                                                        padding: '12px 16px', // ✅ PADDING INCREASED
                                                         borderRadius: '8px',
                                                         transition: 'all 0.3s ease',
                                                         display: 'flex',
@@ -732,7 +723,7 @@ const Header = () => {
                                             border: 'none',
                                             color: 'white',
                                             cursor: 'pointer',
-                                            padding: '10px 20px',
+                                            padding: '12px 24px', // ✅ PADDING INCREASED
                                             borderRadius: '25px',
                                             transition: 'all 0.3s ease',
                                             display: 'flex',
@@ -776,7 +767,7 @@ const Header = () => {
                                     style={{
                                         background: 'transparent',
                                         border: 'none',
-                                        padding: '12px',
+                                        padding: '12px 16px', // ✅ PADDING ADDED
                                         cursor: 'pointer',
                                         flex: '0 0 auto',
                                         zIndex: 1001,
@@ -791,33 +782,21 @@ const Header = () => {
                                 </button>
 
                                 {/* Logo - Center - PERFECTLY CENTERED */}
-                                <div id="logo_home" style={{
-                                    position: 'absolute',
-                                    left: '50%',
-                                    top: '50%',
-                                    transform: 'translate(-50%, -50%)',
-                                    textAlign: 'center',
-                                    width: 'auto'
-                                }}>
+                                <div id="logo_home">
                                     <h1 style={{ margin: 0 }}>
-                                        <Link href="/" title="Publicin" style={{
-                                            fontSize: '22px',
-                                            textDecoration: 'none',
-                                            color: '#333',
-                                            fontWeight: 'bold'
-                                        }}>
+                                        <Link href="/" title="Publicin">
                                             Publicin
                                         </Link>
                                     </h1>
                                 </div>
 
-                                {/* Get App Button - Right Side */}
+                                {/* Get App Button - RIGHT Side - FIXED POSITION */}
                                 <div style={{
-                                    flex: '0 0 auto',
-                                    zIndex: 1001,
-                                    width: '50px',
-                                    display: 'flex',
-                                    justifyContent: 'flex-end'
+                                    position: 'absolute',
+                                    right: '15px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    zIndex: 1001
                                 }}>
                                     <button
                                         onClick={handleGetApp}
@@ -826,19 +805,19 @@ const Header = () => {
                                             border: 'none',
                                             color: 'white',
                                             cursor: 'pointer',
-                                            padding: '8px 12px',
+                                            padding: '10px 16px', // ✅ PADDING INCREASED
                                             borderRadius: '20px',
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '4px',
-                                            fontSize: '12px',
+                                            gap: '6px',
+                                            fontSize: '13px',
                                             fontWeight: '600',
                                             boxShadow: '0 3px 10px rgba(102, 126, 234, 0.3)',
                                             whiteSpace: 'nowrap'
                                         }}
                                         title="Get Our App"
                                     >
-                                        <i className="pe-7s-cloud-download" style={{ fontSize: '12px' }}></i>
+                                        <i className="pe-7s-cloud-download" style={{ fontSize: '14px' }}></i>
                                         Get App
                                     </button>
                                 </div>
