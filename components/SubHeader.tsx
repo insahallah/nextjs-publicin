@@ -389,7 +389,7 @@ const Header = () => {
 
     return (
         <div id="page" className={isMenuOpen ? 'menu-open' : ''}>
-            {/* ✅ STICKY HEADER SECTION */}
+            {/* ✅ STICKY HEADER SECTION - HEIGHT 85px */}
             <header className={`header_sticky ${isSticky ? 'sticky-active' : ''}`} style={{
                 position: 'fixed',
                 top: 0,
@@ -397,57 +397,60 @@ const Header = () => {
                 right: 0,
                 width: '100%',
                 background: 'white',
-                boxShadow: isSticky ? '0 2px 20px rgba(0,0,0,0.1)' : 'none',
+                boxShadow: isSticky ? '0 2px 15px rgba(0,0,0,0.1)' : 'none',
                 transition: 'all 0.3s ease',
                 zIndex: 1000,
-                borderBottom: '1px solid #f0f0f0'
+                borderBottom: '1px solid #f0f0f0',
+                height: isMobile ? '70px' : '85px'
             }}>
                 <div className="container" style={{ 
                     maxWidth: '1200px', 
                     margin: '0 auto',
-                    padding: isSticky ? '10px 15px' : '15px'
+                    padding: isSticky ? '12px 15px' : '15px 15px'
                 }}>
-                    <div className="row" style={{ alignItems: 'center', minHeight: '60px' }}>
-                        {/* ✅ DESKTOP LAYOUT */}
+                    <div className="row" style={{ alignItems: 'center', minHeight: '55px' }}>
+                        {/* ✅ DESKTOP LAYOUT - LOGO LEFT, ALL OTHERS RIGHT */}
                         {!isMobile ? (
                             <>
                                 {/* Logo - Left Side */}
-                                <div className="col-lg-2 col-6" style={{
+                                <div className="col-lg-3" style={{
                                     display: 'flex',
                                     alignItems: 'center'
                                 }}>
                                     <div id="logo_home">
                                         <h1 style={{ margin: 0 }}>
                                             <Link href="/" title="Findoctor" style={{
-                                                fontSize: '24px',
+                                                fontSize: '26px',
                                                 textDecoration: 'none',
                                                 color: '#333',
                                                 fontWeight: 'bold'
                                             }}>
-                                                Findoctor
+                                                Publicin
                                             </Link>
                                         </h1>
                                     </div>
                                 </div>
 
-                                {/* Navigation Links - Center */}
-                                <div className="col-lg-6" style={{
+                                {/* ALL CONTENT RIGHT SIDE */}
+                                <div className="col-lg-9" style={{
                                     display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center'
+                                    justifyContent: 'flex-end',
+                                    alignItems: 'center',
+                                    gap: '25px'
                                 }}>
+                                    {/* Navigation Links */}
                                     <nav style={{
                                         display: 'flex',
-                                        gap: '30px',
+                                        gap: '25px',
                                         alignItems: 'center'
                                     }}>
                                         <Link href="/" style={{
                                             textDecoration: 'none',
                                             color: '#333',
                                             fontWeight: '500',
-                                            fontSize: '15px',
+                                            fontSize: '16px',
                                             padding: '8px 16px',
-                                            borderRadius: '6px',
+                                            borderRadius: '8px',
                                             transition: 'all 0.3s ease'
                                         }}
                                             onMouseEnter={(e) => {
@@ -468,10 +471,10 @@ const Header = () => {
                                                 fontWeight: 'bold',
                                                 background: '#f0fff4',
                                                 padding: '8px 16px',
-                                                borderRadius: '20px',
+                                                borderRadius: '25px',
                                                 border: '2px solid #27ae60',
                                                 textDecoration: 'none',
-                                                fontSize: '14px',
+                                                fontSize: '15px',
                                                 transition: 'all 0.3s ease',
                                                 display: 'inline-block'
                                             }}
@@ -491,52 +494,11 @@ const Header = () => {
                                             📍 List Business FREE
                                         </Link>
                                     </nav>
-                                </div>
-
-                                {/* Get App & User Access - Fully Right Side */}
-                                <div className="col-lg-4 col-6" style={{
-                                    display: 'flex',
-                                    justifyContent: 'flex-end',
-                                    alignItems: 'center',
-                                    gap: '20px'
-                                }}>
-                                    {/* Get App Button - Desktop (Fully Right) */}
-                                    <button
-                                        onClick={handleGetApp}
-                                        style={{
-                                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                            border: 'none',
-                                            color: 'white',
-                                            cursor: 'pointer',
-                                            padding: '10px 20px',
-                                            borderRadius: '25px',
-                                            transition: 'all 0.3s ease',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '8px',
-                                            fontSize: '14px',
-                                            fontWeight: '600',
-                                            boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
-                                            marginRight: '10px'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.transform = 'translateY(-2px)';
-                                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.transform = 'translateY(0)';
-                                            e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.3)';
-                                        }}
-                                        title="Get Our App"
-                                    >
-                                        <i className="pe-7s-cloud-download" style={{ fontSize: '16px' }}></i>
-                                        Get App
-                                    </button>
 
                                     {/* User Access Buttons */}
                                     <div style={{
                                         display: 'flex',
-                                        gap: '10px',
+                                        gap: '12px',
                                         alignItems: 'center'
                                     }}>
                                         {isLoggedIn ? (
@@ -551,7 +513,7 @@ const Header = () => {
                                                             color: '#333',
                                                             cursor: 'pointer',
                                                             padding: '8px 16px',
-                                                            borderRadius: '6px',
+                                                            borderRadius: '8px',
                                                             transition: 'all 0.3s ease',
                                                             display: 'flex',
                                                             alignItems: 'center',
@@ -569,7 +531,7 @@ const Header = () => {
                                                         }}
                                                         title="User Menu"
                                                     >
-                                                        <i className="pe-7s-user" style={{ fontSize: '18px' }}></i>
+                                                        <i className="pe-7s-user" style={{ fontSize: '16px' }}></i>
                                                         {user?.fullName?.split(' ')[0] || 'User'}
                                                         <i
                                                             className={`pe-7s-angle-down`}
@@ -708,7 +670,7 @@ const Header = () => {
                                                         color: '#666',
                                                         cursor: 'pointer',
                                                         padding: '8px 16px',
-                                                        borderRadius: '6px',
+                                                        borderRadius: '8px',
                                                         transition: 'all 0.3s ease',
                                                         display: 'flex',
                                                         alignItems: 'center',
@@ -737,7 +699,7 @@ const Header = () => {
                                                         color: '#666',
                                                         cursor: 'pointer',
                                                         padding: '8px 16px',
-                                                        borderRadius: '6px',
+                                                        borderRadius: '8px',
                                                         transition: 'all 0.3s ease',
                                                         display: 'flex',
                                                         alignItems: 'center',
@@ -761,14 +723,49 @@ const Header = () => {
                                             </>
                                         )}
                                     </div>
+
+                                    {/* Get App Button - LAST on Right Side */}
+                                    <button
+                                        onClick={handleGetApp}
+                                        style={{
+                                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                            border: 'none',
+                                            color: 'white',
+                                            cursor: 'pointer',
+                                            padding: '10px 20px',
+                                            borderRadius: '25px',
+                                            transition: 'all 0.3s ease',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            fontSize: '14px',
+                                            fontWeight: '600',
+                                            boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.transform = 'translateY(-2px)';
+                                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.transform = 'translateY(0)';
+                                            e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.3)';
+                                        }}
+                                        title="Get Our App"
+                                    >
+                                        <i className="pe-7s-cloud-download" style={{ fontSize: '16px' }}></i>
+                                        Get App
+                                    </button>
                                 </div>
                             </>
                         ) : (
-                            /* ✅ MOBILE LAYOUT */
+                            /* ✅ MOBILE LAYOUT - Menu Left, Logo Center, Get App Right */
                             <div className="col-12" style={{
                                 display: 'flex',
                                 justifyContent: 'space-between',
-                                alignItems: 'center'
+                                alignItems: 'center',
+                                height: '70px',
+                                position: 'relative',
+                                width: '100%'
                             }}>
                                 {/* Menu Button - Left Side */}
                                 <button 
@@ -779,9 +776,11 @@ const Header = () => {
                                     style={{
                                         background: 'transparent',
                                         border: 'none',
-                                        padding: '10px',
+                                        padding: '12px',
                                         cursor: 'pointer',
-                                        flex: '0 0 auto'
+                                        flex: '0 0 auto',
+                                        zIndex: 1001,
+                                        width: '50px'
                                     }}
                                 >
                                     <div className={`hamburger hamburger--spin ${isMenuOpen ? 'is-active' : ''}`}>
@@ -791,27 +790,34 @@ const Header = () => {
                                     </div>
                                 </button>
 
-                                {/* Logo - Center */}
+                                {/* Logo - Center - PERFECTLY CENTERED */}
                                 <div id="logo_home" style={{
-                                    flex: '1',
-                                    display: 'flex',
-                                    justifyContent: 'center'
+                                    position: 'absolute',
+                                    left: '50%',
+                                    top: '50%',
+                                    transform: 'translate(-50%, -50%)',
+                                    textAlign: 'center',
+                                    width: 'auto'
                                 }}>
                                     <h1 style={{ margin: 0 }}>
-                                        <Link href="/" title="Findoctor" style={{
-                                            fontSize: '20px',
+                                        <Link href="/" title="Publicin" style={{
+                                            fontSize: '22px',
                                             textDecoration: 'none',
                                             color: '#333',
                                             fontWeight: 'bold'
                                         }}>
-                                            Findoctor
+                                            Publicin
                                         </Link>
                                     </h1>
                                 </div>
 
                                 {/* Get App Button - Right Side */}
                                 <div style={{
-                                    flex: '0 0 auto'
+                                    flex: '0 0 auto',
+                                    zIndex: 1001,
+                                    width: '50px',
+                                    display: 'flex',
+                                    justifyContent: 'flex-end'
                                 }}>
                                     <button
                                         onClick={handleGetApp}
@@ -820,18 +826,19 @@ const Header = () => {
                                             border: 'none',
                                             color: 'white',
                                             cursor: 'pointer',
-                                            padding: '8px 16px',
+                                            padding: '8px 12px',
                                             borderRadius: '20px',
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '6px',
+                                            gap: '4px',
                                             fontSize: '12px',
                                             fontWeight: '600',
-                                            boxShadow: '0 3px 10px rgba(102, 126, 234, 0.3)'
+                                            boxShadow: '0 3px 10px rgba(102, 126, 234, 0.3)',
+                                            whiteSpace: 'nowrap'
                                         }}
                                         title="Get Our App"
                                     >
-                                        <i className="pe-7s-cloud-download" style={{ fontSize: '14px' }}></i>
+                                        <i className="pe-7s-cloud-download" style={{ fontSize: '12px' }}></i>
                                         Get App
                                     </button>
                                 </div>
@@ -840,7 +847,7 @@ const Header = () => {
 
                         {/* Loading State */}
                         {!isMobile && isLoading && (
-                            <div className="col-lg-4 col-6">
+                            <div className="col-lg-9">
                                 <div style={{
                                     display: 'flex',
                                     justifyContent: 'flex-end',
@@ -980,10 +987,10 @@ const Header = () => {
                         boxShadow: '2px 0 10px rgba(0, 0, 0, 0.1)'
                     }}
                 >
-                    <div style={{ padding: '20px', marginTop: '60px' }}>
+                    <div style={{ padding: '20px', marginTop: '70px' }}>
                         {/* Navigation Links */}
                         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                            <li style={{ marginBottom: '10px' }}>
+                            <li style={{ marginBottom: '12px' }}>
                                 <Link
                                     href="/"
                                     onClick={closeMenu}
@@ -1005,7 +1012,7 @@ const Header = () => {
                             </li>
 
                             {isLoggedIn && (
-                                <li style={{ marginBottom: '10px' }}>
+                                <li style={{ marginBottom: '12px' }}>
                                     <Link
                                         href="/UserDashboard"
                                         onClick={closeMenu}
@@ -1029,7 +1036,7 @@ const Header = () => {
                                 </li>
                             )}
 
-                            <li style={{ marginBottom: '10px' }}>
+                            <li style={{ marginBottom: '12px' }}>
                                 <Link
                                     href="/list-your-business"
                                     onClick={closeMenu}
@@ -1188,9 +1195,9 @@ const Header = () => {
                 </nav>
             </header>
 
-            {/* ✅ ADDED: Spacer for fixed header */}
+            {/* ✅ ADDED: Spacer for fixed header - HEIGHT 85px */}
             <div style={{ 
-                height: isSticky ? '80px' : '100px', 
+                height: isSticky ? '85px' : '85px',
                 transition: 'height 0.3s ease' 
             }}></div>
 
@@ -1217,7 +1224,7 @@ const Header = () => {
         }
 
         .sticky-active {
-          box-shadow: 0 2px 20px rgba(0,0,0,0.1) !important;
+          box-shadow: 0 2px 15px rgba(0,0,0,0.1) !important;
           background: white !important;
         }
 
