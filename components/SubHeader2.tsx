@@ -18,6 +18,7 @@ const Header = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [showUserDropdown, setShowUserDropdown] = useState(false);
     const [isSticky, setIsSticky] = useState(false);
+    const [preFilledMobile, setPreFilledMobile] = useState('');
 
     // API endpoints
     const API_BASE_URL = 'https://allupipay.in/publicsewa/api/users';
@@ -82,8 +83,17 @@ const Header = () => {
         }
     };
 
-    // Event listeners for modal coordination
+    // ✅ ADDED: Event listener for signup modal from business listing
     useEffect(() => {
+        const handleOpenSignupModalFromBusiness = (event: CustomEvent) => {
+            const { mobileNumber } = event.detail;
+            toast(`Signup required for business listing. Mobile: ${mobileNumber}`, 'info');
+            
+            // Pre-fill mobile number in signup form
+            setPreFilledMobile(mobileNumber);
+            setShowRegisterModal(true);
+        };
+
         const handleOpenLoginModal = () => {
             toast('Login modal requested from ReviewModal', 'info');
             setShowLoginModal(true);
@@ -94,14 +104,15 @@ const Header = () => {
             setShowLoginModal(true);
         };
 
+        window.addEventListener('openSignupModalFromBusiness', handleOpenSignupModalFromBusiness as EventListener);
         window.addEventListener('openLoginModal', handleOpenLoginModal);
         window.addEventListener('openLoginModalFromReview', handleOpenLoginModalFromReview);
 
         return () => {
+            window.removeEventListener('openSignupModalFromBusiness', handleOpenSignupModalFromBusiness as EventListener);
             window.removeEventListener('openLoginModal', handleOpenLoginModal);
             window.removeEventListener('openLoginModalFromReview', handleOpenLoginModalFromReview);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Check screen size and auth status
@@ -159,7 +170,7 @@ const Header = () => {
         setShowUserDropdown(!showUserDropdown);
     };
 
-    // Login Handler
+    // Login Handler - UPDATED WITH REDIRECT
     const handleLoginSuccess = async (loginData: any) => {
         setIsLoggingIn(true);
 
@@ -198,6 +209,11 @@ const Header = () => {
                 setShowLoginModal(false);
                 setShowUserDropdown(false);
 
+                // ✅ Redirect to UserDashboard after 1 second
+                setTimeout(() => {
+                    window.location.href = '/UserDashboard';
+                }, 1000);
+
                 setTimeout(() => {
                     window.dispatchEvent(new CustomEvent('userLoggedIn', {
                         detail: {
@@ -209,7 +225,11 @@ const Header = () => {
                     window.dispatchEvent(new Event('storage'));
                 }, 200);
 
-                modal({ icon: 'success', title: 'Login successful!', text: 'Welcome back!' });
+                modal({ 
+                    icon: 'success', 
+                    title: 'Login successful!', 
+                    text: 'Redirecting to your dashboard...'
+                });
             } else {
                 const errorMessage = data.message || 'Login failed. Please check your credentials and try again.';
                 modal({
@@ -234,7 +254,7 @@ const Header = () => {
         }
     };
 
-    // Signup Handler
+    // Header component ke andar signup handler - UPDATED VERSION
     const handleAwesomeSignup = async (signupData: any) => {
         setIsRegistering(true);
         toast(`Signup data received: ${typeof signupData === 'object' ? (signupData.mobile || 'mobile') : String(signupData)}`, 'info');
@@ -248,13 +268,8 @@ const Header = () => {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    fullName: `${signupData.firstName} ${signupData.lastName}`,
+                    fullName: signupData.fullName,
                     mobile: mobileNumber,
-                    pinCode: signupData.pinCode || '000000',
-                    city: signupData.city || 'Unknown',
-                    village: signupData.village || 'Unknown',
-                    block: signupData.block || 'Unknown',
-                    state: signupData.state || 'Unknown',
                     password: signupData.password
                 })
             });
@@ -266,43 +281,46 @@ const Header = () => {
                 localStorage.setItem('authToken', data.token || data.id);
                 localStorage.setItem('userData', JSON.stringify({
                     id: data.id,
-                    fullName: `${signupData.firstName} ${signupData.lastName}`,
+                    fullName: signupData.fullName,
                     mobile: mobileNumber,
-                    city: signupData.city,
-                    village: signupData.village,
                     ...data
                 }));
 
                 setIsLoggedIn(true);
                 setUser({
                     id: data.id,
-                    fullName: `${signupData.firstName} ${signupData.lastName}`,
+                    fullName: signupData.fullName,
                     mobile: mobileNumber,
-                    city: signupData.city,
-                    village: signupData.village,
                     ...data
                 });
 
                 setShowRegisterModal(false);
                 setShowUserDropdown(false);
+                setPreFilledMobile(''); // ✅ Reset pre-filled mobile
 
-                setTimeout(() => {
-                    toast('Dispatching userLoggedIn event after registration', 'info');
-                    window.dispatchEvent(new CustomEvent('userLoggedIn', {
-                        detail: {
-                            user: {
-                                id: data.id,
-                                fullName: `${signupData.firstName} ${signupData.lastName}`,
-                                mobile: mobileNumber,
-                                city: signupData.city,
-                                village: signupData.village,
-                                ...data
-                            }
+                // ✅ Dispatch userSignedUp event for BusinessListingForm
+                window.dispatchEvent(new CustomEvent('userSignedUp', {
+                    detail: {
+                        user: {
+                            id: data.id,
+                            fullName: signupData.fullName,
+                            mobile: mobileNumber,
+                            ...data
                         }
-                    }));
-                }, 100);
+                    }
+                }));
 
-                modal({ icon: 'success', title: 'Registration successful!', text: 'Welcome!' });
+                // ✅ Registration ke baad login modal open hoga
+                setTimeout(() => {
+                    setShowLoginModal(true);
+                    toast('Please login with your credentials', 'info');
+                }, 500);
+
+                modal({ 
+                    icon: 'success', 
+                    title: 'Registration successful!', 
+                    text: 'Please login to continue'
+                });
             } else {
                 const errorMessage = data.message || 'Registration failed. Please try again.';
                 modal({
@@ -504,7 +522,7 @@ const Header = () => {
                                                             border: 'none',
                                                             color: '#333',
                                                             cursor: 'pointer',
-                                                            padding: '12px 16px', // ✅ PADDING INCREASED
+                                                            padding: '12px 16px',
                                                             borderRadius: '8px',
                                                             transition: 'all 0.3s ease',
                                                             display: 'flex',
@@ -580,7 +598,7 @@ const Header = () => {
                                                                         display: 'flex',
                                                                         alignItems: 'center',
                                                                         gap: '8px',
-                                                                        padding: '10px 16px', // ✅ PADDING INCREASED
+                                                                        padding: '10px 16px',
                                                                         color: '#333',
                                                                         textDecoration: 'none',
                                                                         transition: 'all 0.3s ease',
@@ -602,7 +620,7 @@ const Header = () => {
                                                                         display: 'flex',
                                                                         alignItems: 'center',
                                                                         gap: '8px',
-                                                                        padding: '10px 16px', // ✅ PADDING INCREASED
+                                                                        padding: '10px 16px',
                                                                         color: '#333',
                                                                         textDecoration: 'none',
                                                                         transition: 'all 0.3s ease',
@@ -630,7 +648,7 @@ const Header = () => {
                                                                         display: 'flex',
                                                                         alignItems: 'center',
                                                                         gap: '8px',
-                                                                        padding: '10px 16px', // ✅ PADDING INCREASED
+                                                                        padding: '10px 16px',
                                                                         background: 'none',
                                                                         border: 'none',
                                                                         color: '#e74c3c',
@@ -661,7 +679,7 @@ const Header = () => {
                                                         border: 'none',
                                                         color: '#666',
                                                         cursor: 'pointer',
-                                                        padding: '12px 16px', // ✅ PADDING INCREASED
+                                                        padding: '12px 16px',
                                                         borderRadius: '8px',
                                                         transition: 'all 0.3s ease',
                                                         display: 'flex',
@@ -690,7 +708,7 @@ const Header = () => {
                                                         border: 'none',
                                                         color: '#666',
                                                         cursor: 'pointer',
-                                                        padding: '12px 16px', // ✅ PADDING INCREASED
+                                                        padding: '12px 16px',
                                                         borderRadius: '8px',
                                                         transition: 'all 0.3s ease',
                                                         display: 'flex',
@@ -724,7 +742,7 @@ const Header = () => {
                                             border: 'none',
                                             color: 'white',
                                             cursor: 'pointer',
-                                            padding: '12px 24px', // ✅ PADDING INCREASED
+                                            padding: '12px 24px',
                                             borderRadius: '25px',
                                             transition: 'all 0.3s ease',
                                             display: 'flex',
@@ -768,7 +786,7 @@ const Header = () => {
                                     style={{
                                         background: 'transparent',
                                         border: 'none',
-                                        padding: '12px 16px', // ✅ PADDING ADDED
+                                        padding: '12px 16px',
                                         cursor: 'pointer',
                                         flex: '0 0 auto',
                                         zIndex: 1001,
@@ -806,7 +824,7 @@ const Header = () => {
                                             border: 'none',
                                             color: 'white',
                                             cursor: 'pointer',
-                                            padding: '10px 16px', // ✅ PADDING INCREASED
+                                            padding: '10px 16px',
                                             borderRadius: '20px',
                                             display: 'flex',
                                             alignItems: 'center',
@@ -890,11 +908,14 @@ const Header = () => {
                     </div>
                 )}
 
-                {/* Signup Modal */}
+                {/* Signup Modal with Pre-filled Mobile */}
                 {showRegisterModal && (
                     <div
                         className="modal-overlay"
-                        onClick={() => setShowRegisterModal(false)}
+                        onClick={() => {
+                            setShowRegisterModal(false);
+                            setPreFilledMobile(''); // ✅ Reset when modal closes
+                        }}
                         style={{
                             position: 'fixed',
                             top: 0,
@@ -924,10 +945,12 @@ const Header = () => {
                                 onSwitchToLogin={() => {
                                     setShowRegisterModal(false);
                                     setShowLoginModal(true);
+                                    setPreFilledMobile(''); // ✅ Reset when switching to login
                                 }}
                                 loading={isRegistering}
                                 className="awesome-auth-modal"
                                 showSocialSignup={false}
+                                preFilledMobile={preFilledMobile} // ✅ Pass pre-filled mobile
                             />
                         </div>
                     </div>
@@ -1016,7 +1039,6 @@ const Header = () => {
                                 </li>
                             )}
 
-                            {/* ✅ FIXED: Mobile Menu - List Business FREE - NO LOGIN CHECK - DIRECT LINK */}
                             <li style={{ marginBottom: '12px' }}>
                                 <Link
                                     href="/list-your-business"

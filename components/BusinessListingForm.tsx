@@ -1,5 +1,5 @@
 'use client';
-
+import { API_ENDPOINTS2 } from '@/configs/api';
 import { useState, useEffect } from 'react';
 
 // Types
@@ -14,8 +14,7 @@ interface BusinessFormData {
   city: string;
   state: string;
   categories: string[];
-  password: string;
-  confirmPassword: string;
+  selectedCategoryIds: string[];
   latitude: number | null;
   longitude: number | null;
   address: string;
@@ -26,6 +25,51 @@ interface LocationData {
   longitude: number;
 }
 
+interface UserData {
+  id: string;
+  fullName: string;
+  mobile: string;
+  city: string;
+  village: string;
+}
+
+interface ApiResponse {
+  success: boolean;
+  exists?: boolean;
+  message?: string;
+  user?: any;
+}
+
+// Category Interfaces
+interface ChildCategory {
+  id: string;
+  label: string;
+  emoji?: string;
+}
+
+interface SubCategory {
+  id: string;
+  label: string;
+  emoji?: string;
+  childcategories: ChildCategory[];
+  hasChildren: boolean;
+}
+
+interface Category {
+  id: string;
+  label: string;
+  emoji?: string;
+  subcategories: SubCategory[];
+  hasSubcategories: boolean;
+}
+
+// Custom Event Types
+declare global {
+  interface Window {
+    dispatchEvent(event: CustomEvent): void;
+  }
+}
+
 const BusinessListingForm = () => {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [mobileNumber, setMobileNumber] = useState('');
@@ -33,8 +77,25 @@ const BusinessListingForm = () => {
   const [location, setLocation] = useState<LocationData | null>(null);
   const [locationError, setLocationError] = useState("");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
-  const [locationPermission, setLocationPermission] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Login state management
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<UserData | null>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(false);
+  const [mobileCheckMessage, setMobileCheckMessage] = useState('');
+
+  // Password state for login
+  const [password, setPassword] = useState('');
+  const [showPasswordField, setShowPasswordField] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Category states
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedMainCategory, setSelectedMainCategory] = useState<Category | null>(null);
+  const [selectedSubCategory, setSelectedSubCategory] = useState<SubCategory | null>(null);
+  const [selectedChildCategories, setSelectedChildCategories] = useState<ChildCategory[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
 
   const [formData, setFormData] = useState<BusinessFormData>({
     businessName: '',
@@ -47,8 +108,7 @@ const BusinessListingForm = () => {
     city: '',
     state: '',
     categories: [],
-    password: '',
-    confirmPassword: '',
+    selectedCategoryIds: [],
     latitude: null,
     longitude: null,
     address: ''
@@ -58,21 +118,222 @@ const BusinessListingForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<keyof BusinessFormData, boolean>>>({});
 
-  // Available categories
-  const availableCategories = [
-    'Restaurant & Food',
-    'Retail Shop',
-    'Healthcare',
-    'Education',
-    'Automotive',
-    'Home Services',
-    'Beauty & Spa',
-    'Professional Services',
-    'Real Estate',
-    'Travel & Tourism',
-    'Technology',
-    'Entertainment'
-  ];
+  // Get API endpoint with fallback
+  const getBusinessCreateEndpoint = () => {
+    if (API_ENDPOINTS2?.BUSINESS?.CREATE) {
+      return API_ENDPOINTS2.BUSINESS.CREATE;
+    } else if (API_ENDPOINTS2?.BUSINESS) {
+      const businessEndpoints = Object.values(API_ENDPOINTS2.BUSINESS);
+      return businessEndpoints[0] || '/api/business/create';
+    } else {
+      return '/api/business/create';
+    }
+  };
+
+  // Fetch categories from API with proper error handling
+  const fetchCategories = async () => {
+    setIsLoadingCategories(true);
+    try {
+      console.log('Fetching categories from:', `${API_ENDPOINTS2.AUTH.MAIN_SEARCH}?lang=en`);
+      
+      const response = await fetch(`${API_ENDPOINTS2.AUTH.MAIN_SEARCH}?lang=en`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('API Response:', result);
+      
+      if (result.status === 'success') {
+        if (result.data && Array.isArray(result.data.categories)) {
+          setCategories(result.data.categories);
+          console.log('✅ Categories loaded:', result.data.categories.length);
+        } else if (Array.isArray(result.data)) {
+          setCategories(result.data);
+          console.log('✅ Categories loaded (direct array):', result.data.length);
+        } else if (Array.isArray(result.categories)) {
+          setCategories(result.categories);
+          console.log('✅ Categories loaded (root categories):', result.categories.length);
+        } else {
+          console.error('❌ No categories array found in response:', result);
+          setCategories([]);
+        }
+      } else {
+        console.error('❌ API returned error:', result.message);
+        setCategories([]);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching categories:', error);
+      setCategories([]);
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  };
+
+  // Check authentication status on component mount
+  useEffect(() => {
+    checkAuthStatus();
+    
+    const handleUserLoggedIn = (event: CustomEvent) => {
+      const userData = event.detail.user;
+      setIsLoggedIn(true);
+      setUser(userData);
+      
+      if (userData.mobile) {
+        setMobileNumber(userData.mobile);
+        setIsMobileVerified(true);
+        setCurrentStep(2);
+      }
+    };
+
+    const handleUserSignedUp = (event: CustomEvent) => {
+      const userData = event.detail.user;
+      setIsLoggedIn(true);
+      setUser(userData);
+      
+      if (userData.mobile) {
+        setMobileNumber(userData.mobile);
+        setIsMobileVerified(true);
+        setCurrentStep(2);
+      }
+    };
+
+    window.addEventListener('userLoggedIn', handleUserLoggedIn as EventListener);
+    window.addEventListener('userSignedUp', handleUserSignedUp as EventListener);
+
+    return () => {
+      window.removeEventListener('userLoggedIn', handleUserLoggedIn as EventListener);
+      window.removeEventListener('userSignedUp', handleUserSignedUp as EventListener);
+    };
+  }, []);
+
+  // Load categories when reaching step 3
+  useEffect(() => {
+    if (currentStep === 3) {
+      fetchCategories();
+    }
+  }, [currentStep]);
+
+  // Check if user is logged in
+  const checkAuthStatus = () => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('authToken');
+      const userData = localStorage.getItem('userData');
+
+      if (token && userData) {
+        setIsLoggedIn(true);
+        setUser(JSON.parse(userData));
+        
+        const userObj = JSON.parse(userData);
+        if (userObj.mobile) {
+          setMobileNumber(userObj.mobile);
+        }
+      } else {
+        setIsLoggedIn(false);
+        setUser(null);
+      }
+    }
+  };
+
+  const checkMobileNumberExists = async (mobile: string): Promise<ApiResponse> => {
+    try {
+      const response = await fetch(`${API_ENDPOINTS2.AUTH.MOBILE_VALIDATION}?mobile=${mobile}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('API request failed');
+      }
+
+      const data: ApiResponse = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error checking mobile number:', error);
+      throw new Error('Failed to check mobile number. Please try again.');
+    }
+  };
+
+  // Login function
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!password.trim()) {
+      alert('Please enter your password');
+      return;
+    }
+
+    setIsLoggingIn(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('mobile', mobileNumber);
+      formData.append('password', password);
+
+      const response = await fetch(`${API_ENDPOINTS2.AUTH.LOGIN}`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.status === 'success') {
+        localStorage.setItem('authToken', 'dummy-token');
+        localStorage.setItem('userData', JSON.stringify({
+          id: result.id,
+          fullName: result.name,
+          mobile: result.mobile,
+          city: result.city,
+          village: result.village,
+          email: result.email,
+          state: result.state,
+          profile_image: result.profile_image,
+          pin: result.pin
+        }));
+        
+        setIsLoggedIn(true);
+        setUser({
+          id: result.id,
+          fullName: result.name,
+          mobile: result.mobile,
+          city: result.city,
+          village: result.village
+        });
+        setIsMobileVerified(true);
+        setCurrentStep(2);
+        setMobileCheckMessage('✅ Login successful! Proceeding to next step...');
+        setPassword('');
+        setShowPasswordField(false);
+      } else {
+        const errorMessage = result.message || 'Login failed';
+        alert(errorMessage);
+        setMobileCheckMessage(`❌ ${errorMessage}`);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      alert('Login failed. Please try again.');
+      setMobileCheckMessage('❌ Login failed. Please try again.');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  // Open signup modal
+  const openSignupModal = () => {
+    window.dispatchEvent(new CustomEvent('openSignupModalFromBusiness', {
+      detail: { mobileNumber }
+    }));
+  };
+
+  // Open login modal
+  const openLoginModal = () => {
+    window.dispatchEvent(new CustomEvent('openLoginModalFromBusiness', {
+      detail: { mobileNumber }
+    }));
+  };
 
   // Automatically get location when user moves to step 2
   useEffect(() => {
@@ -99,9 +360,7 @@ const BusinessListingForm = () => {
         };
         setLocation(newLocation);
         setIsGettingLocation(false);
-        setLocationPermission('granted');
         
-        // Update form data with coordinates
         setFormData(prev => ({
           ...prev,
           latitude: newLocation.latitude,
@@ -112,7 +371,6 @@ const BusinessListingForm = () => {
       (err) => {
         setLocationError(err.message);
         setIsGettingLocation(false);
-        setLocationPermission('denied');
         
         switch (err.code) {
           case err.PERMISSION_DENIED:
@@ -142,37 +400,130 @@ const BusinessListingForm = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  // Step 1: Mobile Number Verification
+  // Mobile Number Verification with Password Login
   const handleMobileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!mobileNumber.trim() || mobileNumber.length !== 10) {
       alert('Please enter a valid 10-digit mobile number');
       return;
     }
 
-    setIsLoading(true);
+    setIsCheckingAuth(true);
+    setMobileCheckMessage('');
+
     try {
-      // Simulate OTP sending
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('OTP sent to:', mobileNumber);
+      const token = localStorage.getItem('authToken');
+      const userData = localStorage.getItem('userData');
+
+      if (token && userData) {
+        const currentUser = JSON.parse(userData);
+        
+        if (currentUser.mobile === mobileNumber) {
+          setIsLoggedIn(true);
+          setUser(currentUser);
+          setIsMobileVerified(true);
+          setCurrentStep(2);
+          setMobileCheckMessage('✅ Welcome back! Mobile number verified.');
+          return;
+        } else {
+          setMobileCheckMessage('⚠️ Mobile number does not match your logged in account.');
+          return;
+        }
+      }
+
+      const apiResponse = await checkMobileNumberExists(mobileNumber);
       
-      // For demo, auto-verify after OTP send
-      setIsMobileVerified(true);
-      setCurrentStep(2);
-      alert('OTP sent to your mobile number! Moving to business details...');
+      if (apiResponse.exists) {
+        setShowPasswordField(true);
+        setMobileCheckMessage('✅ Mobile number found. Please enter your password to login.');
+      } else {
+        setMobileCheckMessage('📝 New mobile number. Please sign up to continue.');
+        
+        setTimeout(() => {
+          openSignupModal();
+        }, 1000);
+      }
       
     } catch (error) {
-      alert('Error sending OTP. Please try again.');
+      console.error('Error checking mobile number:', error);
+      setMobileCheckMessage('❌ Error verifying mobile number. Please try again.');
     } finally {
-      setIsLoading(false);
+      setIsCheckingAuth(false);
     }
   };
 
-  // Step 2: Business Details Validation
+  // Category Selection Functions - UPDATED
+  const handleMainCategorySelect = (category: Category) => {
+    setSelectedMainCategory(category);
+    setSelectedSubCategory(null);
+    setSelectedChildCategories([]);
+  };
+
+  const handleSubCategorySelect = (subCategory: SubCategory) => {
+    // Agar subcategory ke child categories hain to subcategory hide karo aur directly child categories dikhao
+    if (subCategory.hasChildren && subCategory.childcategories.length > 0) {
+      setSelectedSubCategory(subCategory);
+      setSelectedChildCategories([]);
+      // Form data clear karo kyunki ab child category select karna hoga
+      setFormData(prev => ({
+        ...prev,
+        categories: [],
+        selectedCategoryIds: []
+      }));
+    } else {
+      // Agar koi child category nahi hai to direct subcategory select karo
+      setSelectedSubCategory(subCategory);
+      setSelectedChildCategories([]);
+      setFormData(prev => ({
+        ...prev,
+        categories: [subCategory.label],
+        selectedCategoryIds: [subCategory.id]
+      }));
+    }
+  };
+
+  const handleChildCategorySelect = (childCategory: ChildCategory) => {
+    // Single selection - sirf ek hi child category select ho sakti hai
+    setSelectedChildCategories([childCategory]);
+    
+    // Form data update karo
+    setFormData(prev => ({
+      ...prev,
+      categories: [childCategory.label],
+      selectedCategoryIds: [childCategory.id]
+    }));
+  };
+
+  const handleBackToMainCategories = () => {
+    setSelectedMainCategory(null);
+    setSelectedSubCategory(null);
+    setSelectedChildCategories([]);
+  };
+
+  const handleBackToSubCategories = () => {
+    setSelectedSubCategory(null);
+    setSelectedChildCategories([]);
+  };
+
+  // Auto-select when child categories are chosen
+  useEffect(() => {
+    if (selectedChildCategories.length > 0) {
+      const selectedLabels = selectedChildCategories.map(child => child.label);
+      const selectedIds = selectedChildCategories.map(child => child.id);
+
+      setFormData(prev => ({
+        ...prev,
+        categories: selectedLabels,
+        selectedCategoryIds: selectedIds
+      }));
+    }
+  }, [selectedChildCategories]);
+
+  // Business Details Validation
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     
-    // Pincode validation - only numbers and max 6 digits
     if (name === 'pincode') {
       if (value.length <= 6 && /^\d*$/.test(value)) {
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -181,7 +532,6 @@ const BusinessListingForm = () => {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
     
-    // Real-time validation for touched fields
     if (touched[name as keyof BusinessFormData]) {
       validateField(name as keyof BusinessFormData, value);
     }
@@ -196,7 +546,6 @@ const BusinessListingForm = () => {
   const validateField = (name: keyof BusinessFormData, value: string | number | string[] | null) => {
     let error = '';
 
-    // Convert value to string for validation
     const stringValue = typeof value === 'string' ? value : 
                        Array.isArray(value) ? '' : 
                        value === null ? '' : String(value);
@@ -239,16 +588,6 @@ const BusinessListingForm = () => {
       case 'state':
         if (!stringValue.trim()) error = 'State is required';
         break;
-      
-      case 'password':
-        if (!stringValue.trim()) error = 'Password is required';
-        else if (stringValue.length < 6) error = 'Password must be at least 6 characters';
-        break;
-      
-      case 'confirmPassword':
-        if (!stringValue.trim()) error = 'Please confirm your password';
-        else if (stringValue !== formData.password) error = 'Passwords do not match';
-        break;
     }
 
     setErrors(prev => ({
@@ -260,21 +599,17 @@ const BusinessListingForm = () => {
   const validateStep2 = (): boolean => {
     const requiredFields: (keyof BusinessFormData)[] = [
       'businessName', 'pincode', 'buildingNumber', 'buildingName', 
-      'street', 'landmark', 'village', 'city', 'state',
-      'password', 'confirmPassword'
+      'street', 'landmark', 'village', 'city', 'state'
     ];
 
-    // Validate all required fields
     requiredFields.forEach(field => {
       const value = formData[field];
-      // Convert to string for validation - handle null and array cases
       const stringValue = typeof value === 'string' ? value : 
                          Array.isArray(value) ? '' : 
                          value === null ? '' : String(value);
       validateField(field, stringValue);
     });
 
-    // Check if any errors exist and all fields are filled
     const hasErrors = Object.values(errors).some(error => error);
     const allFieldsFilled = requiredFields.every(field => {
       const value = formData[field];
@@ -287,13 +622,11 @@ const BusinessListingForm = () => {
   const handleStep2Submit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check if location is available
     if (!location) {
       alert('Location access is required to register your business. Please allow location access and try again.');
       return;
     }
 
-    // Mark all fields as touched
     const allTouched = Object.keys(formData).reduce((acc, key) => {
       acc[key as keyof BusinessFormData] = true;
       return acc;
@@ -302,44 +635,23 @@ const BusinessListingForm = () => {
     setTouched(allTouched);
 
     if (!validateStep2()) {
-      // Scroll to first error
       const firstErrorField = document.querySelector('[aria-invalid="true"]');
       firstErrorField?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
-    // Move to step 3
     setCurrentStep(3);
-  };
-
-  // Step 3: Category Selection
-  const handleCategoryToggle = (category: string) => {
-    setFormData(prev => {
-      const isSelected = prev.categories.includes(category);
-      if (isSelected) {
-        return {
-          ...prev,
-          categories: prev.categories.filter(cat => cat !== category)
-        };
-      } else {
-        return {
-          ...prev,
-          categories: [...prev.categories, category]
-        };
-      }
-    });
   };
 
   // Final API Submission
   const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (formData.categories.length === 0) {
+    if (formData.selectedCategoryIds.length === 0) {
       alert('Please select at least one category');
       return;
     }
 
-    // Final location check
     if (!location) {
       alert('Location access is required to complete registration.');
       return;
@@ -348,48 +660,65 @@ const BusinessListingForm = () => {
     setIsLoading(true);
     
     try {
-      // Prepare final data for API
-      const finalData = {
-        mobileNumber: mobileNumber,
-        businessInfo: {
-          name: formData.businessName,
-          address: {
-            buildingNumber: formData.buildingNumber,
-            buildingName: formData.buildingName,
-            street: formData.street,
-            landmark: formData.landmark,
-            village: formData.village,
-            city: formData.city,
-            state: formData.state,
-            pincode: formData.pincode,
-            latitude: formData.latitude,
-            longitude: formData.longitude,
-            fullAddress: formData.address
-          },
+      const userData = localStorage.getItem('userData');
+      const user = userData ? JSON.parse(userData) : null;
+
+      const completeData = {
+        user_info: {
+          user_id: user?.id || '',
+          mobile_number: mobileNumber,
+          name: user?.fullName || '',
+          email: user?.email || '',
+          city: user?.city || '',
+          village: user?.village || ''
+        },
+        
+        business_info: {
+          business_name: formData.businessName,
           categories: formData.categories,
-          location: {
-            latitude: formData.latitude,
-            longitude: formData.longitude,
-            address: formData.address
-          }
+          category_ids: formData.selectedCategoryIds,
+          description: "",
+          status: "active"
         },
-        account: {
-          password: formData.password,
-          mobileVerified: true
+        
+        address_info: {
+          building_number: formData.buildingNumber,
+          building_name: formData.buildingName,
+          street: formData.street,
+          landmark: formData.landmark,
+          village: formData.village,
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pincode,
+          full_address: `${formData.buildingNumber}, ${formData.buildingName}, ${formData.street}, ${formData.landmark}, ${formData.village}, ${formData.city}, ${formData.state} - ${formData.pincode}`
         },
-        timestamp: new Date().toISOString(),
-        status: 'active'
+        
+        location_info: {
+          latitude: formData.latitude,
+          longitude: formData.longitude,
+          address: formData.address || `${formData.latitude}, ${formData.longitude}`
+        },
+        
+        account_info: {
+          mobile_verified: true,
+          email_verified: false
+        },
+        
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
-      console.log('Final data for API:', finalData);
+      console.log('Complete data for API:', completeData);
 
-      // Actual API call - replace with your endpoint
-      const response = await fetch('/api/business-listing', {
+      const businessCreateEndpoint = getBusinessCreateEndpoint();
+      console.log('Using API endpoint:', businessCreateEndpoint);
+
+      const response = await fetch(businessCreateEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(finalData),
+        body: JSON.stringify(completeData),
       });
       
       const result = await response.json();
@@ -398,31 +727,36 @@ const BusinessListingForm = () => {
         throw new Error(result.message || 'API call failed');
       }
 
-      alert('Business listing created successfully!');
-      
-      // Reset form and go back to step 1
-      setCurrentStep(1);
-      setMobileNumber('');
-      setIsMobileVerified(false);
-      setLocation(null);
-      setFormData({
-        businessName: '',
-        pincode: '',
-        buildingNumber: '',
-        buildingName: '',
-        street: '',
-        landmark: '',
-        village: '',
-        city: '',
-        state: '',
-        categories: [],
-        password: '',
-        confirmPassword: '',
-        latitude: null,
-        longitude: null,
-        address: ''
-      });
-      setTouched({});
+      if (result.status === 'success') {
+        alert('Business listing created successfully!');
+        
+        setCurrentStep(1);
+        setMobileNumber('');
+        setIsMobileVerified(false);
+        setLocation(null);
+        setSelectedMainCategory(null);
+        setSelectedSubCategory(null);
+        setSelectedChildCategories([]);
+        setFormData({
+          businessName: '',
+          pincode: '',
+          buildingNumber: '',
+          buildingName: '',
+          street: '',
+          landmark: '',
+          village: '',
+          city: '',
+          state: '',
+          categories: [],
+          selectedCategoryIds: [],
+          latitude: null,
+          longitude: null,
+          address: ''
+        });
+        setTouched({});
+      } else {
+        throw new Error(result.message || 'Business listing creation failed');
+      }
       
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -464,11 +798,6 @@ const BusinessListingForm = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 relative">
-{/* Responsive Mobile Menu Button (Only One Button) */}
-
-
-
-
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div 
@@ -518,12 +847,11 @@ const BusinessListingForm = () => {
         </div>
       )}
 
-      {/* Progress Steps - Fixed Navigation Bar - Large screens pe visible */}
+      {/* Progress Steps */}
       <div className="bg-white shadow-sm border-b fixed top-0 left-0 right-0 z-40 hidden lg:block">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex justify-center py-4 sm:py-6">
             <div className="flex items-center space-x-4 sm:space-x-6 lg:space-x-8 w-full max-w-md sm:max-w-lg justify-between">
-              {/* Step 1 */}
               <button 
                 onClick={() => goToStep(1)}
                 className={`flex flex-col sm:flex-row items-center space-x-0 sm:space-x-3 text-center min-w-0 flex-1 ${
@@ -540,7 +868,6 @@ const BusinessListingForm = () => {
                 <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Mobile Verification</span>
               </button>
 
-              {/* Step 2 */}
               <button 
                 onClick={() => goToStep(2)}
                 className={`flex flex-col sm:flex-row items-center space-x-0 sm:space-x-3 text-center min-w-0 flex-1 ${
@@ -557,7 +884,6 @@ const BusinessListingForm = () => {
                 <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Business Details</span>
               </button>
 
-              {/* Step 3 */}
               <button 
                 onClick={() => goToStep(3)}
                 className={`flex flex-col sm:flex-row items-center space-x-0 sm:space-x-3 text-center min-w-0 flex-1 ${
@@ -578,7 +904,7 @@ const BusinessListingForm = () => {
         </div>
       </div>
 
-      {/* Main Form Section - Added padding top for fixed nav */}
+      {/* Main Form Section */}
       <div className="pt-20 sm:pt-24 py-4 sm:py-8 lg:pt-24">
         <div className="max-w-6xl mx-auto px-3 sm:px-4">
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
@@ -594,7 +920,6 @@ const BusinessListingForm = () => {
                     with India's No. 1 Local Search Engine
                   </p>
 
-                  {/* Features List */}
                   <div className="space-y-4 mb-8">
                     <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mt-0.5">
@@ -624,7 +949,6 @@ const BusinessListingForm = () => {
                     </div>
                   </div>
 
-                  {/* Terms and Conditions */}
                   <div className="text-xs text-gray-600 text-center border-t border-gray-200 pt-4">
                     <p>
                       By continuing, you agree to our{' '}
@@ -645,92 +969,180 @@ const BusinessListingForm = () => {
                   <div>
                     <div className="mb-6">
                       <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">
-                        Enter Your Mobile Number
+                        {showPasswordField ? 'Enter Your Password' : 'Enter Your Mobile Number'}
                       </h1>
                       <p className="text-sm text-gray-600">
-                        We'll send you an OTP to verify your number
+                        {showPasswordField 
+                          ? 'Please enter your password to continue' 
+                          : 'We\'ll check if your mobile number is registered'
+                        }
                       </p>
+                      
+                      {isLoggedIn && user && !showPasswordField && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-3">
+                          <p className="text-green-800 text-sm">
+                            ✅ Welcome back, <strong>{user.fullName}</strong>! 
+                            Your mobile number is pre-filled. Click "Start Now" to continue.
+                          </p>
+                        </div>
+                      )}
                     </div>
 
-                    <form className="entermobilenumber_form entermobilenumber_inactive" onSubmit={handleMobileSubmit}>
-                      <div className="relative mb-4">
-                        {/* Country Code with Flag */}
-                        <span className="color111 fw500 entermobilenumber_countrycode absolute left-0 top-0 bottom-0 flex items-center gap-2 z-10 bg-gray-50 px-3 py-2 border border-r-0 border-gray-300 rounded-l-lg">
-                          <span 
-                            role="presentation" 
-                            className="entermobilenumber_flag iconwrap w-6 h-4 relative flex items-center justify-center overflow-hidden"
-                          >
-                            {/* Proper Indian Flag */}
-                            <div className="absolute inset-0 flex flex-col">
-                              <div className="h-1/3 bg-orange-500"></div>
-                              <div className="h-1/3 bg-white flex items-center justify-center">
-                                <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+                    {!showPasswordField ? (
+                      <form onSubmit={handleMobileSubmit}>
+                        <div className="relative mb-4">
+                          <span className="color111 fw500 entermobilenumber_countrycode absolute left-0 top-0 bottom-0 flex items-center gap-2 z-10 bg-gray-50 px-3 py-2 border border-r-0 border-gray-300 rounded-l-lg">
+                            <span className="entermobilenumber_flag iconwrap w-6 h-4 relative flex items-center justify-center overflow-hidden">
+                              <div className="absolute inset-0 flex flex-col">
+                                <div className="h-1/3 bg-orange-500"></div>
+                                <div className="h-1/3 bg-white flex items-center justify-center">
+                                  <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+                                </div>
+                                <div className="h-1/3 bg-green-500"></div>
                               </div>
-                              <div className="h-1/3 bg-green-500"></div>
-                            </div>
-                          </span>
-                          <span className="text-gray-700 font-medium text-sm">+91</span>
-                        </span>
-
-                        {/* Mobile Input with Floating Label */}
-                        <div className="relative">
-                          <input
-                            aria-label="Enter Mobile Number"
-                            aria-required="true"
-                            className="entermobilenumber_input input fw500 pl-24 pr-4 py-4 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors text-gray-900 bg-white"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            name="mobileNumber"
-                            autoComplete="off"
-                            maxLength={10}
-                            required
-                            id="mobileInput"
-                            value={mobileNumber}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                              setMobileNumber(value);
-                            }}
-                          />
-                          {/* Floating Label */}
-                          <label 
-                            htmlFor="mobileInput"
-                            className={`absolute left-24 transition-all duration-200 pointer-events-none ${
-                              mobileNumber 
-                                ? 'top-1 text-xs text-blue-600 bg-white px-1 -translate-y-2' 
-                                : 'top-1/2 text-gray-400 -translate-y-1/2'
-                            }`}
-                          >
-                            Enter Mobile No.
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* Start Now Button */}
-                      <button
-                        aria-label="Start Now"
-                        tabIndex={0}
-                        role="button"
-                        className="primarybutton w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
-                        type="submit"
-                        disabled={isLoading || mobileNumber.length !== 10}
-                      >
-                        {isLoading ? (
-                          <>
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                            Sending OTP...
-                          </>
-                        ) : (
-                          <>
-                            Start Now
-                            <span className="businesslistfree_whitearrow iconwrap moveRight transition-transform duration-300 group-hover:translate-x-1">
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                              </svg>
                             </span>
-                          </>
+                            <span className="text-gray-700 font-medium text-sm">+91</span>
+                          </span>
+
+                          <div className="relative">
+                            <input
+                              aria-label="Enter Mobile Number"
+                              aria-required="true"
+                              className="entermobilenumber_input input fw500 pl-24 pr-4 py-4 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors text-gray-900 bg-white"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              name="mobileNumber"
+                              autoComplete="off"
+                              maxLength={10}
+                              required
+                              id="mobileInput"
+                              value={mobileNumber}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                setMobileNumber(value);
+                                setMobileCheckMessage('');
+                              }}
+                            />
+                            <label 
+                              htmlFor="mobileInput"
+                              className={`absolute left-24 transition-all duration-200 pointer-events-none ${
+                                mobileNumber 
+                                  ? 'top-1 text-xs text-blue-600 bg-white px-1 -translate-y-2' 
+                                  : 'top-1/2 text-gray-400 -translate-y-1/2'
+                              }`}
+                            >
+                              Enter Mobile No.
+                            </label>
+                          </div>
+                        </div>
+
+                        {mobileCheckMessage && (
+                          <div className={`mb-4 p-3 rounded-lg text-sm ${
+                            mobileCheckMessage.includes('✅') 
+                              ? 'bg-green-50 border border-green-200 text-green-800'
+                              : mobileCheckMessage.includes('❌')
+                              ? 'bg-red-50 border border-red-200 text-red-800'
+                              : 'bg-blue-50 border border-blue-200 text-blue-800'
+                          }`}>
+                            {mobileCheckMessage}
+                          </div>
                         )}
-                      </button>
-                    </form>
+
+                        <button
+                          type="submit"
+                          disabled={isCheckingAuth || mobileNumber.length !== 10}
+                          className="primarybutton w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
+                        >
+                          {isCheckingAuth ? (
+                            <>
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                              Checking Mobile...
+                            </>
+                          ) : (
+                            <>
+                              Start Now
+                              <span className="businesslistfree_whitearrow iconwrap moveRight transition-transform duration-300 group-hover:translate-x-1">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                </svg>
+                              </span>
+                            </>
+                          )}
+                        </button>
+                      </form>
+                    ) : (
+                      <form onSubmit={handleLogin}>
+                        <div className="mb-4">
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                            <p className="text-blue-800 text-sm">
+                              Logging in with: <strong>+91 {mobileNumber}</strong>
+                            </p>
+                          </div>
+
+                          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                            Password *
+                          </label>
+                          <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400"
+                            placeholder="Enter your password"
+                          />
+                        </div>
+
+                        {mobileCheckMessage && (
+                          <div className={`mb-4 p-3 rounded-lg text-sm ${
+                            mobileCheckMessage.includes('✅') 
+                              ? 'bg-green-50 border border-green-200 text-green-800'
+                              : 'bg-blue-50 border border-blue-200 text-blue-800'
+                          }`}>
+                            {mobileCheckMessage}
+                          </div>
+                        )}
+
+                        <div className="flex gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowPasswordField(false);
+                              setPassword('');
+                              setMobileCheckMessage('');
+                            }}
+                            className="flex-1 bg-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-400 transition-colors"
+                          >
+                            Back
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={isLoggingIn || !password.trim()}
+                            className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          >
+                            {isLoggingIn ? (
+                              <>
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                Logging in...
+                              </>
+                            ) : (
+                              'Login'
+                            )}
+                          </button>
+                        </div>
+
+                        <div className="mt-4 text-center">
+                          <button
+                            type="button"
+                            onClick={openSignupModal}
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          >
+                            Don't have an account? Sign up
+                          </button>
+                        </div>
+                      </form>
+                    )}
                   </div>
                 )}
 
@@ -749,7 +1161,6 @@ const BusinessListingForm = () => {
                       </p>
                     </div>
 
-                    {/* Location Detection Status - Hidden from users */}
                     <div className={`mb-4 p-3 rounded-lg ${
                       location ? 'bg-green-50 border border-green-200' : 
                       locationError ? 'bg-red-50 border border-red-200' : 
@@ -814,8 +1225,6 @@ const BusinessListingForm = () => {
                           id="pincode"
                           name="pincode"
                           type="text"
-                          inputMode="numeric"
-                          maxLength={6}
                           required
                           value={formData.pincode}
                           onChange={handleChange}
@@ -827,6 +1236,7 @@ const BusinessListingForm = () => {
                               : 'border-gray-300 hover:border-gray-400'
                           }`}
                           placeholder="Enter 6-digit pincode"
+                          maxLength={6}
                         />
                         {errors.pincode && (
                           <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
@@ -839,7 +1249,7 @@ const BusinessListingForm = () => {
                       {/* Building Number */}
                       <div>
                         <label htmlFor="buildingNumber" className="block text-sm font-medium text-gray-700 mb-2">
-                          Plot No. / Building No. *
+                          Building Number *
                         </label>
                         <input
                           id="buildingNumber"
@@ -855,7 +1265,7 @@ const BusinessListingForm = () => {
                               ? 'border-red-500 bg-red-50' 
                               : 'border-gray-300 hover:border-gray-400'
                           }`}
-                          placeholder="Enter building number/details"
+                          placeholder="Enter building/house number"
                         />
                         {errors.buildingNumber && (
                           <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
@@ -868,7 +1278,7 @@ const BusinessListingForm = () => {
                       {/* Building Name */}
                       <div>
                         <label htmlFor="buildingName" className="block text-sm font-medium text-gray-700 mb-2">
-                          Building Name / Society *
+                          Building Name *
                         </label>
                         <input
                           id="buildingName"
@@ -884,7 +1294,7 @@ const BusinessListingForm = () => {
                               ? 'border-red-500 bg-red-50' 
                               : 'border-gray-300 hover:border-gray-400'
                           }`}
-                          placeholder="Enter building or society name"
+                          placeholder="Enter building name"
                         />
                         {errors.buildingName && (
                           <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
@@ -894,69 +1304,68 @@ const BusinessListingForm = () => {
                         )}
                       </div>
 
-                      {/* Street and Landmark */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                        <div>
-                          <label htmlFor="street" className="block text-sm font-medium text-gray-700 mb-2">
-                            Street / Road *
-                          </label>
-                          <input
-                            id="street"
-                            name="street"
-                            type="text"
-                            required
-                            value={formData.street}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                            aria-invalid={errors.street ? 'true' : 'false'}
-                            className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${
-                              errors.street 
-                                ? 'border-red-500 bg-red-50' 
-                                : 'border-gray-300 hover:border-gray-400'
-                            }`}
-                            placeholder="Enter street name"
-                          />
-                          {errors.street && (
-                            <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                              <span>⚠</span>
-                              {errors.street}
-                            </p>
-                          )}
-                        </div>
+                      {/* Street */}
+                      <div>
+                        <label htmlFor="street" className="block text-sm font-medium text-gray-700 mb-2">
+                          Street/Road *
+                        </label>
+                        <input
+                          id="street"
+                          name="street"
+                          type="text"
+                          required
+                          value={formData.street}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          aria-invalid={errors.street ? 'true' : 'false'}
+                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${
+                            errors.street 
+                              ? 'border-red-500 bg-red-50' 
+                              : 'border-gray-300 hover:border-gray-400'
+                          }`}
+                          placeholder="Enter street name"
+                        />
+                        {errors.street && (
+                          <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                            <span>⚠</span>
+                            {errors.street}
+                          </p>
+                        )}
+                      </div>
 
-                        <div>
-                          <label htmlFor="landmark" className="block text-sm font-medium text-gray-700 mb-2">
-                            Landmark *
-                          </label>
-                          <input
-                            id="landmark"
-                            name="landmark"
-                            type="text"
-                            required
-                            value={formData.landmark}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                            aria-invalid={errors.landmark ? 'true' : 'false'}
-                            className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${
-                              errors.landmark 
-                                ? 'border-red-500 bg-red-50' 
-                                : 'border-gray-300 hover:border-gray-400'
-                            }`}
-                            placeholder="Enter nearby landmark"
-                          />
-                          {errors.landmark && (
-                            <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                              <span>⚠</span>
-                              {errors.landmark}
-                            </p>
-                          )}
-                        </div>
+                      {/* Landmark */}
+                      <div>
+                        <label htmlFor="landmark" className="block text-sm font-medium text-gray-700 mb-2">
+                          Landmark *
+                        </label>
+                        <input
+                          id="landmark"
+                          name="landmark"
+                          type="text"
+                          required
+                          value={formData.landmark}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          aria-invalid={errors.landmark ? 'true' : 'false'}
+                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${
+                            errors.landmark 
+                              ? 'border-red-500 bg-red-50' 
+                              : 'border-gray-300 hover:border-gray-400'
+                          }`}
+                          placeholder="Enter nearby landmark"
+                        />
+                        {errors.landmark && (
+                          <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                            <span>⚠</span>
+                            {errors.landmark}
+                          </p>
+                        )}
                       </div>
 
                       {/* Village */}
                       <div>
                         <label htmlFor="village" className="block text-sm font-medium text-gray-700 mb-2">
-                          Village *
+                          Village/Locality *
                         </label>
                         <input
                           id="village"
@@ -972,7 +1381,7 @@ const BusinessListingForm = () => {
                               ? 'border-red-500 bg-red-50' 
                               : 'border-gray-300 hover:border-gray-400'
                           }`}
-                          placeholder="Enter village name"
+                          placeholder="Enter village or locality"
                         />
                         {errors.village && (
                           <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
@@ -982,122 +1391,62 @@ const BusinessListingForm = () => {
                         )}
                       </div>
 
-                      {/* City and State */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                        <div>
-                          <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">
-                            City *
-                          </label>
-                          <input
-                            id="city"
-                            name="city"
-                            type="text"
-                            required
-                            value={formData.city}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                            aria-invalid={errors.city ? 'true' : 'false'}
-                            className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${
-                              errors.city 
-                                ? 'border-red-500 bg-red-50' 
-                                : 'border-gray-300 hover:border-gray-400'
-                            }`}
-                            placeholder="Enter city"
-                          />
-                          {errors.city && (
-                            <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                              <span>⚠</span>
-                              {errors.city}
-                            </p>
-                          )}
-                        </div>
-
-                        <div>
-                          <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-2">
-                            State *
-                          </label>
-                          <input
-                            id="state"
-                            name="state"
-                            type="text"
-                            required
-                            value={formData.state}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                            aria-invalid={errors.state ? 'true' : 'false'}
-                            className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${
-                              errors.state 
-                                ? 'border-red-500 bg-red-50' 
-                                : 'border-gray-300 hover:border-gray-400'
-                            }`}
-                            placeholder="Enter state"
-                          />
-                          {errors.state && (
-                            <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                              <span>⚠</span>
-                              {errors.state}
-                            </p>
-                          )}
-                        </div>
+                      {/* City */}
+                      <div>
+                        <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">
+                          City *
+                        </label>
+                        <input
+                          id="city"
+                          name="city"
+                          type="text"
+                          required
+                          value={formData.city}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          aria-invalid={errors.city ? 'true' : 'false'}
+                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${
+                            errors.city 
+                              ? 'border-red-500 bg-red-50' 
+                              : 'border-gray-300 hover:border-gray-400'
+                          }`}
+                          placeholder="Enter city"
+                        />
+                        {errors.city && (
+                          <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                            <span>⚠</span>
+                            {errors.city}
+                          </p>
+                        )}
                       </div>
 
-                      {/* Password Fields */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                        <div>
-                          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                            Password *
-                          </label>
-                          <input
-                            id="password"
-                            name="password"
-                            type="password"
-                            required
-                            value={formData.password}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                            aria-invalid={errors.password ? 'true' : 'false'}
-                            className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${
-                              errors.password 
-                                ? 'border-red-500 bg-red-50' 
-                                : 'border-gray-300 hover:border-gray-400'
-                            }`}
-                            placeholder="Enter password"
-                          />
-                          {errors.password && (
-                            <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                              <span>⚠</span>
-                              {errors.password}
-                            </p>
-                          )}
-                        </div>
-
-                        <div>
-                          <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                            Confirm Password *
-                          </label>
-                          <input
-                            id="confirmPassword"
-                            name="confirmPassword"
-                            type="password"
-                            required
-                            value={formData.confirmPassword}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                            aria-invalid={errors.confirmPassword ? 'true' : 'false'}
-                            className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${
-                              errors.confirmPassword 
-                                ? 'border-red-500 bg-red-50' 
-                                : 'border-gray-300 hover:border-gray-400'
-                            }`}
-                            placeholder="Confirm password"
-                          />
-                          {errors.confirmPassword && (
-                            <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                              <span>⚠</span>
-                              {errors.confirmPassword}
-                            </p>
-                          )}
-                        </div>
+                      {/* State */}
+                      <div>
+                        <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-2">
+                          State *
+                        </label>
+                        <input
+                          id="state"
+                          name="state"
+                          type="text"
+                          required
+                          value={formData.state}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          aria-invalid={errors.state ? 'true' : 'false'}
+                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${
+                            errors.state 
+                              ? 'border-red-500 bg-red-50' 
+                              : 'border-gray-300 hover:border-gray-400'
+                          }`}
+                          placeholder="Enter state"
+                        />
+                        {errors.state && (
+                          <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                            <span>⚠</span>
+                            {errors.state}
+                          </p>
+                        )}
                       </div>
 
                       <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -1128,59 +1477,319 @@ const BusinessListingForm = () => {
                         Select Business Categories
                       </h1>
                       <p className="text-sm text-gray-600">
-                        Choose relevant categories for your business (select at least one)
+                        {!selectedMainCategory 
+                          ? 'Choose a main category to get started' 
+                          : !selectedSubCategory
+                          ? 'Now select a sub-category'
+                          : 'Select specific child categories for your business'
+                        }
                       </p>
                     </div>
 
-                    <form onSubmit={handleFinalSubmit} className="space-y-6">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {availableCategories.map((category) => (
-                          <div
-                            key={category}
-                            onClick={() => handleCategoryToggle(category)}
-                            className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                              formData.categories.includes(category)
-                                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium text-sm sm:text-base">{category}</span>
-                              {formData.categories.includes(category) && (
-                                <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
-                              )}
+                    {isLoadingCategories ? (
+                      <div className="flex flex-col items-center justify-center py-12">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                        <div className="text-lg text-gray-600">Loading categories...</div>
+                      </div>
+                    ) : categories.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12">
+                        <div className="text-red-500 text-lg mb-4">❌ No categories available</div>
+                        <button
+                          onClick={fetchCategories}
+                          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          Retry Loading Categories
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {/* Breadcrumb Navigation */}
+                        {(selectedMainCategory || selectedSubCategory) && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                            <button
+                              onClick={handleBackToMainCategories}
+                              className="text-blue-600 hover:text-blue-800 font-medium"
+                            >
+                              All Categories
+                            </button>
+                            {selectedMainCategory && (
+                              <>
+                                <span>›</span>
+                                {selectedSubCategory ? (
+                                  <button
+                                    onClick={handleBackToSubCategories}
+                                    className="text-blue-600 hover:text-blue-800 font-medium"
+                                  >
+                                    {selectedMainCategory.label}
+                                  </button>
+                                ) : (
+                                  <span className="text-gray-900 font-medium">{selectedMainCategory.label}</span>
+                                )}
+                              </>
+                            )}
+                            {selectedSubCategory && (
+                              <>
+                                <span>›</span>
+                                <span className="text-gray-900 font-medium">{selectedSubCategory.label}</span>
+                              </>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Main Categories View */}
+                        {!selectedMainCategory && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+                            {categories.map((category) => (
+                              <div
+                                key={category.id}
+                                onClick={() => handleMainCategorySelect(category)}
+                                className="p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50 border-gray-200 bg-white text-gray-700"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    {category.emoji && (
+                                      <span className="text-xl">{category.emoji}</span>
+                                    )}
+                                    <span className="font-medium text-sm sm:text-base">{category.label}</span>
+                                  </div>
+                                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                  </svg>
+                                </div>
+                                {category.hasSubcategories && (
+                                  <div className="mt-2 text-xs text-gray-500">
+                                    {category.subcategories.length} sub-categories available
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Sub Categories View */}
+                        {selectedMainCategory && !selectedSubCategory && (
+                          <div className="space-y-3 max-h-96 overflow-y-auto">
+                            {selectedMainCategory.subcategories.map((subCategory) => {
+                              const isSelected = formData.selectedCategoryIds.includes(subCategory.id);
+                              
+                              return (
+                                <div
+                                  key={subCategory.id}
+                                  onClick={() => handleSubCategorySelect(subCategory)}
+                                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                                    isSelected
+                                      ? 'border-green-500 bg-green-50 text-green-700'
+                                      : 'hover:border-blue-300 hover:bg-blue-50 border-gray-200 bg-white text-gray-700'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      {subCategory.emoji && (
+                                        <span className="text-xl">{subCategory.emoji}</span>
+                                      )}
+                                      <span className="font-medium text-sm sm:text-base">{subCategory.label}</span>
+                                      {!subCategory.hasChildren || subCategory.childcategories.length === 0 ? (
+                                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                          Direct Select
+                                        </span>
+                                      ) : (
+                                        <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                                          Has Child Categories
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {isSelected && (
+                                        <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                        </svg>
+                                      )}
+                                      {subCategory.hasChildren && subCategory.childcategories.length > 0 && (
+                                        <span className="text-xs text-gray-500">
+                                          {subCategory.childcategories.length} options
+                                        </span>
+                                      )}
+                                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                      </svg>
+                                    </div>
+                                  </div>
+                                  
+                                  {isSelected && (
+                                    <div className="mt-2 text-xs text-green-600 font-medium">
+                                      ✓ Selected
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Child Categories View - ONLY show when subcategory has children */}
+                        {selectedSubCategory && selectedSubCategory.hasChildren && selectedSubCategory.childcategories.length > 0 && (
+                          <div className="space-y-4">
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                              <h3 className="font-semibold text-blue-900">
+                                {selectedMainCategory?.label} › {selectedSubCategory.label}
+                              </h3>
+                              <p className="text-sm text-blue-700 mt-1">
+                                Select one category that best matches your business
+                              </p>
+                            </div>
+
+                            {/* Child Categories Grid - ALL child categories remain visible */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+                              {selectedSubCategory.childcategories.map((childCategory) => {
+                                const isSelected = selectedChildCategories.some(child => child.id === childCategory.id);
+                                
+                                return (
+                                  <div
+                                    key={childCategory.id}
+                                    onClick={() => handleChildCategorySelect(childCategory)}
+                                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                                      isSelected
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-3">
+                                        {childCategory.emoji && (
+                                          <span className="text-xl">{childCategory.emoji}</span>
+                                        )}
+                                        <span className="font-medium text-sm sm:text-base">{childCategory.label}</span>
+                                      </div>
+                                      {isSelected ? (
+                                        <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                        </svg>
+                                      ) : (
+                                        <div className="w-5 h-5 border-2 border-gray-300 rounded"></div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {/* Selected Category Summary */}
+                            {selectedChildCategories.length > 0 && (
+                              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <h4 className="font-semibold text-green-800 mb-2">
+                                  Selected Category
+                                </h4>
+                                <div className="flex flex-wrap gap-2">
+                                  {selectedChildCategories.map((child) => (
+                                    <span
+                                      key={child.id}
+                                      className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium"
+                                    >
+                                      {child.emoji && <span className="mr-1">{child.emoji}</span>}
+                                      {child.label}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Action Buttons */}
+                            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                              <button
+                                type="button"
+                                onClick={handleBackToSubCategories}
+                                className="flex-1 bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-400 transition-colors"
+                              >
+                                Back to Sub-categories
+                              </button>
                             </div>
                           </div>
-                        ))}
-                      </div>
+                        )}
 
-                      {formData.categories.length > 0 && (
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                          <p className="text-green-800 font-medium">
-                            Selected categories: {formData.categories.join(', ')}
-                          </p>
-                        </div>
-                      )}
+                        {/* Direct Subcategory Selection View - when subcategory has NO children */}
+                        {selectedSubCategory && (!selectedSubCategory.hasChildren || selectedSubCategory.childcategories.length === 0) && (
+                          <div className="space-y-4">
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                              <h3 className="font-semibold text-green-800 mb-2">
+                                ✅ Category Selected Successfully!
+                              </h3>
+                              <p className="text-green-700">
+                                You have selected: <strong>{selectedSubCategory.label}</strong>
+                              </p>
+                              <div className="mt-2 bg-white border border-green-300 rounded-lg p-3">
+                                <div className="flex items-center gap-2">
+                                  {selectedSubCategory.emoji && (
+                                    <span className="text-xl">{selectedSubCategory.emoji}</span>
+                                  )}
+                                  <span className="font-medium text-green-800">{selectedSubCategory.label}</span>
+                                </div>
+                              </div>
+                            </div>
 
-                      <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                        <button
-                          type="button"
-                          onClick={() => setCurrentStep(2)}
-                          className="flex-1 bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-400 transition-colors"
-                        >
-                          Back
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={formData.categories.length === 0 || isLoading}
-                          className="flex-1 bg-green-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {isLoading ? 'Creating Listing...' : 'Complete Listing'}
-                        </button>
+                            <div className="flex flex-col sm:flex-row gap-4">
+                              <button
+                                type="button"
+                                onClick={handleBackToSubCategories}
+                                className="flex-1 bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-400 transition-colors"
+                              >
+                                Change Category
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Final Submit Section */}
+                        {formData.selectedCategoryIds.length > 0 && (
+                          <div className="border-t pt-6 mt-6">
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                              <h3 className="font-semibold text-green-800 mb-2">
+                                ✅ Categories Selected Successfully!
+                              </h3>
+                              <p className="text-green-700">
+                                You have selected {formData.categories.length} category for your business.
+                              </p>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {formData.categories.map((category, index) => (
+                                  <span
+                                    key={index}
+                                    className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium"
+                                  >
+                                    {category}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-4">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedMainCategory(null);
+                                  setSelectedSubCategory(null);
+                                  setSelectedChildCategories([]);
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    categories: [],
+                                    selectedCategoryIds: []
+                                  }));
+                                }}
+                                className="flex-1 bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-400 transition-colors"
+                              >
+                                Change Categories
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleFinalSubmit}
+                                disabled={isLoading}
+                                className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {isLoading ? 'Creating Listing...' : 'Complete Business Listing'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </form>
+                    )}
                   </div>
                 )}
               </div>
@@ -1197,7 +1806,6 @@ const BusinessListingForm = () => {
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-12">
-            {/* Step 1 */}
             <div className="text-center group">
               <div className="mb-6 flex justify-center">
                 <div className="relative">
@@ -1219,7 +1827,6 @@ const BusinessListingForm = () => {
               </div>
             </div>
 
-            {/* Step 2 */}
             <div className="text-center group">
               <div className="mb-6 flex justify-center">
                 <div className="relative">
@@ -1241,7 +1848,6 @@ const BusinessListingForm = () => {
               </div>
             </div>
 
-            {/* Step 3 */}
             <div className="text-center group">
               <div className="mb-6 flex justify-center">
                 <div className="relative">

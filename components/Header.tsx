@@ -16,7 +16,7 @@ const Header = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [showUserDropdown, setShowUserDropdown] = useState(false); // ✅ NEW: Dropdown state
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   // API endpoints
   const API_BASE_URL = 'https://allupipay.in/publicsewa/api';
@@ -35,7 +35,6 @@ const Header = () => {
         background: '#ffffff',
       });
     } catch (e) {
-      // fallback to console if Swal fails
       // eslint-disable-next-line no-console
       console.log(message, e);
     }
@@ -50,6 +49,13 @@ const Header = () => {
       confirmButtonColor: opts.icon === 'error' ? '#ef4444' : '#10b981',
       background: '#ffffff',
     });
+  };
+
+  // ✅ MODIFIED: Handle Get App click
+  const handleGetAppClick = () => {
+    toast('Download our app from Play Store!', 'info');
+    // Yahan aap app download link add kar sakte hain
+    // window.open('https://play.google.com/store/apps/details?id=com.yourapp', '_blank');
   };
 
   // Check screen size function
@@ -99,17 +105,12 @@ const Header = () => {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Check screen size
         checkScreenSize();
         window.addEventListener('resize', checkScreenSize);
-
-        // Check if user is logged in
         checkAuthStatus();
 
-        // Small delay to ensure everything is loaded properly
         await new Promise(resolve => setTimeout(resolve, 100));
       } catch (error) {
-        // keep console.error for unexpected internal errors
         // eslint-disable-next-line no-console
         console.error('Initialization error:', error);
         modal({ icon: 'error', title: 'Initialization error', text: String(error) });
@@ -126,7 +127,7 @@ const Header = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ NEW: Close dropdown when clicking outside
+  // ✅ MODIFIED: Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (showUserDropdown) {
@@ -148,18 +149,17 @@ const Header = () => {
     setIsMenuOpen(false);
   };
 
-  // ✅ NEW: Toggle user dropdown
+  // ✅ MODIFIED: Toggle user dropdown
   const toggleUserDropdown = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowUserDropdown(!showUserDropdown);
   };
 
-  // ✅ FIXED: Awesome Login Handler - अब error message properly show होगा
+  // ✅ MODIFIED: Awesome Login Handler
   const handleLoginSuccess = async (loginData: any) => {
     setIsLoggingIn(true);
     
     try {
-      // Mobile number directly use karo (ab mobile field hai)
       const mobileNumber = loginData.mobile;
 
       const formData = new URLSearchParams();
@@ -176,11 +176,9 @@ const Header = () => {
 
       const data = await response.json();
 
-      // ✅ FIXED: यहाँ error handling improve की है
       if (response.ok && data.status === 'success') {
         toast('Login successful!', 'success');
 
-        // Store token and user data
         localStorage.setItem('authToken', data.token || data.id);
         localStorage.setItem('userData', JSON.stringify({
           id: data.id,
@@ -194,9 +192,8 @@ const Header = () => {
         setIsLoggedIn(true);
         setUser(data);
         setShowLoginModal(false);
-        setShowUserDropdown(false); // ✅ Close dropdown after login
+        setShowUserDropdown(false);
 
-        // Dispatch events
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('userLoggedIn', {
             detail: {
@@ -210,45 +207,35 @@ const Header = () => {
 
         modal({ icon: 'success', title: 'Login successful!', text: 'Welcome back!' });
       } else {
-        // ✅ FIXED: अब error message properly show होगा
         const errorMessage = data.message || 'Login failed. Please check your credentials and try again.';
-        
-        // Show error in modal (main error message)
         modal({ 
           icon: 'error', 
           title: 'Login failed', 
           text: errorMessage 
         });
-        
-        // Also show as toast for immediate feedback
         toast(errorMessage, 'error');
       }
     } catch (error) {
-      // ✅ FIXED: Network errors के लिए भी proper message
       const errorMessage = 'Network error: Please check your internet connection and try again.';
-      
       // eslint-disable-next-line no-console
       console.error('Login error:', error);
-      
       modal({ 
         icon: 'error', 
         title: 'Login failed', 
         text: errorMessage 
       });
-      
       toast(errorMessage, 'error');
     } finally {
       setIsLoggingIn(false);
     }
   };
 
-  // ✅ UPDATED: Awesome Signup Handler - Mobile number field use karo
+  // ✅ MODIFIED: Awesome Signup Handler
   const handleAwesomeSignup = async (signupData: any) => {
     setIsRegistering(true);
     toast(`Signup data received: ${typeof signupData === 'object' ? (signupData.mobile || 'mobile') : String(signupData)}`, 'info');
 
     try {
-      // Mobile number directly use karo (ab mobile field hai)
       const mobileNumber = signupData.mobile;
 
       const response = await fetch(`${API_BASE_URL}/register.php`, {
@@ -272,7 +259,6 @@ const Header = () => {
       toast('Registration response received', 'info');
 
       if (response.ok && data.status === 'success') {
-        // Store token and user data
         localStorage.setItem('authToken', data.token || data.id);
         localStorage.setItem('userData', JSON.stringify({
           id: data.id,
@@ -294,9 +280,8 @@ const Header = () => {
         });
 
         setShowRegisterModal(false);
-        setShowUserDropdown(false); // ✅ Close dropdown after signup
+        setShowUserDropdown(false);
 
-        // Dispatch event after registration
         setTimeout(() => {
           toast('Dispatching userLoggedIn event after registration', 'info');
           window.dispatchEvent(new CustomEvent('userLoggedIn', {
@@ -315,7 +300,6 @@ const Header = () => {
 
         modal({ icon: 'success', title: 'Registration successful!', text: 'Welcome!' });
       } else {
-        // ✅ FIXED: Signup errors के लिए भी proper message
         const errorMessage = data.message || 'Registration failed. Please try again.';
         modal({ 
           icon: 'error', 
@@ -325,18 +309,14 @@ const Header = () => {
         toast(errorMessage, 'error');
       }
     } catch (error) {
-      // ✅ FIXED: Network errors के लिए भी proper message
       const errorMessage = 'Network error: Please check your internet connection and try again.';
-      
       // eslint-disable-next-line no-console
       console.error('Registration error:', error);
-      
       modal({ 
         icon: 'error', 
         title: 'Registration failed', 
         text: errorMessage 
       });
-      
       toast(errorMessage, 'error');
     } finally {
       setIsRegistering(false);
@@ -348,12 +328,9 @@ const Header = () => {
     localStorage.removeItem('userData');
     setIsLoggedIn(false);
     setUser(null);
-    setShowUserDropdown(false); // ✅ Close dropdown after logout
+    setShowUserDropdown(false);
 
-    // Dispatch event when user logs out
     window.dispatchEvent(new CustomEvent('userLoggedOut'));
-
-    // Close mobile menu if open
     closeMenu();
 
     modal({ icon: 'info', title: 'Logged out successfully!', text: '' });
@@ -366,7 +343,7 @@ const Header = () => {
         closeMenu();
         setShowLoginModal(false);
         setShowRegisterModal(false);
-        setShowUserDropdown(false); // ✅ Close dropdown on ESC
+        setShowUserDropdown(false);
       }
     };
 
@@ -404,24 +381,24 @@ const Header = () => {
       {/* Header Section */}
       <header className="header_sticky">
         {/* Mobile Menu Button */}
-       <button
-  className="btn_mobile"
-  onClick={toggleMenu}
-  type="button"
-  aria-label="Toggle menu"
-  style={{
-    position: 'fixed',   // <== FIXED KAR DIYA
-    left: '15px',
-    top: '15px',
-    zIndex: 1001
-  }}
->
-  <div className={`hamburger hamburger--spin ${isMenuOpen ? 'is-active' : ''}`}>
-    <div className="hamburger-box">
-      <div className="hamburger-inner"></div>
-    </div>
-  </div>
-</button>
+        <button
+          className="btn_mobile"
+          onClick={toggleMenu}
+          type="button"
+          aria-label="Toggle menu"
+          style={{
+            position: 'fixed',
+            left: '15px',
+            top: '15px',
+            zIndex: 1001
+          }}
+        >
+          <div className={`hamburger hamburger--spin ${isMenuOpen ? 'is-active' : ''}`}>
+            <div className="hamburger-box">
+              <div className="hamburger-inner"></div>
+            </div>
+          </div>
+        </button>
 
         <div className="container">
           <div className="row">
@@ -455,7 +432,7 @@ const Header = () => {
                 }}>
                   {isLoggedIn ? (
                     <>
-                      {/* ✅ UPDATED: User Welcome with Dropdown */}
+                      {/* ✅ MODIFIED: User Welcome with Dropdown */}
                       <li className="user-welcome" style={{ position: 'relative' }}>
                         <button
                           onClick={toggleUserDropdown}
@@ -495,7 +472,7 @@ const Header = () => {
                           ></i>
                         </button>
 
-                        {/* ✅ NEW: User Dropdown Menu */}
+                        {/* ✅ MODIFIED: User Dropdown Menu */}
                         {showUserDropdown && (
                           <div style={{
                             position: 'absolute',
@@ -736,8 +713,10 @@ const Header = () => {
                       </Link>
                     </li>
                     <li>
+                      {/* ✅ FIXED: Direct Link without login check */}
                       <Link
                         href="/list-your-business"
+                        onClick={closeMenu}
                         style={{
                           color: '#27ae60',
                           fontWeight: 'bold',
@@ -766,6 +745,40 @@ const Header = () => {
                         📍 List Your Business FREE
                       </Link>
                     </li>
+                    {/* ✅ MODIFIED: Get App Button in Desktop Menu */}
+                    <li>
+                      <button
+                        onClick={handleGetAppClick}
+                        title="Get Our App"
+                        style={{
+                          background: 'linear-gradient(135deg, rgb(102, 126, 234) 0%, rgb(118, 75, 162) 100%)',
+                          border: 'none',
+                          color: 'white',
+                          cursor: 'pointer',
+                          padding: '10px 16px',
+                          borderRadius: '20px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          boxShadow: 'rgba(102, 126, 234, 0.3) 0px 3px 10px',
+                          whiteSpace: 'nowrap',
+                          transition: 'all 0.3s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = 'rgba(102, 126, 234, 0.5) 0px 5px 15px';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = 'rgba(102, 126, 234, 0.3) 0px 3px 10px';
+                        }}
+                      >
+                        <i className="pe-7s-cloud-download" style={{ fontSize: '14px' }}></i>
+                        Get App
+                      </button>
+                    </li>
                   </ul>
                 </nav>
               </div>
@@ -792,7 +805,7 @@ const Header = () => {
           </div>
         </div>
 
-        {/* ✅ UPDATED: Awesome Login Modal with Scroll Fix */}
+        {/* ✅ MODIFIED: Awesome Login Modal with Scroll Fix */}
         {showLoginModal && (
           <div
             className="modal-overlay"
@@ -810,7 +823,7 @@ const Header = () => {
               zIndex: 10001,
               padding: '20px',
               backdropFilter: 'blur(5px)',
-              overflow: 'auto' // ✅ Scroll enable for overlay
+              overflow: 'auto'
             }}
           >
             <div
@@ -818,7 +831,7 @@ const Header = () => {
               style={{
                 width: '100%',
                 maxWidth: '450px',
-                margin: 'auto' // ✅ Center the modal
+                margin: 'auto'
               }}
             >
               <AwesomeLogin
@@ -836,7 +849,7 @@ const Header = () => {
           </div>
         )}
 
-        {/* ✅ UPDATED: Awesome Signup Modal with Scroll Fix */}
+        {/* ✅ MODIFIED: Awesome Signup Modal with Scroll Fix */}
         {showRegisterModal && (
           <div
             className="modal-overlay"
@@ -849,12 +862,12 @@ const Header = () => {
               bottom: 0,
               background: 'rgba(0, 0, 0, 0.6)',
               display: 'flex',
-              alignItems: 'flex-start', // ✅ Changed to flex-start for scroll
+              alignItems: 'flex-start',
               justifyContent: 'center',
               zIndex: 10001,
               padding: '20px',
               backdropFilter: 'blur(5px)',
-              overflow: 'auto' // ✅ Scroll enable for overlay
+              overflow: 'auto'
             }}
           >
             <div
@@ -862,7 +875,7 @@ const Header = () => {
               style={{
                 width: '100%',
                 maxWidth: '500px',
-                margin: '20px auto' // ✅ Margin for better spacing
+                margin: '20px auto'
               }}
             >
               <AwesomeSignup
@@ -897,7 +910,7 @@ const Header = () => {
           }}
         ></div>
 
-        {/* ✅ UPDATED: Mobile Menu with Awesome Modal Integration */}
+        {/* ✅ MODIFIED: Mobile Menu with Direct Access */}
         <nav
           className={`mobile-menu ${isMenuOpen ? 'mobile-open' : ''}`}
           style={{
@@ -946,7 +959,7 @@ const Header = () => {
                 </Link>
               </li>
               
-              {/* ✅ NEW: Dashboard Link in Mobile Menu */}
+              {/* ✅ MODIFIED: Dashboard Link in Mobile Menu */}
               {isLoggedIn && (
                 <li style={{ marginBottom: '10px' }}>
                   <Link
@@ -973,6 +986,7 @@ const Header = () => {
               )}
 
               <li style={{ marginBottom: '10px' }}>
+                {/* ✅ FIXED: Direct Link without login check in mobile */}
                 <Link
                   href="/list-your-business"
                   onClick={closeMenu}
@@ -995,9 +1009,49 @@ const Header = () => {
                   📍 List Your Business FREE
                 </Link>
               </li>
+
+              {/* ✅ MODIFIED: Get App Button in Mobile Menu */}
+              <li style={{ marginBottom: '10px' }}>
+                <button
+                  onClick={() => {
+                    handleGetAppClick();
+                    closeMenu();
+                  }}
+                  title="Get Our App"
+                  style={{
+                    width: '100%',
+                    background: 'linear-gradient(135deg, rgb(102, 126, 234) 0%, rgb(118, 75, 162) 100%)',
+                    border: 'none',
+                    color: 'white',
+                    cursor: 'pointer',
+                    padding: '12px 15px',
+                    borderRadius: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    boxShadow: 'rgba(102, 126, 234, 0.3) 0px 3px 10px',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = 'rgba(102, 126, 234, 0.5) 0px 5px 15px';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'rgba(102, 126, 234, 0.3) 0px 3px 10px';
+                  }}
+                >
+                  <i className="pe-7s-cloud-download" style={{ fontSize: '14px' }}></i>
+                  Get App
+                </button>
+              </li>
             </ul>
 
-            {/* ✅ UPDATED: User Section with Awesome Modal Integration */}
+            {/* ✅ MODIFIED: User Section */}
             <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
               {isLoggedIn ? (
                 <div style={{ textAlign: 'center' }}>
@@ -1171,7 +1225,7 @@ const Header = () => {
         </div>
       </main>
 
-      {/* ✅ UPDATED: Custom CSS for Awesome Components */}
+      {/* ✅ MODIFIED: Custom CSS for Awesome Components */}
       <style jsx>{`
         .awesome-auth-modal {
           animation: scaleUp 0.3s ease forwards;
