@@ -119,16 +119,16 @@ const BusinessListingForm = () => {
   const [touched, setTouched] = useState<Partial<Record<keyof BusinessFormData, boolean>>>({});
 
   // Get API endpoint with fallback
-  const getBusinessCreateEndpoint = () => {
-    if (API_ENDPOINTS2?.BUSINESS?.CREATE) {
-      return API_ENDPOINTS2.BUSINESS.CREATE;
-    } else if (API_ENDPOINTS2?.BUSINESS) {
-      const businessEndpoints = Object.values(API_ENDPOINTS2.BUSINESS);
-      return businessEndpoints[0] || '/api/business/create';
-    } else {
-      return '/api/business/create';
-    }
-  };
+  // const getBusinessCreateEndpoint = () => {
+  //   if (API_ENDPOINTS2?.BUSINESS?.CREATE) {
+  //     return API_ENDPOINTS2.BUSINESS.CREATE;
+  //   } else if (API_ENDPOINTS2?.BUSINESS) {
+  //     const businessEndpoints = Object.values(API_ENDPOINTS2.BUSINESS);
+  //     return businessEndpoints[0] || '/api/business/create';
+  //   } else {
+  //     return '/api/business/create';
+  //   }
+  // };
 
   // Fetch categories from API with proper error handling
   const fetchCategories = async () => {
@@ -710,10 +710,10 @@ const BusinessListingForm = () => {
 
       console.log('Complete data for API:', completeData);
 
-      const businessCreateEndpoint = getBusinessCreateEndpoint();
-      console.log('Using API endpoint:', businessCreateEndpoint);
+      //const businessCreateEndpoint = getBusinessCreateEndpoint();
+     // console.log('Using API endpoint:', businessCreateEndpoint);
 
-      const response = await fetch(businessCreateEndpoint, {
+      const response = await fetch(API_ENDPOINTS2.AUTH.MAIN_SEARCH, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
