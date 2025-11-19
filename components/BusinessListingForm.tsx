@@ -118,17 +118,6 @@ const BusinessListingForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<keyof BusinessFormData, boolean>>>({});
 
-  // Get API endpoint with fallback
-  // const getBusinessCreateEndpoint = () => {
-  //   if (API_ENDPOINTS2?.BUSINESS?.CREATE) {
-  //     return API_ENDPOINTS2.BUSINESS.CREATE;
-  //   } else if (API_ENDPOINTS2?.BUSINESS) {
-  //     const businessEndpoints = Object.values(API_ENDPOINTS2.BUSINESS);
-  //     return businessEndpoints[0] || '/api/business/create';
-  //   } else {
-  //     return '/api/business/create';
-  //   }
-  // };
 
   // Fetch categories from API with proper error handling
   const fetchCategories = async () => {
