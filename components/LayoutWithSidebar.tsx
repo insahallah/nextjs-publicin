@@ -131,7 +131,7 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
     window.dispatchEvent(new CustomEvent('userLoggedOut'))
     window.dispatchEvent(new Event('storage'))
     
-    router.push('/')
+    router.push('/list-your-business')
   }
 
   // Close dropdown when clicking outside
