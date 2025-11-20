@@ -118,7 +118,6 @@ const BusinessListingForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<keyof BusinessFormData, boolean>>>({});
 
-
   // Fetch categories from API with proper error handling
   const fetchCategories = async () => {
     setIsLoadingCategories(true);
@@ -172,7 +171,7 @@ const BusinessListingForm = () => {
       if (userData.mobile) {
         setMobileNumber(userData.mobile);
         setIsMobileVerified(true);
-        setCurrentStep(2);
+        setCurrentStep(2); // ✅ Directly step 2 par le jao
       }
     };
 
@@ -184,7 +183,7 @@ const BusinessListingForm = () => {
       if (userData.mobile) {
         setMobileNumber(userData.mobile);
         setIsMobileVerified(true);
-        setCurrentStep(2);
+        setCurrentStep(2); // ✅ Directly step 2 par le jao
       }
     };
 
@@ -204,7 +203,7 @@ const BusinessListingForm = () => {
     }
   }, [currentStep]);
 
-  // Check if user is logged in
+  // Check if user is logged in - UPDATED
   const checkAuthStatus = () => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('authToken');
@@ -217,6 +216,8 @@ const BusinessListingForm = () => {
         const userObj = JSON.parse(userData);
         if (userObj.mobile) {
           setMobileNumber(userObj.mobile);
+          setIsMobileVerified(true);
+          setCurrentStep(2); // ✅ Directly step 2 par le jao
         }
       } else {
         setIsLoggedIn(false);
@@ -389,7 +390,7 @@ const BusinessListingForm = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  // Mobile Number Verification with Password Login
+  // Mobile Number Verification with Password Login - UPDATED
   const handleMobileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -405,6 +406,7 @@ const BusinessListingForm = () => {
       const token = localStorage.getItem('authToken');
       const userData = localStorage.getItem('userData');
 
+      // ✅ Agar user already logged in hai to directly step 2 par le jao
       if (token && userData) {
         const currentUser = JSON.parse(userData);
         
@@ -421,6 +423,7 @@ const BusinessListingForm = () => {
         }
       }
 
+      // ✅ Agar user logged in nahi hai tabhi mobile check karo
       const apiResponse = await checkMobileNumberExists(mobileNumber);
       
       if (apiResponse.exists) {
@@ -442,7 +445,7 @@ const BusinessListingForm = () => {
     }
   };
 
-  // Category Selection Functions - UPDATED
+  // Category Selection Functions
   const handleMainCategorySelect = (category: Category) => {
     setSelectedMainCategory(category);
     setSelectedSubCategory(null);
@@ -636,6 +639,19 @@ const BusinessListingForm = () => {
   const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // User ID check - agar empty hai to redirect karein
+    const userData = localStorage.getItem('userData');
+    const user = userData ? JSON.parse(userData) : null;
+    
+    if (!user?.id) {
+      alert('User not logged in. Please login to continue.');
+      window.location.href = '/list-your-business';
+      return;
+    }
+
+    // User ID ko variable mein store karein
+    const userId = user.id;
+
     if (formData.selectedCategoryIds.length === 0) {
       alert('Please select at least one category');
       return;
@@ -649,65 +665,63 @@ const BusinessListingForm = () => {
     setIsLoading(true);
     
     try {
-      const userData = localStorage.getItem('userData');
-      const user = userData ? JSON.parse(userData) : null;
+      // Sab data ek array mein
+      const completeData = [
+        {
+          user_info: {
+            user_id: userId,
+            mobile_number: mobileNumber,
+            name: user?.fullName || '',
+            email: user?.email || '',
+            city: user?.city || '',
+            village: user?.village || ''
+          },
+          
+          business_info: {
+            business_name: formData.businessName,
+            categories: formData.categories,
+            category_ids: formData.selectedCategoryIds,
+            description: "",
+            status: "active"
+          },
+          
+          address_info: {
+            building_number: formData.buildingNumber,
+            building_name: formData.buildingName,
+            street: formData.street,
+            landmark: formData.landmark,
+            village: formData.village,
+            city: formData.city,
+            state: formData.state,
+            pincode: formData.pincode,
+            full_address: `${formData.buildingNumber}, ${formData.buildingName}, ${formData.street}, ${formData.landmark}, ${formData.village}, ${formData.city}, ${formData.state} - ${formData.pincode}`
+          },
+          
+          location_info: {
+            latitude: formData.latitude,
+            longitude: formData.longitude,
+            address: formData.address || `${formData.latitude}, ${formData.longitude}`
+          },
+          
+          account_info: {
+            mobile_verified: true,
+            email_verified: false
+          },
+          
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
 
-      const completeData = {
-        user_info: {
-          user_id: user?.id || '',
-          mobile_number: mobileNumber,
-          name: user?.fullName || '',
-          email: user?.email || '',
-          city: user?.city || '',
-          village: user?.village || ''
-        },
-        
-        business_info: {
-          business_name: formData.businessName,
-          categories: formData.categories,
-          category_ids: formData.selectedCategoryIds,
-          description: "",
-          status: "active"
-        },
-        
-        address_info: {
-          building_number: formData.buildingNumber,
-          building_name: formData.buildingName,
-          street: formData.street,
-          landmark: formData.landmark,
-          village: formData.village,
-          city: formData.city,
-          state: formData.state,
-          pincode: formData.pincode,
-          full_address: `${formData.buildingNumber}, ${formData.buildingName}, ${formData.street}, ${formData.landmark}, ${formData.village}, ${formData.city}, ${formData.state} - ${formData.pincode}`
-        },
-        
-        location_info: {
-          latitude: formData.latitude,
-          longitude: formData.longitude,
-          address: formData.address || `${formData.latitude}, ${formData.longitude}`
-        },
-        
-        account_info: {
-          mobile_verified: true,
-          email_verified: false
-        },
-        
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      console.log('Complete data for API:', completeData);
-
-      //const businessCreateEndpoint = getBusinessCreateEndpoint();
-     // console.log('Using API endpoint:', businessCreateEndpoint);
+      console.log('Complete data array for API:', completeData);
+      console.log('User ID being sent:', userId);
 
       const response = await fetch(API_ENDPOINTS2.AUTH.MAIN_SEARCH, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(completeData),
+        body: JSON.stringify(completeData), // Array directly send karein
       });
       
       const result = await response.json();
@@ -719,6 +733,7 @@ const BusinessListingForm = () => {
       if (result.status === 'success') {
         alert('Business listing created successfully!');
         
+        // Reset form
         setCurrentStep(1);
         setMobileNumber('');
         setIsMobileVerified(false);
@@ -963,7 +978,9 @@ const BusinessListingForm = () => {
                       <p className="text-sm text-gray-600">
                         {showPasswordField 
                           ? 'Please enter your password to continue' 
-                          : 'We\'ll check if your mobile number is registered'
+                          : isLoggedIn 
+                            ? 'You are already logged in. Click "Continue" to proceed.'
+                            : 'We\'ll check if your mobile number is registered'
                         }
                       </p>
                       
@@ -971,7 +988,7 @@ const BusinessListingForm = () => {
                         <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-3">
                           <p className="text-green-800 text-sm">
                             ✅ Welcome back, <strong>{user.fullName}</strong>! 
-                            Your mobile number is pre-filled. Click "Start Now" to continue.
+                            Your mobile number is pre-filled. Click "Continue" to proceed.
                           </p>
                         </div>
                       )}
@@ -1011,6 +1028,7 @@ const BusinessListingForm = () => {
                                 setMobileNumber(value);
                                 setMobileCheckMessage('');
                               }}
+                              disabled={isLoggedIn} // ✅ Agar logged in hai to input disabled
                             />
                             <label 
                               htmlFor="mobileInput"
@@ -1047,6 +1065,8 @@ const BusinessListingForm = () => {
                               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                               Checking Mobile...
                             </>
+                          ) : isLoggedIn ? (
+                            'Continue to Business Details' // ✅ Updated text for logged in users
                           ) : (
                             <>
                               Start Now

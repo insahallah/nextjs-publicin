@@ -1,10 +1,12 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
 import Link from 'next/link';
 import Swal from 'sweetalert2';
 import AwesomeLogin from './AwesomeLogin';
 import AwesomeSignup from './AwesomeSignup';
-
+const navigate = useNavigate();
 const Header = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [searchType, setSearchType] = useState('all');
@@ -327,16 +329,19 @@ const Header = () => {
         }
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userData');
-        setIsLoggedIn(false);
-        setUser(null);
-        setShowUserDropdown(false);
-        window.dispatchEvent(new CustomEvent('userLoggedOut'));
-        closeMenu();
-        modal({ icon: 'info', title: 'Logged out successfully!', text: '' });
-    };
+const handleLogout = () => {
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('userData');
+  setIsLoggedIn(false);
+  setUser(null);
+  setShowUserDropdown(false);
+  window.dispatchEvent(new CustomEvent('userLoggedOut'));
+  closeMenu();
+  modal({ icon: 'info', title: 'Logged out successfully!', text: '' });
+  
+  // Redirect with query parameter
+  navigate('/list-your-business?logout');
+};
 
     // ESC key press par menu close
     useEffect(() => {

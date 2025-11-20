@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+
 import Link from 'next/link';
 import Swal from 'sweetalert2';
 import AwesomeLogin from './AwesomeLogin';
@@ -88,7 +89,7 @@ const Header = () => {
         const handleOpenSignupModalFromBusiness = (event: CustomEvent) => {
             const { mobileNumber } = event.detail;
             toast(`Signup required for business listing. Mobile: ${mobileNumber}`, 'info');
-            
+
             // Pre-fill mobile number in signup form
             setPreFilledMobile(mobileNumber);
             setShowRegisterModal(true);
@@ -225,9 +226,9 @@ const Header = () => {
                     window.dispatchEvent(new Event('storage'));
                 }, 200);
 
-                modal({ 
-                    icon: 'success', 
-                    title: 'Login successful!', 
+                modal({
+                    icon: 'success',
+                    title: 'Login successful!',
                     text: 'Redirecting to your dashboard...'
                 });
             } else {
@@ -254,96 +255,125 @@ const Header = () => {
         }
     };
 
-    // Header component ke andar signup handler - UPDATED VERSION
-    const handleAwesomeSignup = async (signupData: any) => {
-        setIsRegistering(true);
-        toast(`Signup data received: ${typeof signupData === 'object' ? (signupData.mobile || 'mobile') : String(signupData)}`, 'info');
+const handleAwesomeSignup = async (signupData: any) => {
+    setIsRegistering(true);
+    console.log('🚀 Signup started with data:', signupData);
 
-        try {
-            const mobileNumber = signupData.mobile;
+    try {
+        const mobileNumber = signupData.mobile;
 
-            const response = await fetch(`${API_BASE_URL}/register.php`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    fullName: signupData.fullName,
-                    mobile: mobileNumber,
-                    password: signupData.password
-                })
+        const response = await fetch(`${API_BASE_URL}/register.php`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                fullName: signupData.fullName,
+                mobile: mobileNumber,
+                password: signupData.password
+            })
+        });
+
+        console.log('📡 API Response status:', response.status);
+        const data = await response.json();
+        console.log('📦 API Response data:', data);
+        
+        if (response.ok && data.status === 'success') {
+            console.log('✅ Signup API success');
+            
+            // ✅ Create EXACT same user object as login
+            const userObj = {
+                id: data.id,
+                fullName: data.fullName || data.name || signupData.fullName || 'User',
+                name: data.name || data.fullName || signupData.fullName || 'User',
+                mobile: data.mobile || mobileNumber,
+                city: data.city || '',
+                village: data.village || '',
+                block: data.block || '',
+                email: data.email || '',
+                state: data.state || '',
+                profile_image: data.profile_image || '',
+                pin: data.pin || '',
+                ...data
+            };
+
+            console.log('👤 User object created:', userObj);
+
+            // ✅ Store in localStorage
+            localStorage.setItem('authToken', data.token || data.id);
+            localStorage.setItem('userData', JSON.stringify(userObj));
+
+            // ✅ Verify storage
+            const storedToken = localStorage.getItem('authToken');
+            const storedUser = localStorage.getItem('userData');
+            console.log('💾 Stored authToken:', storedToken);
+            console.log('💾 Stored userData:', storedUser);
+
+            // ✅ Update state
+            setIsLoggedIn(true);
+            setUser(userObj);
+            console.log('🔄 State updated - isLoggedIn:', true, 'user:', userObj);
+
+            // ✅ Close modals
+            setShowRegisterModal(false);
+            setShowUserDropdown(false);
+            setPreFilledMobile('');
+            console.log('🎯 Modals closed');
+
+            // ✅ Dispatch events
+            window.dispatchEvent(new CustomEvent('userSignedUp', { 
+                detail: { user: userObj } 
+            }));
+            window.dispatchEvent(new CustomEvent('userLoggedIn', { 
+                detail: { 
+                    user: userObj,
+                    userId: userObj.id,
+                    timestamp: new Date().toISOString()
+                } 
+            }));
+            window.dispatchEvent(new Event('storage'));
+            console.log('📢 Events dispatched');
+
+            // ✅ Success message
+            modal({
+                icon: 'success',
+                title: 'Registration successful!',
+                text: 'You have been automatically logged in. Redirecting to dashboard...'
             });
 
-            const data = await response.json();
-            toast('Registration response received', 'info');
+            toast('Welcome! You are now logged in.', 'success');
 
-            if (response.ok && data.status === 'success') {
-                localStorage.setItem('authToken', data.token || data.id);
-                localStorage.setItem('userData', JSON.stringify({
-                    id: data.id,
-                    fullName: signupData.fullName,
-                    mobile: mobileNumber,
-                    ...data
-                }));
+            // ✅ Redirect to UserDashboard
+            console.log('🔄 Redirecting to UserDashboard in 1 second...');
+            setTimeout(() => {
+                console.log('🔀 Now redirecting to UserDashboard');
+                //window.location.href = '/UserDashboard';
+            }, 1000);
 
-                setIsLoggedIn(true);
-                setUser({
-                    id: data.id,
-                    fullName: signupData.fullName,
-                    mobile: mobileNumber,
-                    ...data
-                });
-
-                setShowRegisterModal(false);
-                setShowUserDropdown(false);
-                setPreFilledMobile(''); // ✅ Reset pre-filled mobile
-
-                // ✅ Dispatch userSignedUp event for BusinessListingForm
-                window.dispatchEvent(new CustomEvent('userSignedUp', {
-                    detail: {
-                        user: {
-                            id: data.id,
-                            fullName: signupData.fullName,
-                            mobile: mobileNumber,
-                            ...data
-                        }
-                    }
-                }));
-
-                // ✅ Registration ke baad login modal open hoga
-                setTimeout(() => {
-                    setShowLoginModal(true);
-                    toast('Please login with your credentials', 'info');
-                }, 500);
-
-                modal({ 
-                    icon: 'success', 
-                    title: 'Registration successful!', 
-                    text: 'Please login to continue'
-                });
-            } else {
-                const errorMessage = data.message || 'Registration failed. Please try again.';
-                modal({
-                    icon: 'error',
-                    title: 'Registration failed',
-                    text: errorMessage
-                });
-                toast(errorMessage, 'error');
-            }
-        } catch (error) {
-            const errorMessage = 'Network error: Please check your internet connection and try again.';
-            // eslint-disable-next-line no-console
-            console.error('Registration error:', error);
+        } else {
+            const errorMessage = data.message || 'Registration failed. Please try again.';
+            console.error('❌ Signup failed:', errorMessage);
             modal({
                 icon: 'error',
                 title: 'Registration failed',
                 text: errorMessage
             });
             toast(errorMessage, 'error');
-        } finally {
-            setIsRegistering(false);
         }
-    };
+    } catch (error) {
+        const errorMessage = 'Network error: Please check your internet connection and try again.';
+        console.error('❌ Registration error:', error);
+        modal({
+            icon: 'error',
+            title: 'Registration failed',
+            text: errorMessage
+        });
+        toast(errorMessage, 'error');
+    } finally {
+        setIsRegistering(false);
+        console.log('🏁 Signup process completed');
+    }
+};
 
     const handleLogout = () => {
         localStorage.removeItem('authToken');
@@ -354,6 +384,9 @@ const Header = () => {
         window.dispatchEvent(new CustomEvent('userLoggedOut'));
         closeMenu();
         modal({ icon: 'info', title: 'Logged out successfully!', text: '' });
+
+        // Redirect with query parameter
+        window.location.href = '/list-your-business';
     };
 
     // ESC key press par menu close
