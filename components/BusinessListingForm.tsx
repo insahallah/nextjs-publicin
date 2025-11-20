@@ -118,7 +118,6 @@ const BusinessListingForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<keyof BusinessFormData, boolean>>>({});
 
-
   // Fetch categories from API with proper error handling
   const fetchCategories = async () => {
     setIsLoadingCategories(true);
@@ -217,6 +216,8 @@ const BusinessListingForm = () => {
         const userObj = JSON.parse(userData);
         if (userObj.mobile) {
           setMobileNumber(userObj.mobile);
+          setIsMobileVerified(true);
+          setCurrentStep(2);
         }
       } else {
         setIsLoggedIn(false);
@@ -442,7 +443,7 @@ const BusinessListingForm = () => {
     }
   };
 
-  // Category Selection Functions - UPDATED
+  // Category Selection Functions
   const handleMainCategorySelect = (category: Category) => {
     setSelectedMainCategory(category);
     setSelectedSubCategory(null);
@@ -633,139 +634,139 @@ const BusinessListingForm = () => {
   };
 
   // Final API Submission
-const handleFinalSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  // User ID check - agar empty hai to redirect karein
-  const userData = localStorage.getItem('userData');
-  const user = userData ? JSON.parse(userData) : null;
-  
-  if (!user?.id) {
-    alert('User not logged in. Please login to continue.');
-    window.location.href = '/list-your-business';
-    return;
-  }
-
-  // User ID ko variable mein store karein
-  const userId = user.id;
-
-  if (formData.selectedCategoryIds.length === 0) {
-    alert('Please select at least one category');
-    return;
-  }
-
-  if (!location) {
-    alert('Location access is required to complete registration.');
-    return;
-  }
-
-  setIsLoading(true);
-  
-  try {
-    // Sab data ek array mein
-    const completeData = [
-      {
-        user_info: {
-          user_id: userId,
-          mobile_number: mobileNumber,
-          name: user?.fullName || '',
-          email: user?.email || '',
-          city: user?.city || '',
-          village: user?.village || ''
-        },
-        
-        business_info: {
-          business_name: formData.businessName,
-          categories: formData.categories,
-          category_ids: formData.selectedCategoryIds,
-          description: "",
-          status: "active"
-        },
-        
-        address_info: {
-          building_number: formData.buildingNumber,
-          building_name: formData.buildingName,
-          street: formData.street,
-          landmark: formData.landmark,
-          village: formData.village,
-          city: formData.city,
-          state: formData.state,
-          pincode: formData.pincode,
-          full_address: `${formData.buildingNumber}, ${formData.buildingName}, ${formData.street}, ${formData.landmark}, ${formData.village}, ${formData.city}, ${formData.state} - ${formData.pincode}`
-        },
-        
-        location_info: {
-          latitude: formData.latitude,
-          longitude: formData.longitude,
-          address: formData.address || `${formData.latitude}, ${formData.longitude}`
-        },
-        
-        account_info: {
-          mobile_verified: true,
-          email_verified: false
-        },
-        
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ];
-
-    console.log('Complete data array for API:', completeData);
-    console.log('User ID being sent:', userId);
-
-    const response = await fetch(API_ENDPOINTS2.AUTH.MAIN_SEARCH, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(completeData), // Array directly send karein
-    });
+  const handleFinalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || 'API call failed');
+    // User ID check - agar empty hai to redirect karein
+    const userData = localStorage.getItem('userData');
+    const user = userData ? JSON.parse(userData) : null;
+    
+    if (!user?.id) {
+      alert('User not logged in. Please login to continue.');
+      window.location.href = '/list-your-business';
+      return;
     }
 
-    if (result.status === 'success') {
-      alert('Business listing created successfully!');
-      
-      // Reset form
-      setCurrentStep(1);
-      setMobileNumber('');
-      setIsMobileVerified(false);
-      setLocation(null);
-      setSelectedMainCategory(null);
-      setSelectedSubCategory(null);
-      setSelectedChildCategories([]);
-      setFormData({
-        businessName: '',
-        pincode: '',
-        buildingNumber: '',
-        buildingName: '',
-        street: '',
-        landmark: '',
-        village: '',
-        city: '',
-        state: '',
-        categories: [],
-        selectedCategoryIds: [],
-        latitude: null,
-        longitude: null,
-        address: ''
+    // User ID ko variable mein store karein
+    const userId = user.id;
+
+    if (formData.selectedCategoryIds.length === 0) {
+      alert('Please select at least one category');
+      return;
+    }
+
+    if (!location) {
+      alert('Location access is required to complete registration.');
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      // Sab data ek array mein
+      const completeData = [
+        {
+          user_info: {
+            user_id: userId,
+            mobile_number: mobileNumber,
+            name: user?.fullName || '',
+            email: user?.email || '',
+            city: user?.city || '',
+            village: user?.village || ''
+          },
+          
+          business_info: {
+            business_name: formData.businessName,
+            categories: formData.categories,
+            category_ids: formData.selectedCategoryIds,
+            description: "",
+            status: "active"
+          },
+          
+          address_info: {
+            building_number: formData.buildingNumber,
+            building_name: formData.buildingName,
+            street: formData.street,
+            landmark: formData.landmark,
+            village: formData.village,
+            city: formData.city,
+            state: formData.state,
+            pincode: formData.pincode,
+            full_address: `${formData.buildingNumber}, ${formData.buildingName}, ${formData.street}, ${formData.landmark}, ${formData.village}, ${formData.city}, ${formData.state} - ${formData.pincode}`
+          },
+          
+          location_info: {
+            latitude: formData.latitude,
+            longitude: formData.longitude,
+            address: formData.address || `${formData.latitude}, ${formData.longitude}`
+          },
+          
+          account_info: {
+            mobile_verified: true,
+            email_verified: false
+          },
+          
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+
+      console.log('Complete data array for API:', completeData);
+      console.log('User ID being sent:', userId);
+
+      const response = await fetch(API_ENDPOINTS2.AUTH.MAIN_SEARCH, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(completeData), // Array directly send karein
       });
-      setTouched({});
-    } else {
-      throw new Error(result.message || 'Business listing creation failed');
+      
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'API call failed');
+      }
+
+      if (result.status === 'success') {
+        alert('Business listing created successfully!');
+        
+        // Reset form
+        setCurrentStep(1);
+        setMobileNumber('');
+        setIsMobileVerified(false);
+        setLocation(null);
+        setSelectedMainCategory(null);
+        setSelectedSubCategory(null);
+        setSelectedChildCategories([]);
+        setFormData({
+          businessName: '',
+          pincode: '',
+          buildingNumber: '',
+          buildingName: '',
+          street: '',
+          landmark: '',
+          village: '',
+          city: '',
+          state: '',
+          categories: [],
+          selectedCategoryIds: [],
+          latitude: null,
+          longitude: null,
+          address: ''
+        });
+        setTouched({});
+      } else {
+        throw new Error(result.message || 'Business listing creation failed');
+      }
+      
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      alert(error instanceof Error ? error.message : 'Error creating business listing. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-    
-  } catch (error) {
-    console.error('Error submitting form:', error);
-    alert(error instanceof Error ? error.message : 'Error creating business listing. Please try again.');
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   // Navigation between steps
   const goToStep = (step: number) => {
@@ -975,7 +976,9 @@ const handleFinalSubmit = async (e: React.FormEvent) => {
                       <p className="text-sm text-gray-600">
                         {showPasswordField 
                           ? 'Please enter your password to continue' 
-                          : 'We\'ll check if your mobile number is registered'
+                          : isLoggedIn 
+                            ? 'You are already logged in. Click "Continue" to proceed.'
+                            : 'We\'ll check if your mobile number is registered'
                         }
                       </p>
                       
@@ -983,7 +986,7 @@ const handleFinalSubmit = async (e: React.FormEvent) => {
                         <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-3">
                           <p className="text-green-800 text-sm">
                             ✅ Welcome back, <strong>{user.fullName}</strong>! 
-                            Your mobile number is pre-filled. Click "Start Now" to continue.
+                            Your mobile number is pre-filled. Click "Continue" to proceed.
                           </p>
                         </div>
                       )}
@@ -1023,6 +1026,7 @@ const handleFinalSubmit = async (e: React.FormEvent) => {
                                 setMobileNumber(value);
                                 setMobileCheckMessage('');
                               }}
+                              disabled={isLoggedIn}
                             />
                             <label 
                               htmlFor="mobileInput"
@@ -1059,6 +1063,8 @@ const handleFinalSubmit = async (e: React.FormEvent) => {
                               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                               Checking Mobile...
                             </>
+                          ) : isLoggedIn ? (
+                            'Continue to Business Details'
                           ) : (
                             <>
                               Start Now
@@ -1627,19 +1633,33 @@ const handleFinalSubmit = async (e: React.FormEvent) => {
                           </div>
                         )}
 
-                        {/* Child Categories View - ONLY show when subcategory has children */}
+                        {/* Child Categories View - Subcategory ko bhi dikhao */}
                         {selectedSubCategory && selectedSubCategory.hasChildren && selectedSubCategory.childcategories.length > 0 && (
                           <div className="space-y-4">
+                            {/* Subcategory Header - Visible rahega */}
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                              <h3 className="font-semibold text-blue-900">
-                                {selectedMainCategory?.label} › {selectedSubCategory.label}
+                              <div className="flex items-center gap-2 mb-2">
+                                <button
+                                  onClick={handleBackToSubCategories}
+                                  className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                  </svg>
+                                  Back
+                                </button>
+                                <span className="text-gray-400">›</span>
+                                <span className="text-blue-900 font-semibold">{selectedMainCategory?.label}</span>
+                              </div>
+                              <h3 className="font-semibold text-blue-900 text-lg">
+                                {selectedSubCategory.label}
                               </h3>
                               <p className="text-sm text-blue-700 mt-1">
                                 Select one category that best matches your business
                               </p>
                             </div>
 
-                            {/* Child Categories Grid - ALL child categories remain visible */}
+                            {/* Child Categories Grid */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
                               {selectedSubCategory.childcategories.map((childCategory) => {
                                 const isSelected = selectedChildCategories.some(child => child.id === childCategory.id);
@@ -1651,7 +1671,7 @@ const handleFinalSubmit = async (e: React.FormEvent) => {
                                     className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
                                       isSelected
                                         ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                                     }`}
                                   >
                                     <div className="flex items-center justify-between">
@@ -1691,19 +1711,11 @@ const handleFinalSubmit = async (e: React.FormEvent) => {
                                     </span>
                                   ))}
                                 </div>
+                                <p className="text-green-700 text-sm mt-2">
+                                  ✓ Category selected successfully! You can now complete your business listing.
+                                </p>
                               </div>
                             )}
-
-                            {/* Action Buttons */}
-                            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                              <button
-                                type="button"
-                                onClick={handleBackToSubCategories}
-                                className="flex-1 bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-400 transition-colors"
-                              >
-                                Back to Sub-categories
-                              </button>
-                            </div>
                           </div>
                         )}
 
