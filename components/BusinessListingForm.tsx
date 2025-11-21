@@ -101,7 +101,8 @@ const BusinessListingForm = () => {
   const [selectedChildCategories, setSelectedChildCategories] = useState<ChildCategory[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
 
-  const [formData, setFormData] = useState<BusinessFormData>({
+  // Initialize formData with ALL required properties
+  const initialFormData: BusinessFormData = {
     businessName: '',
     pincode: '',
     buildingNumber: '',
@@ -120,7 +121,9 @@ const BusinessListingForm = () => {
     longitude: null,
     address: '',
     images: []
-  });
+  };
+
+  const [formData, setFormData] = useState<BusinessFormData>(initialFormData);
 
   const [errors, setErrors] = useState<Partial<BusinessFormData>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -130,8 +133,6 @@ const BusinessListingForm = () => {
   const fetchCategories = async () => {
     setIsLoadingCategories(true);
     try {
-      console.log('Fetching categories from:', `${API_ENDPOINTS2.AUTH.MAIN_SEARCH}?lang=en`);
-
       const response = await fetch(`${API_ENDPOINTS2.AUTH.MAIN_SEARCH}?lang=en`);
 
       if (!response.ok) {
@@ -139,28 +140,21 @@ const BusinessListingForm = () => {
       }
 
       const result = await response.json();
-      console.log('API Response:', result);
 
       if (result.status === 'success') {
         if (result.data && Array.isArray(result.data.categories)) {
           setCategories(result.data.categories);
-          console.log('✅ Categories loaded:', result.data.categories.length);
         } else if (Array.isArray(result.data)) {
           setCategories(result.data);
-          console.log('✅ Categories loaded (direct array):', result.data.length);
         } else if (Array.isArray(result.categories)) {
           setCategories(result.categories);
-          console.log('✅ Categories loaded (root categories):', result.categories.length);
         } else {
-          console.error('❌ No categories array found in response:', result);
           setCategories([]);
         }
       } else {
-        console.error('❌ API returned error:', result.message);
         setCategories([]);
       }
     } catch (error) {
-      console.error('❌ Error fetching categories:', error);
       setCategories([]);
     } finally {
       setIsLoadingCategories(false);
@@ -250,7 +244,6 @@ const BusinessListingForm = () => {
       const data: ApiResponse = await response.json();
       return data;
     } catch (error) {
-      console.error('Error checking mobile number:', error);
       throw new Error('Failed to check mobile number. Please try again.');
     }
   };
@@ -311,7 +304,6 @@ const BusinessListingForm = () => {
         setMobileCheckMessage(`❌ ${errorMessage}`);
       }
     } catch (error) {
-      console.error('Login error:', error);
       alert('Login failed. Please try again.');
       setMobileCheckMessage('❌ Login failed. Please try again.');
     } finally {
@@ -444,7 +436,6 @@ const BusinessListingForm = () => {
       }
 
     } catch (error) {
-      console.error('Error checking mobile number:', error);
       setMobileCheckMessage('❌ Error verifying mobile number. Please try again.');
     } finally {
       setIsCheckingAuth(false);
@@ -457,7 +448,6 @@ const BusinessListingForm = () => {
     setSelectedSubCategory(null);
     setSelectedChildCategories([]);
 
-    // Only main category select - clear others
     setFormData(prev => ({
       ...prev,
       categories: [category.label],
@@ -469,11 +459,9 @@ const BusinessListingForm = () => {
   };
 
   const handleSubCategorySelect = (subCategory: SubCategory) => {
-    // Agar subcategory ke child categories hain
     if (subCategory.hasChildren && subCategory.childcategories.length > 0) {
       setSelectedSubCategory(subCategory);
       setSelectedChildCategories([]);
-      // Form data clear karo kyunki ab child category select karna hoga
       setFormData(prev => ({
         ...prev,
         categories: [],
@@ -482,7 +470,6 @@ const BusinessListingForm = () => {
         selectedChildCategoryId: null
       }));
     } else {
-      // Agar koi child category nahi hai to direct subcategory select karo
       setSelectedSubCategory(subCategory);
       setSelectedChildCategories([]);
       setFormData(prev => ({
@@ -491,23 +478,21 @@ const BusinessListingForm = () => {
         selectedCategoryIds: [subCategory.id],
         selectedSubCategoryId: subCategory.id,
         selectedChildCategoryId: null,
-        selectedMainCategoryId: null // Remove main category
+        selectedMainCategoryId: null
       }));
     }
   };
 
   const handleChildCategorySelect = (childCategory: ChildCategory) => {
-    // Single selection - sirf ek hi child category select ho sakti hai
     setSelectedChildCategories([childCategory]);
 
-    // Form data update karo - only child category, remove main and sub
     setFormData(prev => ({
       ...prev,
       categories: [childCategory.label],
       selectedCategoryIds: [childCategory.id],
       selectedChildCategoryId: childCategory.id,
-      selectedMainCategoryId: null, // Remove main category
-      selectedSubCategoryId: null // Remove sub category
+      selectedMainCategoryId: null,
+      selectedSubCategoryId: null
     }));
   };
 
@@ -648,15 +633,13 @@ const BusinessListingForm = () => {
     }
   };
 
-  // UPDATED Final API Submission - FormData use karein
+  // UPDATED Final API Submission
   const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Get user data from localStorage
     const userData = localStorage.getItem('userData');
     const user = userData ? JSON.parse(userData) : null;
 
-    // Check if user is logged in
     if (!user?.id) {
       alert('User not logged in. Please login to continue.');
       window.location.href = '/list-your-business';
@@ -664,21 +647,17 @@ const BusinessListingForm = () => {
     }
 
     const userId = user.id;
-    console.log('👤 User ID from localStorage:', userId);
 
-    // Validate categories
     if (formData.selectedCategoryIds.length === 0) {
       alert('Please select at least one category');
       return;
     }
 
-    // Validate location
     if (!location) {
       alert('Location access is required to complete registration.');
       return;
     }
 
-    // Validate required fields
     if (!formData.businessName || !formData.pincode || !formData.city || !formData.state) {
       alert('Please fill all required fields');
       return;
@@ -687,13 +666,8 @@ const BusinessListingForm = () => {
     setIsLoading(true);
 
     try {
-      // ✅ STEP 1: First verify user exists in database - WITH IMPROVED ERROR HANDLING
-      console.log('🔍 Starting user verification for ID:', userId);
-      
       try {
-        // Use absolute URL to avoid path issues
         const userCheckUrl = `/api/check-user?id=${userId}`;
-        console.log('🌐 Calling user check API:', userCheckUrl);
         
         const userCheckResponse = await fetch(userCheckUrl, {
           method: 'GET',
@@ -701,59 +675,44 @@ const BusinessListingForm = () => {
             'Content-Type': 'application/json',
           },
         });
-
-        console.log('📡 User check response status:', userCheckResponse.status);
         
         if (!userCheckResponse.ok) {
-          // If API endpoint doesn't exist or server error, skip user check
           if (userCheckResponse.status === 404) {
-            console.warn('⚠️ User check API not found, proceeding without user verification');
-            // Continue with submission without user verification
+            // Continue without user verification
           } else {
             throw new Error(`HTTP error! status: ${userCheckResponse.status}`);
           }
         } else {
           const userCheckResult = await userCheckResponse.json();
-          console.log('✅ User check API response:', userCheckResult);
           
           if (!userCheckResult.exists) {
             alert('User account not found. Please login again.');
             localStorage.removeItem('userData');
-            // ✅ REDIRECT to list-your-business when user not found in check
             window.location.href = '/list-your-business';
             return;
           }
         }
       } catch (error) {
-        console.error('❌ Error in user check:', error);
-        console.warn('⚠️ User verification failed, but proceeding with submission...');
         // Don't block submission if user check fails
       }
 
-      // ✅ STEP 2: Prepare form data for submission
       const formDataToSend = new FormData();
 
-      // User information
       formDataToSend.append('userId', userId.toString());
       formDataToSend.append('mobile', mobileNumber);
       formDataToSend.append('businessName', formData.businessName);
 
-      // Category handling
       if (selectedChildCategories.length > 0) {
         const categoryId = selectedChildCategories[0].id.replace('child', '');
         formDataToSend.append('child', categoryId);
-        console.log('🏷️ Selected child category ID:', categoryId);
       } else if (selectedSubCategory) {
         const categoryId = selectedSubCategory.id.replace('sub', '');
         formDataToSend.append('subcategory', categoryId);
-        console.log('🏷️ Selected subcategory ID:', categoryId);
       } else if (selectedMainCategory) {
         const categoryId = selectedMainCategory.id.replace('main', '');
         formDataToSend.append('category', categoryId);
-        console.log('🏷️ Selected main category ID:', categoryId);
       }
 
-      // Address fields
       formDataToSend.append('building_number', formData.buildingNumber.toString());
       formDataToSend.append('building_name', formData.buildingName);
       formDataToSend.append('street', formData.street);
@@ -763,49 +722,29 @@ const BusinessListingForm = () => {
       formDataToSend.append('state', formData.state);
       formDataToSend.append('pinCode', formData.pincode);
 
-      // Location fields
       formDataToSend.append('latitude', formData.latitude?.toString() || '');
       formDataToSend.append('longitude', formData.longitude?.toString() || '');
 
-      // Description and additional fields
       formDataToSend.append('description', formData.businessName || 'Business listing');
       formDataToSend.append('block', formData.village);
       formDataToSend.append('district', formData.city);
       formDataToSend.append('block_name', formData.village);
       formDataToSend.append('district_name', formData.city);
 
-      // ✅ STEP 3: Add images if available - WITH TYPE FIX
       if (formData.images && formData.images.length > 0) {
         formData.images.forEach((image: File) => {
           formDataToSend.append('images[]', image);
         });
-        console.log('📸 Images added:', formData.images.length);
-      } else {
-        console.log('📸 No images to upload');
       }
 
-      // Log form data for debugging
-      console.log('📋 FormData being sent:');
-      for (let [key, value] of formDataToSend.entries()) {
-        console.log(key, ':', value);
-      }
-
-      // ✅ STEP 4: Submit business data
-      console.log('🚀 Submitting business data to:', API_ENDPOINTS2.AUTH.BUSINESS_SUBMISSION);
-      
       const response = await fetch(API_ENDPOINTS2.AUTH.BUSINESS_SUBMISSION, {
         method: 'POST',
         body: formDataToSend,
       });
-
-      console.log('📡 Business submission response status:', response.status);
       
       const result = await response.json();
-      console.log('🔍 Business submission API response:', result);
 
-      // ✅ UPDATED: Check for "User not found" message from PHP backend BEFORE checking response.ok
       if (result.message && result.message.includes('User not found')) {
-        console.log('❌ User not found error from PHP backend');
         alert('User account not found. Please login again.');
         localStorage.removeItem('userData');
         window.location.href = '/list-your-business';
@@ -817,14 +756,9 @@ const BusinessListingForm = () => {
       }
 
       if (result.success) {
-        console.log('✅ Business submission successful!');
         alert('Business listing created successfully!');
-
-        // ✅ STEP 5: Redirect to my-businesses page
-        console.log('🔄 Redirecting to /my-businesses');
         window.location.href = '/my-businesses';
         
-        // ✅ FIXED: Reset form with ALL required properties
         setCurrentStep(1);
         setMobileNumber('');
         setIsMobileVerified(false);
@@ -832,34 +766,10 @@ const BusinessListingForm = () => {
         setSelectedMainCategory(null);
         setSelectedSubCategory(null);
         setSelectedChildCategories([]);
-        
-        // ✅ COMPLETE form reset with ALL required properties
-  setFormData({
-  businessName: '',
-  pincode: '',
-  buildingNumber: '',
-  buildingName: '',
-  street: '',
-  landmark: '',
-  village: '',
-  city: '',
-  state: '',
-  categories: [],
-  selectedCategoryIds: [],
-  selectedMainCategoryId: null,
-  selectedSubCategoryId: null,
-  selectedChildCategoryId: null,
-  latitude: null,
-  longitude: null,
-  address: '',
-  images: []
-});
-
+        setFormData(initialFormData);
         setTouched({});
       } else {
-        // ✅ UPDATED: Also check for "User not found" in success: false case
         if (result.message && result.message.includes('User not found')) {
-          console.log('❌ User not found in business submission result');
           alert('User account not found. Please login again.');
           localStorage.removeItem('userData');
           window.location.href = '/list-your-business';
@@ -869,11 +779,7 @@ const BusinessListingForm = () => {
       }
 
     } catch (error) {
-      console.error('❌ Full error details:', error);
-      
-      // ✅ UPDATED: Check if error contains "User not found" message from PHP
       if (error instanceof Error && error.message.includes('User not found')) {
-        console.log('❌ User not found in catch block');
         alert('User account not found. Please login again.');
         localStorage.removeItem('userData');
         window.location.href = '/list-your-business';
@@ -1728,10 +1634,9 @@ const BusinessListingForm = () => {
                           </div>
                         )}
 
-                        {/* Child Categories View - Subcategory ko bhi dikhao */}
+                        {/* Child Categories View */}
                         {selectedSubCategory && selectedSubCategory.hasChildren && selectedSubCategory.childcategories.length > 0 && (
                           <div className="space-y-4">
-                            {/* Subcategory Header - Visible rahega */}
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                               <div className="flex items-center gap-2 mb-2">
                                 <button
@@ -1754,7 +1659,6 @@ const BusinessListingForm = () => {
                               </p>
                             </div>
 
-                            {/* Child Categories Grid */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
                               {selectedSubCategory.childcategories.map((childCategory) => {
                                 const isSelected = selectedChildCategories.some(child => child.id === childCategory.id);
@@ -1788,7 +1692,6 @@ const BusinessListingForm = () => {
                               })}
                             </div>
 
-                            {/* Selected Category Summary */}
                             {selectedChildCategories.length > 0 && (
                               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                                 <h4 className="font-semibold text-green-800 mb-2">
@@ -1813,7 +1716,6 @@ const BusinessListingForm = () => {
                           </div>
                         )}
 
-                        {/* Direct Subcategory Selection View - when subcategory has NO children */}
                         {selectedSubCategory && (!selectedSubCategory.hasChildren || selectedSubCategory.childcategories.length === 0) && (
                           <div className="space-y-4">
                             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -1845,7 +1747,6 @@ const BusinessListingForm = () => {
                           </div>
                         )}
 
-                        {/* Final Submit Section */}
                         {formData.selectedCategoryIds.length > 0 && (
                           <div className="border-t pt-6 mt-6">
                             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
