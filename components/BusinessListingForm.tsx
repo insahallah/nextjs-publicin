@@ -660,7 +660,6 @@ const BusinessListingForm = () => {
     setCurrentStep(3);
   };
 
-  // UPDATED Final API Submission - FormData use karein
 // UPDATED Final API Submission - FormData use karein
 const handleFinalSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -787,7 +786,7 @@ const handleFinalSubmit = async (e: React.FormEvent) => {
     formDataToSend.append('block_name', formData.village);
     formDataToSend.append('district_name', formData.city);
 
-    // ✅ STEP 3: Add images if available
+    // ✅ STEP 3: Add images if available - WITH TYPE FIX
     if (formData.images && formData.images.length > 0) {
       formData.images.forEach((image: File) => {
         formDataToSend.append('images[]', image);
@@ -860,7 +859,7 @@ const handleFinalSubmit = async (e: React.FormEvent) => {
         latitude: null,
         longitude: null,
         address: '',
-        images: []
+        images: [] // ✅ Yahaan bhi images ko reset karo
       });
       setTouched({});
     } else {
