@@ -21,6 +21,7 @@ interface BusinessFormData {
   latitude: number | null;
   longitude: number | null;
   address: string;
+  images: File[];
 }
 
 interface LocationData {
@@ -117,7 +118,8 @@ const BusinessListingForm = () => {
     selectedChildCategoryId: null,
     latitude: null,
     longitude: null,
-    address: ''
+    address: '',
+    images: []
   });
 
   const [errors, setErrors] = useState<Partial<BusinessFormData>>({});
