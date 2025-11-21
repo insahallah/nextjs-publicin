@@ -156,6 +156,7 @@ const BusinessListingForm = () => {
       }
     } catch (error) {
       setCategories([]);
+      // optional: console.error('fetchCategories error', error);
     } finally {
       setIsLoadingCategories(false);
     }
@@ -166,11 +167,11 @@ const BusinessListingForm = () => {
     checkAuthStatus();
 
     const handleUserLoggedIn = (event: CustomEvent) => {
-      const userData = event.detail.user;
+      const userData = (event as CustomEvent).detail.user;
       setIsLoggedIn(true);
       setUser(userData);
 
-      if (userData.mobile) {
+      if (userData?.mobile) {
         setMobileNumber(userData.mobile);
         setIsMobileVerified(true);
         setCurrentStep(2);
@@ -178,11 +179,11 @@ const BusinessListingForm = () => {
     };
 
     const handleUserSignedUp = (event: CustomEvent) => {
-      const userData = event.detail.user;
+      const userData = (event as CustomEvent).detail.user;
       setIsLoggedIn(true);
       setUser(userData);
 
-      if (userData.mobile) {
+      if (userData?.mobile) {
         setMobileNumber(userData.mobile);
         setIsMobileVerified(true);
         setCurrentStep(2);
@@ -196,6 +197,7 @@ const BusinessListingForm = () => {
       window.removeEventListener('userLoggedIn', handleUserLoggedIn as EventListener);
       window.removeEventListener('userSignedUp', handleUserSignedUp as EventListener);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load categories when reaching step 3
@@ -260,13 +262,13 @@ const BusinessListingForm = () => {
     setIsLoggingIn(true);
 
     try {
-      const formData = new FormData();
-      formData.append('mobile', mobileNumber);
-      formData.append('password', password);
+      const fd = new FormData();
+      fd.append('mobile', mobileNumber);
+      fd.append('password', password);
 
       const response = await fetch(`${API_ENDPOINTS2.AUTH.LOGIN}`, {
         method: 'POST',
-        body: formData,
+        body: fd,
       });
 
       const result = await response.json();
@@ -330,6 +332,7 @@ const BusinessListingForm = () => {
     if (currentStep === 2 && isMobileVerified) {
       getCurrentLocation();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, isMobileVerified]);
 
   // Get user location automatically
@@ -528,10 +531,10 @@ const BusinessListingForm = () => {
 
     if (name === 'pincode') {
       if (value.length <= 6 && /^\d*$/.test(value)) {
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData(prev => ({ ...prev, [name]: value } as BusinessFormData));
       }
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      setFormData(prev => ({ ...prev, [name]: value } as BusinessFormData));
     }
 
     if (touched[name as keyof BusinessFormData]) {
@@ -612,7 +615,7 @@ const BusinessListingForm = () => {
       validateField(field, stringValue);
     });
 
-    const hasErrors = Object.values(errors).some(error => error);
+    const hasErrors = Object.values(errors).some(error => !!error);
     const allFieldsFilled = requiredFields.every(field => {
       const value = formData[field];
       return typeof value === 'string' ? value.trim() !== '' : false;
@@ -668,14 +671,14 @@ const BusinessListingForm = () => {
     try {
       try {
         const userCheckUrl = `/api/check-user?id=${userId}`;
-        
+
         const userCheckResponse = await fetch(userCheckUrl, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
           },
         });
-        
+
         if (!userCheckResponse.ok) {
           if (userCheckResponse.status === 404) {
             // Continue without user verification
@@ -684,7 +687,7 @@ const BusinessListingForm = () => {
           }
         } else {
           const userCheckResult = await userCheckResponse.json();
-          
+
           if (!userCheckResult.exists) {
             alert('User account not found. Please login again.');
             localStorage.removeItem('userData');
@@ -741,7 +744,7 @@ const BusinessListingForm = () => {
         method: 'POST',
         body: formDataToSend,
       });
-      
+
       const result = await response.json();
 
       if (result.message && result.message.includes('User not found')) {
@@ -758,7 +761,7 @@ const BusinessListingForm = () => {
       if (result.success) {
         alert('Business listing created successfully!');
         window.location.href = '/my-businesses';
-        
+
         setCurrentStep(1);
         setMobileNumber('');
         setIsMobileVerified(false);
@@ -766,6 +769,7 @@ const BusinessListingForm = () => {
         setSelectedMainCategory(null);
         setSelectedSubCategory(null);
         setSelectedChildCategories([]);
+        // Reset using initialFormData (TypeScript-safe)
         setFormData(initialFormData);
         setTouched({});
       } else {
@@ -785,13 +789,12 @@ const BusinessListingForm = () => {
         window.location.href = '/list-your-business';
         return;
       }
-      
+
       alert(error instanceof Error ? error.message : 'Error creating business listing. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
-
   // Navigation between steps
   const goToStep = (step: number) => {
     if (step === 2 && !isMobileVerified) {
