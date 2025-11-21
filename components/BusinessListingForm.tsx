@@ -834,26 +834,27 @@ const BusinessListingForm = () => {
         setSelectedChildCategories([]);
         
         // ✅ COMPLETE form reset with ALL required properties
-        setFormData({
-          businessName: '',
-          pincode: '',
-          buildingNumber: '',
-          buildingName: '',
-          street: '',
-          landmark: '',
-          village: '',
-          city: '',
-          state: '',
-          categories: [],
-          selectedCategoryIds: [],
-          selectedMainCategoryId: null,
-          selectedSubCategoryId: null,
-          selectedChildCategoryId: null,
-          latitude: null,
-          longitude: null,
-          address: '',
-          images: []
-        });
+  setFormData({
+  businessName: '',
+  pincode: '',
+  buildingNumber: '',
+  buildingName: '',
+  street: '',
+  landmark: '',
+  village: '',
+  city: '',
+  state: '',
+  categories: [],
+  selectedCategoryIds: [],
+  selectedMainCategoryId: null,
+  selectedSubCategoryId: null,
+  selectedChildCategoryId: null,
+  latitude: null,
+  longitude: null,
+  address: '',
+  images: []
+});
+
         setTouched({});
       } else {
         // ✅ UPDATED: Also check for "User not found" in success: false case
