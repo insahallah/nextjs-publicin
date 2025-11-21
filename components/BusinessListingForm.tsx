@@ -832,6 +832,8 @@ const BusinessListingForm = () => {
         setSelectedMainCategory(null);
         setSelectedSubCategory(null);
         setSelectedChildCategories([]);
+        
+        // ✅ COMPLETE form reset with ALL required properties
         setFormData({
           businessName: '',
           pincode: '',
