@@ -636,240 +636,253 @@ const BusinessListingForm = () => {
     return !hasErrors && allFieldsFilled;
   };
 
-// UPDATED Final API Submission - FormData use karein
-const handleFinalSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-
-  // Get user data from localStorage
-  const userData = localStorage.getItem('userData');
-  const user = userData ? JSON.parse(userData) : null;
-
-  // Check if user is logged in
-  if (!user?.id) {
-    alert('User not logged in. Please login to continue.');
-    window.location.href = '/list-your-business';
-    return;
-  }
-
-  const userId = user.id;
-  console.log('👤 User ID from localStorage:', userId);
-
-  // Validate categories
-  if (formData.selectedCategoryIds.length === 0) {
-    alert('Please select at least one category');
-    return;
-  }
-
-  // Validate location
-  if (!location) {
-    alert('Location access is required to complete registration.');
-    return;
-  }
-
-  // Validate required fields
-  if (!formData.businessName || !formData.pincode || !formData.city || !formData.state) {
-    alert('Please fill all required fields');
-    return;
-  }
-
-  setIsLoading(true);
-
-  try {
-    // ✅ STEP 1: First verify user exists in database - WITH IMPROVED ERROR HANDLING
-    console.log('🔍 Starting user verification for ID:', userId);
-    
-    try {
-      // Use absolute URL to avoid path issues
-      const userCheckUrl = `/api/check-user?id=${userId}`;
-      console.log('🌐 Calling user check API:', userCheckUrl);
-      
-      const userCheckResponse = await fetch(userCheckUrl, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      console.log('📡 User check response status:', userCheckResponse.status);
-      
-      if (!userCheckResponse.ok) {
-        // If API endpoint doesn't exist or server error, skip user check
-        if (userCheckResponse.status === 404) {
-          console.warn('⚠️ User check API not found, proceeding without user verification');
-          // Continue with submission without user verification
-        } else {
-          throw new Error(`HTTP error! status: ${userCheckResponse.status}`);
-        }
-      } else {
-        const userCheckResult = await userCheckResponse.json();
-        console.log('✅ User check API response:', userCheckResult);
-        
-        if (!userCheckResult.exists) {
-          alert('User account not found. Please login again.');
-          localStorage.removeItem('userData');
-          // ✅ REDIRECT to list-your-business when user not found in check
-          window.location.href = '/list-your-business';
-          return;
-        }
-      }
-    } catch (error) {
-      console.error('❌ Error in user check:', error);
-      console.warn('⚠️ User verification failed, but proceeding with submission...');
-      // Don't block submission if user check fails
-    }
-
-    // ✅ STEP 2: Prepare form data for submission
-    const formDataToSend = new FormData();
-
-    // User information
-    formDataToSend.append('userId', userId.toString());
-    formDataToSend.append('mobile', mobileNumber);
-    formDataToSend.append('businessName', formData.businessName);
-
-    // Category handling
-    if (selectedChildCategories.length > 0) {
-      const categoryId = selectedChildCategories[0].id.replace('child', '');
-      formDataToSend.append('child', categoryId);
-      console.log('🏷️ Selected child category ID:', categoryId);
-    } else if (selectedSubCategory) {
-      const categoryId = selectedSubCategory.id.replace('sub', '');
-      formDataToSend.append('subcategory', categoryId);
-      console.log('🏷️ Selected subcategory ID:', categoryId);
-    } else if (selectedMainCategory) {
-      const categoryId = selectedMainCategory.id.replace('main', '');
-      formDataToSend.append('category', categoryId);
-      console.log('🏷️ Selected main category ID:', categoryId);
-    }
-
-    // Address fields
-    formDataToSend.append('building_number', formData.buildingNumber.toString());
-    formDataToSend.append('building_name', formData.buildingName);
-    formDataToSend.append('street', formData.street);
-    formDataToSend.append('landmark', formData.landmark);
-    formDataToSend.append('village', formData.village);
-    formDataToSend.append('city', formData.city);
-    formDataToSend.append('state', formData.state);
-    formDataToSend.append('pinCode', formData.pincode);
-
-    // Location fields
-    formDataToSend.append('latitude', formData.latitude?.toString() || '');
-    formDataToSend.append('longitude', formData.longitude?.toString() || '');
-
-    // Description and additional fields
-    formDataToSend.append('description', formData.businessName || 'Business listing');
-    formDataToSend.append('block', formData.village);
-    formDataToSend.append('district', formData.city);
-    formDataToSend.append('block_name', formData.village);
-    formDataToSend.append('district_name', formData.city);
-
-    // ✅ STEP 3: Add images if available - WITH TYPE FIX
-    if (formData.images && formData.images.length > 0) {
-      formData.images.forEach((image: File) => {
-        formDataToSend.append('images[]', image);
-      });
-      console.log('📸 Images added:', formData.images.length);
+  // Step 2 form submission
+  const handleStep2Submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateStep2() && location) {
+      setCurrentStep(3);
+    } else if (!location) {
+      alert('Please allow location access to continue');
     } else {
-      console.log('📸 No images to upload');
+      alert('Please fill all required fields correctly');
     }
+  };
 
-    // Log form data for debugging
-    console.log('📋 FormData being sent:');
-    for (let [key, value] of formDataToSend.entries()) {
-      console.log(key, ':', value);
-    }
+  // UPDATED Final API Submission - FormData use karein
+  const handleFinalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-    // ✅ STEP 4: Submit business data
-    console.log('🚀 Submitting business data to:', API_ENDPOINTS2.AUTH.BUSINESS_SUBMISSION);
-    
-    const response = await fetch(API_ENDPOINTS2.AUTH.BUSINESS_SUBMISSION, {
-      method: 'POST',
-      body: formDataToSend,
-    });
+    // Get user data from localStorage
+    const userData = localStorage.getItem('userData');
+    const user = userData ? JSON.parse(userData) : null;
 
-    console.log('📡 Business submission response status:', response.status);
-    
-    const result = await response.json();
-    console.log('🔍 Business submission API response:', result);
-
-    // ✅ UPDATED: Check for "User not found" message from PHP backend BEFORE checking response.ok
-    if (result.message && result.message.includes('User not found')) {
-      console.log('❌ User not found error from PHP backend');
-      alert('User account not found. Please login again.');
-      localStorage.removeItem('userData');
+    // Check if user is logged in
+    if (!user?.id) {
+      alert('User not logged in. Please login to continue.');
       window.location.href = '/list-your-business';
       return;
     }
 
-    if (!response.ok) {
-      throw new Error(result.message || `HTTP error! status: ${response.status}`);
+    const userId = user.id;
+    console.log('👤 User ID from localStorage:', userId);
+
+    // Validate categories
+    if (formData.selectedCategoryIds.length === 0) {
+      alert('Please select at least one category');
+      return;
     }
 
-    if (result.success) {
-      console.log('✅ Business submission successful!');
-      alert('Business listing created successfully!');
+    // Validate location
+    if (!location) {
+      alert('Location access is required to complete registration.');
+      return;
+    }
 
-      // ✅ STEP 5: Redirect to my-businesses page
-      console.log('🔄 Redirecting to /my-businesses');
-      window.location.href = '/my-businesses';
+    // Validate required fields
+    if (!formData.businessName || !formData.pincode || !formData.city || !formData.state) {
+      alert('Please fill all required fields');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // ✅ STEP 1: First verify user exists in database - WITH IMPROVED ERROR HANDLING
+      console.log('🔍 Starting user verification for ID:', userId);
       
-      // ✅ FIXED: Reset form with ALL required properties
-      setCurrentStep(1);
-      setMobileNumber('');
-      setIsMobileVerified(false);
-      setLocation(null);
-      setSelectedMainCategory(null);
-      setSelectedSubCategory(null);
-      setSelectedChildCategories([]);
-      setFormData({
-        businessName: '',
-        pincode: '',
-        buildingNumber: '',
-        buildingName: '',
-        street: '',
-        landmark: '',
-        village: '',
-        city: '',
-        state: '',
-        categories: [],
-        selectedCategoryIds: [],
-        selectedMainCategoryId: null,
-        selectedSubCategoryId: null,
-        selectedChildCategoryId: null,
-        latitude: null,
-        longitude: null,
-        address: '',
-        images: []
+      try {
+        // Use absolute URL to avoid path issues
+        const userCheckUrl = `/api/check-user?id=${userId}`;
+        console.log('🌐 Calling user check API:', userCheckUrl);
+        
+        const userCheckResponse = await fetch(userCheckUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        console.log('📡 User check response status:', userCheckResponse.status);
+        
+        if (!userCheckResponse.ok) {
+          // If API endpoint doesn't exist or server error, skip user check
+          if (userCheckResponse.status === 404) {
+            console.warn('⚠️ User check API not found, proceeding without user verification');
+            // Continue with submission without user verification
+          } else {
+            throw new Error(`HTTP error! status: ${userCheckResponse.status}`);
+          }
+        } else {
+          const userCheckResult = await userCheckResponse.json();
+          console.log('✅ User check API response:', userCheckResult);
+          
+          if (!userCheckResult.exists) {
+            alert('User account not found. Please login again.');
+            localStorage.removeItem('userData');
+            // ✅ REDIRECT to list-your-business when user not found in check
+            window.location.href = '/list-your-business';
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error in user check:', error);
+        console.warn('⚠️ User verification failed, but proceeding with submission...');
+        // Don't block submission if user check fails
+      }
+
+      // ✅ STEP 2: Prepare form data for submission
+      const formDataToSend = new FormData();
+
+      // User information
+      formDataToSend.append('userId', userId.toString());
+      formDataToSend.append('mobile', mobileNumber);
+      formDataToSend.append('businessName', formData.businessName);
+
+      // Category handling
+      if (selectedChildCategories.length > 0) {
+        const categoryId = selectedChildCategories[0].id.replace('child', '');
+        formDataToSend.append('child', categoryId);
+        console.log('🏷️ Selected child category ID:', categoryId);
+      } else if (selectedSubCategory) {
+        const categoryId = selectedSubCategory.id.replace('sub', '');
+        formDataToSend.append('subcategory', categoryId);
+        console.log('🏷️ Selected subcategory ID:', categoryId);
+      } else if (selectedMainCategory) {
+        const categoryId = selectedMainCategory.id.replace('main', '');
+        formDataToSend.append('category', categoryId);
+        console.log('🏷️ Selected main category ID:', categoryId);
+      }
+
+      // Address fields
+      formDataToSend.append('building_number', formData.buildingNumber.toString());
+      formDataToSend.append('building_name', formData.buildingName);
+      formDataToSend.append('street', formData.street);
+      formDataToSend.append('landmark', formData.landmark);
+      formDataToSend.append('village', formData.village);
+      formDataToSend.append('city', formData.city);
+      formDataToSend.append('state', formData.state);
+      formDataToSend.append('pinCode', formData.pincode);
+
+      // Location fields
+      formDataToSend.append('latitude', formData.latitude?.toString() || '');
+      formDataToSend.append('longitude', formData.longitude?.toString() || '');
+
+      // Description and additional fields
+      formDataToSend.append('description', formData.businessName || 'Business listing');
+      formDataToSend.append('block', formData.village);
+      formDataToSend.append('district', formData.city);
+      formDataToSend.append('block_name', formData.village);
+      formDataToSend.append('district_name', formData.city);
+
+      // ✅ STEP 3: Add images if available - WITH TYPE FIX
+      if (formData.images && formData.images.length > 0) {
+        formData.images.forEach((image: File) => {
+          formDataToSend.append('images[]', image);
+        });
+        console.log('📸 Images added:', formData.images.length);
+      } else {
+        console.log('📸 No images to upload');
+      }
+
+      // Log form data for debugging
+      console.log('📋 FormData being sent:');
+      for (let [key, value] of formDataToSend.entries()) {
+        console.log(key, ':', value);
+      }
+
+      // ✅ STEP 4: Submit business data
+      console.log('🚀 Submitting business data to:', API_ENDPOINTS2.AUTH.BUSINESS_SUBMISSION);
+      
+      const response = await fetch(API_ENDPOINTS2.AUTH.BUSINESS_SUBMISSION, {
+        method: 'POST',
+        body: formDataToSend,
       });
-      setTouched({});
-    } else {
-      // ✅ UPDATED: Also check for "User not found" in success: false case
+
+      console.log('📡 Business submission response status:', response.status);
+      
+      const result = await response.json();
+      console.log('🔍 Business submission API response:', result);
+
+      // ✅ UPDATED: Check for "User not found" message from PHP backend BEFORE checking response.ok
       if (result.message && result.message.includes('User not found')) {
-        console.log('❌ User not found in business submission result');
+        console.log('❌ User not found error from PHP backend');
         alert('User account not found. Please login again.');
         localStorage.removeItem('userData');
         window.location.href = '/list-your-business';
         return;
       }
-      throw new Error(result.message || 'Business listing creation failed');
-    }
 
-  } catch (error) {
-    console.error('❌ Full error details:', error);
-    
-    // ✅ UPDATED: Check if error contains "User not found" message from PHP
-    if (error instanceof Error && error.message.includes('User not found')) {
-      console.log('❌ User not found in catch block');
-      alert('User account not found. Please login again.');
-      localStorage.removeItem('userData');
-      window.location.href = '/list-your-business';
-      return;
+      if (!response.ok) {
+        throw new Error(result.message || `HTTP error! status: ${response.status}`);
+      }
+
+      if (result.success) {
+        console.log('✅ Business submission successful!');
+        alert('Business listing created successfully!');
+
+        // ✅ STEP 5: Redirect to my-businesses page
+        console.log('🔄 Redirecting to /my-businesses');
+        window.location.href = '/my-businesses';
+        
+        // ✅ FIXED: Reset form with ALL required properties
+        setCurrentStep(1);
+        setMobileNumber('');
+        setIsMobileVerified(false);
+        setLocation(null);
+        setSelectedMainCategory(null);
+        setSelectedSubCategory(null);
+        setSelectedChildCategories([]);
+        setFormData({
+          businessName: '',
+          pincode: '',
+          buildingNumber: '',
+          buildingName: '',
+          street: '',
+          landmark: '',
+          village: '',
+          city: '',
+          state: '',
+          categories: [],
+          selectedCategoryIds: [],
+          selectedMainCategoryId: null,
+          selectedSubCategoryId: null,
+          selectedChildCategoryId: null,
+          latitude: null,
+          longitude: null,
+          address: '',
+          images: []
+        });
+        setTouched({});
+      } else {
+        // ✅ UPDATED: Also check for "User not found" in success: false case
+        if (result.message && result.message.includes('User not found')) {
+          console.log('❌ User not found in business submission result');
+          alert('User account not found. Please login again.');
+          localStorage.removeItem('userData');
+          window.location.href = '/list-your-business';
+          return;
+        }
+        throw new Error(result.message || 'Business listing creation failed');
+      }
+
+    } catch (error) {
+      console.error('❌ Full error details:', error);
+      
+      // ✅ UPDATED: Check if error contains "User not found" message from PHP
+      if (error instanceof Error && error.message.includes('User not found')) {
+        console.log('❌ User not found in catch block');
+        alert('User account not found. Please login again.');
+        localStorage.removeItem('userData');
+        window.location.href = '/list-your-business';
+        return;
+      }
+      
+      alert(error instanceof Error ? error.message : 'Error creating business listing. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-    
-    alert(error instanceof Error ? error.message : 'Error creating business listing. Please try again.');
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
+
   // Navigation between steps
   const goToStep = (step: number) => {
     if (step === 2 && !isMobileVerified) {
