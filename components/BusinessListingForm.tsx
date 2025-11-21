@@ -15,6 +15,9 @@ interface BusinessFormData {
   state: string;
   categories: string[];
   selectedCategoryIds: string[];
+  selectedMainCategoryId: string | null;
+  selectedSubCategoryId: string | null;
+  selectedChildCategoryId: string | null;
   latitude: number | null;
   longitude: number | null;
   address: string;
@@ -78,7 +81,7 @@ const BusinessListingForm = () => {
   const [locationError, setLocationError] = useState("");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
+
   // Login state management
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<UserData | null>(null);
@@ -109,6 +112,9 @@ const BusinessListingForm = () => {
     state: '',
     categories: [],
     selectedCategoryIds: [],
+    selectedMainCategoryId: null,
+    selectedSubCategoryId: null,
+    selectedChildCategoryId: null,
     latitude: null,
     longitude: null,
     address: ''
@@ -123,16 +129,16 @@ const BusinessListingForm = () => {
     setIsLoadingCategories(true);
     try {
       console.log('Fetching categories from:', `${API_ENDPOINTS2.AUTH.MAIN_SEARCH}?lang=en`);
-      
+
       const response = await fetch(`${API_ENDPOINTS2.AUTH.MAIN_SEARCH}?lang=en`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const result = await response.json();
       console.log('API Response:', result);
-      
+
       if (result.status === 'success') {
         if (result.data && Array.isArray(result.data.categories)) {
           setCategories(result.data.categories);
@@ -162,12 +168,12 @@ const BusinessListingForm = () => {
   // Check authentication status on component mount
   useEffect(() => {
     checkAuthStatus();
-    
+
     const handleUserLoggedIn = (event: CustomEvent) => {
       const userData = event.detail.user;
       setIsLoggedIn(true);
       setUser(userData);
-      
+
       if (userData.mobile) {
         setMobileNumber(userData.mobile);
         setIsMobileVerified(true);
@@ -179,7 +185,7 @@ const BusinessListingForm = () => {
       const userData = event.detail.user;
       setIsLoggedIn(true);
       setUser(userData);
-      
+
       if (userData.mobile) {
         setMobileNumber(userData.mobile);
         setIsMobileVerified(true);
@@ -212,7 +218,7 @@ const BusinessListingForm = () => {
       if (token && userData) {
         setIsLoggedIn(true);
         setUser(JSON.parse(userData));
-        
+
         const userObj = JSON.parse(userData);
         if (userObj.mobile) {
           setMobileNumber(userObj.mobile);
@@ -250,7 +256,7 @@ const BusinessListingForm = () => {
   // Login function
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!password.trim()) {
       alert('Please enter your password');
       return;
@@ -283,7 +289,7 @@ const BusinessListingForm = () => {
           profile_image: result.profile_image,
           pin: result.pin
         }));
-        
+
         setIsLoggedIn(true);
         setUser({
           id: result.id,
@@ -350,7 +356,7 @@ const BusinessListingForm = () => {
         };
         setLocation(newLocation);
         setIsGettingLocation(false);
-        
+
         setFormData(prev => ({
           ...prev,
           latitude: newLocation.latitude,
@@ -361,7 +367,7 @@ const BusinessListingForm = () => {
       (err) => {
         setLocationError(err.message);
         setIsGettingLocation(false);
-        
+
         switch (err.code) {
           case err.PERMISSION_DENIED:
             setLocationError("Location access denied. Please allow location access to continue.");
@@ -393,7 +399,7 @@ const BusinessListingForm = () => {
   // Mobile Number Verification with Password Login
   const handleMobileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!mobileNumber.trim() || mobileNumber.length !== 10) {
       alert('Please enter a valid 10-digit mobile number');
       return;
@@ -408,7 +414,7 @@ const BusinessListingForm = () => {
 
       if (token && userData) {
         const currentUser = JSON.parse(userData);
-        
+
         if (currentUser.mobile === mobileNumber) {
           setIsLoggedIn(true);
           setUser(currentUser);
@@ -423,18 +429,18 @@ const BusinessListingForm = () => {
       }
 
       const apiResponse = await checkMobileNumberExists(mobileNumber);
-      
+
       if (apiResponse.exists) {
         setShowPasswordField(true);
         setMobileCheckMessage('✅ Mobile number found. Please enter your password to login.');
       } else {
         setMobileCheckMessage('📝 New mobile number. Please sign up to continue.');
-        
+
         setTimeout(() => {
           openSignupModal();
         }, 1000);
       }
-      
+
     } catch (error) {
       console.error('Error checking mobile number:', error);
       setMobileCheckMessage('❌ Error verifying mobile number. Please try again.');
@@ -443,15 +449,25 @@ const BusinessListingForm = () => {
     }
   };
 
-  // Category Selection Functions
+  // UPDATED Category Selection Functions
   const handleMainCategorySelect = (category: Category) => {
     setSelectedMainCategory(category);
     setSelectedSubCategory(null);
     setSelectedChildCategories([]);
+
+    // Only main category select - clear others
+    setFormData(prev => ({
+      ...prev,
+      categories: [category.label],
+      selectedCategoryIds: [category.id],
+      selectedMainCategoryId: category.id,
+      selectedSubCategoryId: null,
+      selectedChildCategoryId: null
+    }));
   };
 
   const handleSubCategorySelect = (subCategory: SubCategory) => {
-    // Agar subcategory ke child categories hain to subcategory hide karo aur directly child categories dikhao
+    // Agar subcategory ke child categories hain
     if (subCategory.hasChildren && subCategory.childcategories.length > 0) {
       setSelectedSubCategory(subCategory);
       setSelectedChildCategories([]);
@@ -459,7 +475,9 @@ const BusinessListingForm = () => {
       setFormData(prev => ({
         ...prev,
         categories: [],
-        selectedCategoryIds: []
+        selectedCategoryIds: [],
+        selectedSubCategoryId: subCategory.id,
+        selectedChildCategoryId: null
       }));
     } else {
       // Agar koi child category nahi hai to direct subcategory select karo
@@ -468,7 +486,10 @@ const BusinessListingForm = () => {
       setFormData(prev => ({
         ...prev,
         categories: [subCategory.label],
-        selectedCategoryIds: [subCategory.id]
+        selectedCategoryIds: [subCategory.id],
+        selectedSubCategoryId: subCategory.id,
+        selectedChildCategoryId: null,
+        selectedMainCategoryId: null // Remove main category
       }));
     }
   };
@@ -476,12 +497,15 @@ const BusinessListingForm = () => {
   const handleChildCategorySelect = (childCategory: ChildCategory) => {
     // Single selection - sirf ek hi child category select ho sakti hai
     setSelectedChildCategories([childCategory]);
-    
-    // Form data update karo
+
+    // Form data update karo - only child category, remove main and sub
     setFormData(prev => ({
       ...prev,
       categories: [childCategory.label],
-      selectedCategoryIds: [childCategory.id]
+      selectedCategoryIds: [childCategory.id],
+      selectedChildCategoryId: childCategory.id,
+      selectedMainCategoryId: null, // Remove main category
+      selectedSubCategoryId: null // Remove sub category
     }));
   };
 
@@ -489,31 +513,32 @@ const BusinessListingForm = () => {
     setSelectedMainCategory(null);
     setSelectedSubCategory(null);
     setSelectedChildCategories([]);
+    setFormData(prev => ({
+      ...prev,
+      categories: [],
+      selectedCategoryIds: [],
+      selectedMainCategoryId: null,
+      selectedSubCategoryId: null,
+      selectedChildCategoryId: null
+    }));
   };
 
   const handleBackToSubCategories = () => {
     setSelectedSubCategory(null);
     setSelectedChildCategories([]);
+    setFormData(prev => ({
+      ...prev,
+      categories: [],
+      selectedCategoryIds: [],
+      selectedSubCategoryId: null,
+      selectedChildCategoryId: null
+    }));
   };
-
-  // Auto-select when child categories are chosen
-  useEffect(() => {
-    if (selectedChildCategories.length > 0) {
-      const selectedLabels = selectedChildCategories.map(child => child.label);
-      const selectedIds = selectedChildCategories.map(child => child.id);
-
-      setFormData(prev => ({
-        ...prev,
-        categories: selectedLabels,
-        selectedCategoryIds: selectedIds
-      }));
-    }
-  }, [selectedChildCategories]);
 
   // Business Details Validation
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    
+
     if (name === 'pincode') {
       if (value.length <= 6 && /^\d*$/.test(value)) {
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -521,7 +546,7 @@ const BusinessListingForm = () => {
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
-    
+
     if (touched[name as keyof BusinessFormData]) {
       validateField(name as keyof BusinessFormData, value);
     }
@@ -536,45 +561,45 @@ const BusinessListingForm = () => {
   const validateField = (name: keyof BusinessFormData, value: string | number | string[] | null) => {
     let error = '';
 
-    const stringValue = typeof value === 'string' ? value : 
-                       Array.isArray(value) ? '' : 
-                       value === null ? '' : String(value);
+    const stringValue = typeof value === 'string' ? value :
+      Array.isArray(value) ? '' :
+        value === null ? '' : String(value);
 
     switch (name) {
       case 'businessName':
         if (!stringValue.trim()) error = 'Business name is required';
         else if (stringValue.trim().length < 2) error = 'Business name must be at least 2 characters';
         break;
-      
+
       case 'pincode':
         if (!stringValue.trim()) error = 'Pincode is required';
         else if (!/^\d{6}$/.test(stringValue)) error = 'Pincode must be exactly 6 digits';
         break;
-      
+
       case 'buildingNumber':
         if (!stringValue.trim()) error = 'Building number is required';
         break;
-      
+
       case 'buildingName':
         if (!stringValue.trim()) error = 'Building name is required';
         break;
-      
+
       case 'street':
         if (!stringValue.trim()) error = 'Street name is required';
         break;
-      
+
       case 'landmark':
         if (!stringValue.trim()) error = 'Landmark is required';
         break;
-      
+
       case 'village':
         if (!stringValue.trim()) error = 'Village is required';
         break;
-      
+
       case 'city':
         if (!stringValue.trim()) error = 'City is required';
         break;
-      
+
       case 'state':
         if (!stringValue.trim()) error = 'State is required';
         break;
@@ -588,15 +613,15 @@ const BusinessListingForm = () => {
 
   const validateStep2 = (): boolean => {
     const requiredFields: (keyof BusinessFormData)[] = [
-      'businessName', 'pincode', 'buildingNumber', 'buildingName', 
+      'businessName', 'pincode', 'buildingNumber', 'buildingName',
       'street', 'landmark', 'village', 'city', 'state'
     ];
 
     requiredFields.forEach(field => {
       const value = formData[field];
-      const stringValue = typeof value === 'string' ? value : 
-                         Array.isArray(value) ? '' : 
-                         value === null ? '' : String(value);
+      const stringValue = typeof value === 'string' ? value :
+        Array.isArray(value) ? '' :
+          value === null ? '' : String(value);
       validateField(field, stringValue);
     });
 
@@ -611,7 +636,7 @@ const BusinessListingForm = () => {
 
   const handleStep2Submit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!location) {
       alert('Location access is required to register your business. Please allow location access and try again.');
       return;
@@ -621,7 +646,7 @@ const BusinessListingForm = () => {
       acc[key as keyof BusinessFormData] = true;
       return acc;
     }, {} as Record<keyof BusinessFormData, boolean>);
-    
+
     setTouched(allTouched);
 
     if (!validateStep2()) {
@@ -633,141 +658,238 @@ const BusinessListingForm = () => {
     setCurrentStep(3);
   };
 
-  // Final API Submission
-  const handleFinalSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // UPDATED Final API Submission - FormData use karein
+// UPDATED Final API Submission - FormData use karein
+const handleFinalSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  // Get user data from localStorage
+  const userData = localStorage.getItem('userData');
+  const user = userData ? JSON.parse(userData) : null;
+
+  // Check if user is logged in
+  if (!user?.id) {
+    alert('User not logged in. Please login to continue.');
+    window.location.href = '/list-your-business';
+    return;
+  }
+
+  const userId = user.id;
+  console.log('👤 User ID from localStorage:', userId);
+
+  // Validate categories
+  if (formData.selectedCategoryIds.length === 0) {
+    alert('Please select at least one category');
+    return;
+  }
+
+  // Validate location
+  if (!location) {
+    alert('Location access is required to complete registration.');
+    return;
+  }
+
+  // Validate required fields
+  if (!formData.businessName || !formData.pincode || !formData.city || !formData.state) {
+    alert('Please fill all required fields');
+    return;
+  }
+
+  setIsLoading(true);
+
+  try {
+    // ✅ STEP 1: First verify user exists in database - WITH IMPROVED ERROR HANDLING
+    console.log('🔍 Starting user verification for ID:', userId);
     
-    // User ID check - agar empty hai to redirect karein
-    const userData = localStorage.getItem('userData');
-    const user = userData ? JSON.parse(userData) : null;
+    try {
+      // Use absolute URL to avoid path issues
+      const userCheckUrl = `/api/check-user?id=${userId}`;
+      console.log('🌐 Calling user check API:', userCheckUrl);
+      
+      const userCheckResponse = await fetch(userCheckUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('📡 User check response status:', userCheckResponse.status);
+      
+      if (!userCheckResponse.ok) {
+        // If API endpoint doesn't exist or server error, skip user check
+        if (userCheckResponse.status === 404) {
+          console.warn('⚠️ User check API not found, proceeding without user verification');
+          // Continue with submission without user verification
+        } else {
+          throw new Error(`HTTP error! status: ${userCheckResponse.status}`);
+        }
+      } else {
+        const userCheckResult = await userCheckResponse.json();
+        console.log('✅ User check API response:', userCheckResult);
+        
+        if (!userCheckResult.exists) {
+          alert('User account not found. Please login again.');
+          localStorage.removeItem('userData');
+          // ✅ REDIRECT to list-your-business when user not found in check
+          window.location.href = '/list-your-business';
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error in user check:', error);
+      console.warn('⚠️ User verification failed, but proceeding with submission...');
+      // Don't block submission if user check fails
+    }
+
+    // ✅ STEP 2: Prepare form data for submission
+    const formDataToSend = new FormData();
+
+    // User information
+    formDataToSend.append('userId', userId.toString());
+    formDataToSend.append('mobile', mobileNumber);
+    formDataToSend.append('businessName', formData.businessName);
+
+    // Category handling
+    if (selectedChildCategories.length > 0) {
+      const categoryId = selectedChildCategories[0].id.replace('child', '');
+      formDataToSend.append('child', categoryId);
+      console.log('🏷️ Selected child category ID:', categoryId);
+    } else if (selectedSubCategory) {
+      const categoryId = selectedSubCategory.id.replace('sub', '');
+      formDataToSend.append('subcategory', categoryId);
+      console.log('🏷️ Selected subcategory ID:', categoryId);
+    } else if (selectedMainCategory) {
+      const categoryId = selectedMainCategory.id.replace('main', '');
+      formDataToSend.append('category', categoryId);
+      console.log('🏷️ Selected main category ID:', categoryId);
+    }
+
+    // Address fields
+    formDataToSend.append('building_number', formData.buildingNumber.toString());
+    formDataToSend.append('building_name', formData.buildingName);
+    formDataToSend.append('street', formData.street);
+    formDataToSend.append('landmark', formData.landmark);
+    formDataToSend.append('village', formData.village);
+    formDataToSend.append('city', formData.city);
+    formDataToSend.append('state', formData.state);
+    formDataToSend.append('pinCode', formData.pincode);
+
+    // Location fields
+    formDataToSend.append('latitude', formData.latitude?.toString() || '');
+    formDataToSend.append('longitude', formData.longitude?.toString() || '');
+
+    // Description and additional fields
+    formDataToSend.append('description', formData.businessName || 'Business listing');
+    formDataToSend.append('block', formData.village);
+    formDataToSend.append('district', formData.city);
+    formDataToSend.append('block_name', formData.village);
+    formDataToSend.append('district_name', formData.city);
+
+    // ✅ STEP 3: Add images if available
+    if (formData.images && formData.images.length > 0) {
+      formData.images.forEach((image: File) => {
+        formDataToSend.append('images[]', image);
+      });
+      console.log('📸 Images added:', formData.images.length);
+    } else {
+      console.log('📸 No images to upload');
+    }
+
+    // Log form data for debugging
+    console.log('📋 FormData being sent:');
+    for (let [key, value] of formDataToSend.entries()) {
+      console.log(key, ':', value);
+    }
+
+    // ✅ STEP 4: Submit business data
+    console.log('🚀 Submitting business data to:', API_ENDPOINTS2.AUTH.BUSINESS_SUBMISSION);
     
-    if (!user?.id) {
-      alert('User not logged in. Please login to continue.');
+    const response = await fetch(API_ENDPOINTS2.AUTH.BUSINESS_SUBMISSION, {
+      method: 'POST',
+      body: formDataToSend,
+    });
+
+    console.log('📡 Business submission response status:', response.status);
+    
+    const result = await response.json();
+    console.log('🔍 Business submission API response:', result);
+
+    // ✅ UPDATED: Check for "User not found" message from PHP backend BEFORE checking response.ok
+    if (result.message && result.message.includes('User not found')) {
+      console.log('❌ User not found error from PHP backend');
+      alert('User account not found. Please login again.');
+      localStorage.removeItem('userData');
       window.location.href = '/list-your-business';
       return;
     }
 
-    // User ID ko variable mein store karein
-    const userId = user.id;
-
-    if (formData.selectedCategoryIds.length === 0) {
-      alert('Please select at least one category');
-      return;
+    if (!response.ok) {
+      throw new Error(result.message || `HTTP error! status: ${response.status}`);
     }
 
-    if (!location) {
-      alert('Location access is required to complete registration.');
-      return;
-    }
+    if (result.success) {
+      console.log('✅ Business submission successful!');
+      alert('Business listing created successfully!');
 
-    setIsLoading(true);
-    
-    try {
-      // Sab data ek array mein
-      const completeData = [
-        {
-          user_info: {
-            user_id: userId,
-            mobile_number: mobileNumber,
-            name: user?.fullName || '',
-            email: user?.email || '',
-            city: user?.city || '',
-            village: user?.village || ''
-          },
-          
-          business_info: {
-            business_name: formData.businessName,
-            categories: formData.categories,
-            category_ids: formData.selectedCategoryIds,
-            description: "",
-            status: "active"
-          },
-          
-          address_info: {
-            building_number: formData.buildingNumber,
-            building_name: formData.buildingName,
-            street: formData.street,
-            landmark: formData.landmark,
-            village: formData.village,
-            city: formData.city,
-            state: formData.state,
-            pincode: formData.pincode,
-            full_address: `${formData.buildingNumber}, ${formData.buildingName}, ${formData.street}, ${formData.landmark}, ${formData.village}, ${formData.city}, ${formData.state} - ${formData.pincode}`
-          },
-          
-          location_info: {
-            latitude: formData.latitude,
-            longitude: formData.longitude,
-            address: formData.address || `${formData.latitude}, ${formData.longitude}`
-          },
-          
-          account_info: {
-            mobile_verified: true,
-            email_verified: false
-          },
-          
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ];
-
-      console.log('Complete data array for API:', completeData);
-      console.log('User ID being sent:', userId);
-
-      const response = await fetch(API_ENDPOINTS2.AUTH.MAIN_SEARCH, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(completeData), // Array directly send karein
+      // ✅ STEP 5: Redirect to my-businesses page
+      console.log('🔄 Redirecting to /my-businesses');
+      window.location.href = '/my-businesses';
+      
+      // Reset form (this won't execute after redirect)
+      setCurrentStep(1);
+      setMobileNumber('');
+      setIsMobileVerified(false);
+      setLocation(null);
+      setSelectedMainCategory(null);
+      setSelectedSubCategory(null);
+      setSelectedChildCategories([]);
+      setFormData({
+        businessName: '',
+        pincode: '',
+        buildingNumber: '',
+        buildingName: '',
+        street: '',
+        landmark: '',
+        village: '',
+        city: '',
+        state: '',
+        categories: [],
+        selectedCategoryIds: [],
+        latitude: null,
+        longitude: null,
+        address: '',
+        images: []
       });
-      
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'API call failed');
+      setTouched({});
+    } else {
+      // ✅ UPDATED: Also check for "User not found" in success: false case
+      if (result.message && result.message.includes('User not found')) {
+        console.log('❌ User not found in business submission result');
+        alert('User account not found. Please login again.');
+        localStorage.removeItem('userData');
+        window.location.href = '/list-your-business';
+        return;
       }
-
-      if (result.status === 'success') {
-        alert('Business listing created successfully!');
-        
-        // Reset form
-        setCurrentStep(1);
-        setMobileNumber('');
-        setIsMobileVerified(false);
-        setLocation(null);
-        setSelectedMainCategory(null);
-        setSelectedSubCategory(null);
-        setSelectedChildCategories([]);
-        setFormData({
-          businessName: '',
-          pincode: '',
-          buildingNumber: '',
-          buildingName: '',
-          street: '',
-          landmark: '',
-          village: '',
-          city: '',
-          state: '',
-          categories: [],
-          selectedCategoryIds: [],
-          latitude: null,
-          longitude: null,
-          address: ''
-        });
-        setTouched({});
-      } else {
-        throw new Error(result.message || 'Business listing creation failed');
-      }
-      
-    } catch (error) {
-      console.error('Error submitting form:', error);
-      alert(error instanceof Error ? error.message : 'Error creating business listing. Please try again.');
-    } finally {
-      setIsLoading(false);
+      throw new Error(result.message || 'Business listing creation failed');
     }
-  };
 
+  } catch (error) {
+    console.error('❌ Full error details:', error);
+    
+    // ✅ UPDATED: Check if error contains "User not found" message from PHP
+    if (error instanceof Error && error.message.includes('User not found')) {
+      console.log('❌ User not found in catch block');
+      alert('User account not found. Please login again.');
+      localStorage.removeItem('userData');
+      window.location.href = '/list-your-business';
+      return;
+    }
+    
+    alert(error instanceof Error ? error.message : 'Error creating business listing. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+};
   // Navigation between steps
   const goToStep = (step: number) => {
     if (step === 2 && !isMobileVerified) {
@@ -786,9 +908,9 @@ const BusinessListingForm = () => {
     <div className="flex flex-col items-center justify-center py-12">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
       <div className="text-2xl font-medium text-gray-900 mb-2">
-        {currentStep === 1 ? 'Sending OTP...' : 
-         currentStep === 2 ? 'Validating Details...' : 
-         'Creating Your Listing...'}
+        {currentStep === 1 ? 'Sending OTP...' :
+          currentStep === 2 ? 'Validating Details...' :
+            'Creating Your Listing...'}
       </div>
       <div className="text-gray-500">This may take a few seconds</div>
     </div>
@@ -802,11 +924,11 @@ const BusinessListingForm = () => {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 relative">
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         >
-          <div 
+          <div
             className="fixed left-4 top-1/2 transform -translate-y-1/2 bg-white rounded-lg shadow-xl p-4 min-w-48 z-50"
             onClick={(e) => e.stopPropagation()}
           >
@@ -816,9 +938,8 @@ const BusinessListingForm = () => {
                   goToStep(1);
                   setIsMobileMenuOpen(false);
                 }}
-                className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                  currentStep === 1 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
-                }`}
+                className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${currentStep === 1 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+                  }`}
               >
                 Mobile Verification
               </button>
@@ -827,9 +948,8 @@ const BusinessListingForm = () => {
                   goToStep(2);
                   setIsMobileMenuOpen(false);
                 }}
-                className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                  currentStep === 2 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
-                }`}
+                className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${currentStep === 2 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+                  }`}
               >
                 Business Details
               </button>
@@ -838,9 +958,8 @@ const BusinessListingForm = () => {
                   goToStep(3);
                   setIsMobileMenuOpen(false);
                 }}
-                className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                  currentStep === 3 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
-                }`}
+                className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${currentStep === 3 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+                  }`}
               >
                 Categories
               </button>
@@ -854,49 +973,43 @@ const BusinessListingForm = () => {
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex justify-center py-4 sm:py-6">
             <div className="flex items-center space-x-4 sm:space-x-6 lg:space-x-8 w-full max-w-md sm:max-w-lg justify-between">
-              <button 
+              <button
                 onClick={() => goToStep(1)}
-                className={`flex flex-col sm:flex-row items-center space-x-0 sm:space-x-3 text-center min-w-0 flex-1 ${
-                  currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'
-                }`}
+                className={`flex flex-col sm:flex-row items-center space-x-0 sm:space-x-3 text-center min-w-0 flex-1 ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'
+                  }`}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 flex-shrink-0 ${
-                  currentStep >= 1 
-                    ? 'bg-blue-600 border-blue-600 text-white' 
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 flex-shrink-0 ${currentStep >= 1
+                    ? 'bg-blue-600 border-blue-600 text-white'
                     : 'border-gray-300 text-gray-400'
-                }`}>
+                  }`}>
                   1
                 </div>
                 <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Mobile Verification</span>
               </button>
 
-              <button 
+              <button
                 onClick={() => goToStep(2)}
-                className={`flex flex-col sm:flex-row items-center space-x-0 sm:space-x-3 text-center min-w-0 flex-1 ${
-                  currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'
-                }`}
+                className={`flex flex-col sm:flex-row items-center space-x-0 sm:space-x-3 text-center min-w-0 flex-1 ${currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'
+                  }`}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 flex-shrink-0 ${
-                  currentStep >= 2 
-                    ? 'bg-blue-600 border-blue-600 text-white' 
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 flex-shrink-0 ${currentStep >= 2
+                    ? 'bg-blue-600 border-blue-600 text-white'
                     : 'border-gray-300 text-gray-400'
-                }`}>
+                  }`}>
                   2
                 </div>
                 <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Business Details</span>
               </button>
 
-              <button 
+              <button
                 onClick={() => goToStep(3)}
-                className={`flex flex-col sm:flex-row items-center space-x-0 sm:space-x-3 text-center min-w-0 flex-1 ${
-                  currentStep >= 3 ? 'text-blue-600' : 'text-gray-400'
-                }`}
+                className={`flex flex-col sm:flex-row items-center space-x-0 sm:space-x-3 text-center min-w-0 flex-1 ${currentStep >= 3 ? 'text-blue-600' : 'text-gray-400'
+                  }`}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 flex-shrink-0 ${
-                  currentStep >= 3 
-                    ? 'bg-blue-600 border-blue-600 text-white' 
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 flex-shrink-0 ${currentStep >= 3
+                    ? 'bg-blue-600 border-blue-600 text-white'
                     : 'border-gray-300 text-gray-400'
-                }`}>
+                  }`}>
                   3
                 </div>
                 <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Categories</span>
@@ -917,7 +1030,7 @@ const BusinessListingForm = () => {
                   <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                     List Your Business for <span className="text-blue-600">FREE</span>
                   </h1>
-                  
+
                   <p className="text-lg text-gray-700 mb-6">
                     with India's No. 1 Local Search Engine
                   </p>
@@ -931,7 +1044,7 @@ const BusinessListingForm = () => {
                       </div>
                       <span className="text-gray-700">Get Discovered & Create Your Online Business</span>
                     </div>
-                    
+
                     <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mt-0.5">
                         <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -940,7 +1053,7 @@ const BusinessListingForm = () => {
                       </div>
                       <span className="text-gray-700">Respond to Customer Reviews & Questions</span>
                     </div>
-                    
+
                     <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mt-0.5">
                         <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -974,18 +1087,18 @@ const BusinessListingForm = () => {
                         {showPasswordField ? 'Enter Your Password' : 'Enter Your Mobile Number'}
                       </h1>
                       <p className="text-sm text-gray-600">
-                        {showPasswordField 
-                          ? 'Please enter your password to continue' 
-                          : isLoggedIn 
+                        {showPasswordField
+                          ? 'Please enter your password to continue'
+                          : isLoggedIn
                             ? 'You are already logged in. Click "Continue" to proceed.'
                             : 'We\'ll check if your mobile number is registered'
                         }
                       </p>
-                      
+
                       {isLoggedIn && user && !showPasswordField && (
                         <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-3">
                           <p className="text-green-800 text-sm">
-                            ✅ Welcome back, <strong>{user.fullName}</strong>! 
+                            ✅ Welcome back, <strong>{user.fullName}</strong>!
                             Your mobile number is pre-filled. Click "Continue" to proceed.
                           </p>
                         </div>
@@ -1028,13 +1141,12 @@ const BusinessListingForm = () => {
                               }}
                               disabled={isLoggedIn}
                             />
-                            <label 
+                            <label
                               htmlFor="mobileInput"
-                              className={`absolute left-24 transition-all duration-200 pointer-events-none ${
-                                mobileNumber 
-                                  ? 'top-1 text-xs text-blue-600 bg-white px-1 -translate-y-2' 
+                              className={`absolute left-24 transition-all duration-200 pointer-events-none ${mobileNumber
+                                  ? 'top-1 text-xs text-blue-600 bg-white px-1 -translate-y-2'
                                   : 'top-1/2 text-gray-400 -translate-y-1/2'
-                              }`}
+                                }`}
                             >
                               Enter Mobile No.
                             </label>
@@ -1042,13 +1154,12 @@ const BusinessListingForm = () => {
                         </div>
 
                         {mobileCheckMessage && (
-                          <div className={`mb-4 p-3 rounded-lg text-sm ${
-                            mobileCheckMessage.includes('✅') 
+                          <div className={`mb-4 p-3 rounded-lg text-sm ${mobileCheckMessage.includes('✅')
                               ? 'bg-green-50 border border-green-200 text-green-800'
                               : mobileCheckMessage.includes('❌')
-                              ? 'bg-red-50 border border-red-200 text-red-800'
-                              : 'bg-blue-50 border border-blue-200 text-blue-800'
-                          }`}>
+                                ? 'bg-red-50 border border-red-200 text-red-800'
+                                : 'bg-blue-50 border border-blue-200 text-blue-800'
+                            }`}>
                             {mobileCheckMessage}
                           </div>
                         )}
@@ -1102,11 +1213,10 @@ const BusinessListingForm = () => {
                         </div>
 
                         {mobileCheckMessage && (
-                          <div className={`mb-4 p-3 rounded-lg text-sm ${
-                            mobileCheckMessage.includes('✅') 
+                          <div className={`mb-4 p-3 rounded-lg text-sm ${mobileCheckMessage.includes('✅')
                               ? 'bg-green-50 border border-green-200 text-green-800'
                               : 'bg-blue-50 border border-blue-200 text-blue-800'
-                          }`}>
+                            }`}>
                             {mobileCheckMessage}
                           </div>
                         )}
@@ -1168,11 +1278,10 @@ const BusinessListingForm = () => {
                       </p>
                     </div>
 
-                    <div className={`mb-4 p-3 rounded-lg ${
-                      location ? 'bg-green-50 border border-green-200' : 
-                      locationError ? 'bg-red-50 border border-red-200' : 
-                      'bg-blue-50 border border-blue-200'
-                    }`}>
+                    <div className={`mb-4 p-3 rounded-lg ${location ? 'bg-green-50 border border-green-200' :
+                        locationError ? 'bg-red-50 border border-red-200' :
+                          'bg-blue-50 border border-blue-200'
+                      }`}>
                       <div className="flex items-center gap-3">
                         {isGettingLocation ? (
                           <>
@@ -1208,11 +1317,10 @@ const BusinessListingForm = () => {
                           onChange={handleChange}
                           onBlur={handleBlur}
                           aria-invalid={errors.businessName ? 'true' : 'false'}
-                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${
-                            errors.businessName 
-                              ? 'border-red-500 bg-red-50' 
+                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${errors.businessName
+                              ? 'border-red-500 bg-red-50'
                               : 'border-gray-300 hover:border-gray-400'
-                          }`}
+                            }`}
                           placeholder="Enter your business name"
                         />
                         {errors.businessName && (
@@ -1237,11 +1345,10 @@ const BusinessListingForm = () => {
                           onChange={handleChange}
                           onBlur={handleBlur}
                           aria-invalid={errors.pincode ? 'true' : 'false'}
-                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${
-                            errors.pincode 
-                              ? 'border-red-500 bg-red-50' 
+                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${errors.pincode
+                              ? 'border-red-500 bg-red-50'
                               : 'border-gray-300 hover:border-gray-400'
-                          }`}
+                            }`}
                           placeholder="Enter 6-digit pincode"
                           maxLength={6}
                         />
@@ -1267,11 +1374,10 @@ const BusinessListingForm = () => {
                           onChange={handleChange}
                           onBlur={handleBlur}
                           aria-invalid={errors.buildingNumber ? 'true' : 'false'}
-                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${
-                            errors.buildingNumber 
-                              ? 'border-red-500 bg-red-50' 
+                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${errors.buildingNumber
+                              ? 'border-red-500 bg-red-50'
                               : 'border-gray-300 hover:border-gray-400'
-                          }`}
+                            }`}
                           placeholder="Enter building/house number"
                         />
                         {errors.buildingNumber && (
@@ -1296,11 +1402,10 @@ const BusinessListingForm = () => {
                           onChange={handleChange}
                           onBlur={handleBlur}
                           aria-invalid={errors.buildingName ? 'true' : 'false'}
-                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${
-                            errors.buildingName 
-                              ? 'border-red-500 bg-red-50' 
+                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${errors.buildingName
+                              ? 'border-red-500 bg-red-50'
                               : 'border-gray-300 hover:border-gray-400'
-                          }`}
+                            }`}
                           placeholder="Enter building name"
                         />
                         {errors.buildingName && (
@@ -1325,11 +1430,10 @@ const BusinessListingForm = () => {
                           onChange={handleChange}
                           onBlur={handleBlur}
                           aria-invalid={errors.street ? 'true' : 'false'}
-                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${
-                            errors.street 
-                              ? 'border-red-500 bg-red-50' 
+                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${errors.street
+                              ? 'border-red-500 bg-red-50'
                               : 'border-gray-300 hover:border-gray-400'
-                          }`}
+                            }`}
                           placeholder="Enter street name"
                         />
                         {errors.street && (
@@ -1354,11 +1458,10 @@ const BusinessListingForm = () => {
                           onChange={handleChange}
                           onBlur={handleBlur}
                           aria-invalid={errors.landmark ? 'true' : 'false'}
-                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${
-                            errors.landmark 
-                              ? 'border-red-500 bg-red-50' 
+                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${errors.landmark
+                              ? 'border-red-500 bg-red-50'
                               : 'border-gray-300 hover:border-gray-400'
-                          }`}
+                            }`}
                           placeholder="Enter nearby landmark"
                         />
                         {errors.landmark && (
@@ -1383,11 +1486,10 @@ const BusinessListingForm = () => {
                           onChange={handleChange}
                           onBlur={handleBlur}
                           aria-invalid={errors.village ? 'true' : 'false'}
-                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${
-                            errors.village 
-                              ? 'border-red-500 bg-red-50' 
+                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${errors.village
+                              ? 'border-red-500 bg-red-50'
                               : 'border-gray-300 hover:border-gray-400'
-                          }`}
+                            }`}
                           placeholder="Enter village or locality"
                         />
                         {errors.village && (
@@ -1412,11 +1514,10 @@ const BusinessListingForm = () => {
                           onChange={handleChange}
                           onBlur={handleBlur}
                           aria-invalid={errors.city ? 'true' : 'false'}
-                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${
-                            errors.city 
-                              ? 'border-red-500 bg-red-50' 
+                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${errors.city
+                              ? 'border-red-500 bg-red-50'
                               : 'border-gray-300 hover:border-gray-400'
-                          }`}
+                            }`}
                           placeholder="Enter city"
                         />
                         {errors.city && (
@@ -1441,11 +1542,10 @@ const BusinessListingForm = () => {
                           onChange={handleChange}
                           onBlur={handleBlur}
                           aria-invalid={errors.state ? 'true' : 'false'}
-                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${
-                            errors.state 
-                              ? 'border-red-500 bg-red-50' 
+                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 ${errors.state
+                              ? 'border-red-500 bg-red-50'
                               : 'border-gray-300 hover:border-gray-400'
-                          }`}
+                            }`}
                           placeholder="Enter state"
                         />
                         {errors.state && (
@@ -1484,11 +1584,11 @@ const BusinessListingForm = () => {
                         Select Business Categories
                       </h1>
                       <p className="text-sm text-gray-600">
-                        {!selectedMainCategory 
-                          ? 'Choose a main category to get started' 
+                        {!selectedMainCategory
+                          ? 'Choose a main category to get started'
                           : !selectedSubCategory
-                          ? 'Now select a sub-category'
-                          : 'Select specific child categories for your business'
+                            ? 'Now select a sub-category'
+                            : 'Select specific child categories for your business'
                         }
                       </p>
                     </div>
@@ -1578,16 +1678,15 @@ const BusinessListingForm = () => {
                           <div className="space-y-3 max-h-96 overflow-y-auto">
                             {selectedMainCategory.subcategories.map((subCategory) => {
                               const isSelected = formData.selectedCategoryIds.includes(subCategory.id);
-                              
+
                               return (
                                 <div
                                   key={subCategory.id}
                                   onClick={() => handleSubCategorySelect(subCategory)}
-                                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                                    isSelected
+                                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${isSelected
                                       ? 'border-green-500 bg-green-50 text-green-700'
                                       : 'hover:border-blue-300 hover:bg-blue-50 border-gray-200 bg-white text-gray-700'
-                                  }`}
+                                    }`}
                                 >
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
@@ -1621,7 +1720,7 @@ const BusinessListingForm = () => {
                                       </svg>
                                     </div>
                                   </div>
-                                  
+
                                   {isSelected && (
                                     <div className="mt-2 text-xs text-green-600 font-medium">
                                       ✓ Selected
@@ -1663,16 +1762,15 @@ const BusinessListingForm = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
                               {selectedSubCategory.childcategories.map((childCategory) => {
                                 const isSelected = selectedChildCategories.some(child => child.id === childCategory.id);
-                                
+
                                 return (
                                   <div
                                     key={childCategory.id}
                                     onClick={() => handleChildCategorySelect(childCategory)}
-                                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                                      isSelected
+                                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${isSelected
                                         ? 'border-blue-500 bg-blue-50 text-blue-700'
                                         : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                                    }`}
+                                      }`}
                                   >
                                     <div className="flex items-center justify-between">
                                       <div className="flex items-center gap-3">
@@ -1783,7 +1881,10 @@ const BusinessListingForm = () => {
                                   setFormData(prev => ({
                                     ...prev,
                                     categories: [],
-                                    selectedCategoryIds: []
+                                    selectedCategoryIds: [],
+                                    selectedMainCategoryId: null,
+                                    selectedSubCategoryId: null,
+                                    selectedChildCategoryId: null
                                   }));
                                 }}
                                 className="flex-1 bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-400 transition-colors"
@@ -1817,7 +1918,7 @@ const BusinessListingForm = () => {
           <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-8 sm:mb-12">
             Get a FREE Business Listing in 3 Simple Steps
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-12">
             <div className="text-center group">
               <div className="mb-6 flex justify-center">

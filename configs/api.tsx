@@ -15,6 +15,7 @@ export const API_ENDPOINTS2 = {
     MOBILE_VALIDATION: `${API_BASE_URL2}/check-mobile.php`,
     CATEGORY_LIST: `${API_BASE_URL2}/category_list.php`,
     MAIN_SEARCH: `${API_BASE_URL2}/main-search.php`,
+   BUSINESS_SUBMISSION: `${API_BASE_URL2}/business_submissions.php`,
   },
 }
 
