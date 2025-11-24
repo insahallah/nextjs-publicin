@@ -6,7 +6,7 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://allupipa
 export const API_BASE_URL2 = process.env.NEXT_PUBLIC_API_URL || 'https://allupipay.in/publicsewa/api/users';
 
 export const API_ENDPOINTS2 = {
-  // Auth endpoints
+  // Auth endpoints 
   AUTH: {
     LOGIN: `${API_BASE_URL2}/login.php`,
     REGISTER: `${API_BASE_URL2}/register`,
@@ -15,8 +15,13 @@ export const API_ENDPOINTS2 = {
     MOBILE_VALIDATION: `${API_BASE_URL2}/check-mobile.php`,
     CATEGORY_LIST: `${API_BASE_URL2}/category_list.php`,
     MAIN_SEARCH: `${API_BASE_URL2}/main-search.php`,
-   BUSINESS_SUBMISSION: `${API_BASE_URL2}/business_submissions.php`,
-  },
+    BUSINESS_SUBMISSION: `${API_BASE_URL2}/business_submissions.php`,
+    DISTRICT_LIST: `${API_BASE_URL2}/district_list.php`,
+    GET_BLOCK: `${API_BASE_URL2}/get_blocks.php`,
+    FETCH_BUSINESS_BY_USER_ID: `${API_BASE_URL2}/fetch-business-by-user-id.php`,
+    BUSINESS_VIEW_RIGHTSIDE: `${API_BASE_URL2}/business_view_rightside.php`,
+
+  }
 }
 
 
@@ -29,7 +34,7 @@ export const API_ENDPOINTS = {
     LOGOUT: `${API_BASE_URL}/logout`,
     PROFILE: `${API_BASE_URL}/profile`,
   },
-  
+
   // User endpoints
   USER: {
     PROFILE: `${API_BASE_URL}/user/profile`,

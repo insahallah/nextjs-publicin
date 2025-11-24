@@ -8,6 +8,7 @@ import ListingsContainer from "@/components/ListingsContainer";
 import ReviewModal from "@/components/ReviewModal";
 import AwesomeLogin from "@/components/AwesomeLogin";
 import AwesomeSignup from "@/components/AwesomeSignup";
+import BusinessViewRightSideComponent from "@/components/BusinessViewRightSideComponent";
 
 /**
  * ListPage Component
@@ -32,8 +33,31 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   const [breadcrumbPath, setBreadcrumbPath] = useState<{path: string, name: string, isClickable: boolean}[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
-  
+  const [extractedBusinessId, setExtractedBusinessId] = useState<string>('');
+
   const router = useRouter();
+
+  // Add this useEffect to extract business ID from URL
+  useEffect(() => {
+    const extractBusinessIdFromParams = async () => {
+      try {
+        const { slug } = await params;
+        
+        if (slug && Array.isArray(slug) && slug.length >= 2) {
+          const lastSegment = slug[slug.length - 1];
+          
+          // Check if last segment is a numeric ID (business ID)
+          if (/^\d+$/.test(lastSegment)) {
+            setExtractedBusinessId(lastSegment);
+          }
+        }
+      } catch (error) {
+        // Silent error handling
+      }
+    };
+
+    extractBusinessIdFromParams();
+  }, [params]);
 
   // Generate breadcrumb from slug array
   useEffect(() => {
@@ -72,10 +96,9 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           }
           
           setBreadcrumbPath(breadcrumbs);
-          console.log('🍞 Breadcrumb Path:', breadcrumbs);
         }
       } catch (error) {
-        console.error('Error generating breadcrumb:', error);
+        // Silent error handling
       }
     };
 
@@ -85,19 +108,14 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   // Listen for login events
   useEffect(() => {
     const handleOpenLoginModal = () => {
-      console.log('✅ Login modal requested - Opening AwesomeLogin');
       setIsLoginModalOpen(true);
     };
 
-    const handleUserLoggedIn = (event: any) => {
-      console.log('✅ User logged in event received in ListPage:', event.detail);
-      
+    const handleUserLoggedIn = () => {
       setTimeout(() => {
         const userId = getCurrentUserId();
-        console.log('🎯 User ID after login event:', userId);
         
         if (userId) {
-          console.log('✅ User is logged in, opening review modal');
           setIsLoginModalOpen(false);
           if (shouldReopenReviewAfterLogin && !isReviewModalOpen) {
             setTimeout(() => {
@@ -105,8 +123,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
               setShouldReopenReviewAfterLogin(false);
             }, 500);
           }
-        } else {
-          console.log('❌ Still no user data found after login event');
         }
       }, 300);
     };
@@ -122,7 +138,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
   // Handle signup
   const handleAwesomeSignup = async (signupData: any) => {
-    console.log('📝 Signup requested in ListPage:', signupData);
     alert('Signup functionality will be available soon! For now, please use login.');
     setShowRegisterModal(false);
     setIsLoginModalOpen(true);
@@ -130,7 +145,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
   // Handle login request from review modal
   const handleLoginRequest = () => {
-    console.log('🔐 Login requested from review modal');
     setShouldReopenReviewAfterLogin(true);
     setIsLoginModalOpen(true);
   };
@@ -145,28 +159,22 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       if (userDataStr) {
         try {
           const userData = JSON.parse(userDataStr);
-          console.log('🔍 getCurrentUserId - Found userData:', userData);
-          
           if (userData?.id) {
-            console.log('✅ User ID found:', userData.id);
             return String(userData.id);
           }
         } catch (error) {
-          console.error('Error parsing userData:', error);
+          // Silent error handling
         }
       }
       
       const authToken = localStorage.getItem('authToken');
       if (authToken && /^\d+$/.test(authToken)) {
-        console.log('✅ Using authToken as ID:', authToken);
         return authToken;
       }
       
-      console.log('❌ No user data found in getCurrentUserId');
       return null;
       
     } catch (error) {
-      console.error('🚨 Error getting user ID:', error);
       return null;
     }
   };
@@ -176,7 +184,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     const userId = getCurrentUserId();
     
     if (userId) {
-      console.log('✅ User logged in, opening review modal');
       setSelectedRating(rating);
       if (business) {
         setSelectedBusiness(business);
@@ -184,7 +191,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       setIsReviewModalOpen(true);
       setShouldReopenReviewAfterLogin(false);
     } else {
-      console.log('❌ User not logged in, opening login modal');
       setSelectedRating(rating);
       if (business) {
         setSelectedBusiness(business);
@@ -216,8 +222,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       review: data.comment || "",
     };
 
-    console.log("🚀 Final payload:", payload);
-
     try {
       const res = await fetch(
         "https://allupipay.in/publicsewa/api/users/submit_review.php",
@@ -231,18 +235,13 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         }
       );
 
-      console.log("📨 Response status:", res.status);
-
       let response: any = {};
       try {
         response = await res.json();
       } catch (jsonErr) {
-        console.error("❌ Error parsing JSON response:", jsonErr);
         alert("Failed to submit review: Invalid server response");
         return;
       }
-
-      console.log("📩 API Response:", response);
 
       if (!res.ok || response.status !== "success") {
         throw new Error(response.message || "Request failed");
@@ -256,7 +255,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         fetchReviews(businessData.id);
       }
     } catch (err: any) {
-      console.error("❌ Error submitting review:", err);
       alert("Failed to submit review: " + err.message);
     }
   };
@@ -265,7 +263,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   const fetchReviews = async (businessId: string) => {
     try {
       setReviewsLoading(true);
-      console.log('🔄 Fetching reviews for business ID:', businessId);
       
       const params = new URLSearchParams();
       params.append('business_id', businessId);
@@ -278,27 +275,20 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         }
       );
 
-      console.log('📝 Reviews API Response status:', res.status);
-
       if (res.ok) {
         const data = await res.json();
-        console.log('📝 Reviews API Response data:', data);
         
         // Handle both response formats
         if (data && (data.status === "success" || data.reviews)) {
           const reviewsData = data.data || data.reviews || [];
           setReviews(reviewsData);
-          console.log('✅ Reviews loaded:', reviewsData.length);
         } else {
           setReviews([]);
-          console.log('ℹ️ No reviews found or API returned error');
         }
       } else {
         setReviews([]);
-        console.log('❌ Failed to fetch reviews');
       }
     } catch (error) {
-      console.error('🚨 Error fetching reviews:', error);
       setReviews([]);
     } finally {
       setReviewsLoading(false);
@@ -324,14 +314,10 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
   // Handle successful login from AwesomeLogin
   const handleLoginSuccess = async (loginData: any) => {
-    console.log('🎉 Login successful in ListPage - Data received:', loginData);
-    
     try {
       const formData = new URLSearchParams();
       formData.append('mobile', loginData.mobile);
       formData.append('password', loginData.password);
-
-      console.log('📤 Making login API call from ListPage...');
 
       const response = await fetch('https://allupipay.in/publicsewa/api/login.php', {
         method: 'POST',
@@ -341,13 +327,9 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         body: formData.toString()
       });
 
-      console.log('📥 Login response status:', response.status);
       const data = await response.json();
-      console.log('📥 Login response data:', data);
 
       if (response.ok && data.status === 'success') {
-        console.log('✅ LOGIN SUCCESSFUL in ListPage');
-
         localStorage.setItem('authToken', data.token || data.id);
         localStorage.setItem('userData', JSON.stringify({
           id: data.id,
@@ -357,28 +339,22 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           village: data.village,
           ...data
         }));
-
-        console.log('💾 Data stored in localStorage');
         
         closeLoginModal();
         
         setTimeout(() => {
           const userId = getCurrentUserId();
-          console.log('🎯 Final User ID check:', userId);
           
           if (userId && shouldReopenReviewAfterLogin) {
-            console.log('✅ Opening review modal now');
             setIsReviewModalOpen(true);
             setShouldReopenReviewAfterLogin(false);
           }
         }, 500);
         
       } else {
-        console.log('❌ Login failed in ListPage:', data.message);
         alert(data.message || 'Login failed. Please try again.');
       }
     } catch (error) {
-      console.error('🚨 Login error in ListPage:', error);
       alert('Login failed. Please check your connection and try again.');
     }
   };
@@ -410,8 +386,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
   const handleBreadcrumbClick = (path: string, isClickable: boolean) => {
     if (!isClickable) return;
-    
-    console.log('🔄 Navigating to:', path);
     
     if (path === '') {
       // Home button
@@ -446,10 +420,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         setLoading(true);
         const { slug } = await params;
 
-        console.log('🔍 URL segments received:', slug);
-
         if (!slug || !Array.isArray(slug)) {
-          console.log('❌ No slug or invalid slug');
           notFound();
           return;
         }
@@ -459,8 +430,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           const lastSegment = slug[slug.length - 1];
           const secondLastSegment = slug[slug.length - 2];
 
-          console.log('🔍 Checking segments:', { lastSegment, secondLastSegment });
-
           // Check if last segment is a numeric ID (business ID)
           if (/^\d+$/.test(lastSegment)) {
             setPageType('business');
@@ -468,25 +437,16 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             const businessName = secondLastSegment;
             const categorySlug = slug.slice(0, -2);
 
-            console.log('🏢 Business page detected:', {
-              businessId,
-              businessName,
-              categorySlug,
-              fullSlug: slug
-            });
-
             await fetchBusinessDetails(businessId, categorySlug);
             return;
           }
         }
 
         // Otherwise, it's a category listings page
-        console.log('📁 Category page detected');
         setPageType('category');
         await fetchCategoryData(slug);
 
       } catch (error) {
-        console.error('Error determining page type:', error);
         notFound();
       } finally {
         setLoading(false);
@@ -499,18 +459,13 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   // Fetch business details
   const fetchBusinessDetails = async (businessId: string, categorySlug: string[]) => {
     try {
-      console.log('🔄 Fetching DYNAMIC business details for ID:', businessId);
-
       const directBusinessData = await fetchBusinessDirectly(businessId);
       if (directBusinessData) {
-        console.log('✅ Business found via direct API call');
         formatAndSetBusinessData(directBusinessData, categorySlug);
         return;
       }
 
-      console.log('🔄 Trying category listings search...');
       const listingsData = await fetchListings(categorySlug);
-      console.log('📊 Listings data received:', listingsData);
 
       if (listingsData && listingsData.length > 0) {
         const foundBusiness = listingsData.find(listing => {
@@ -524,25 +479,20 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         });
 
         if (foundBusiness) {
-          console.log('✅ Business found in category listings');
           formatAndSetBusinessData(foundBusiness, categorySlug);
           return;
         }
       }
 
-      console.log('🔄 Trying all categories search...');
       const allCategoriesBusiness = await searchAllCategoriesForBusiness(businessId);
       if (allCategoriesBusiness) {
-        console.log('✅ Business found in all categories search');
         formatAndSetBusinessData(allCategoriesBusiness, categorySlug);
         return;
       }
 
-      console.log('❌ Business not found in any data source');
       notFound();
 
     } catch (error) {
-      console.error('Error fetching business details:', error);
       notFound();
     }
   };
@@ -583,7 +533,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
       return null;
     } catch (error) {
-      console.error('Error in direct business fetch:', error);
       return null;
     }
   };
@@ -609,18 +558,15 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           });
 
           if (foundBusiness) {
-            console.log(`✅ Business found in category: ${category.name}`);
             return foundBusiness;
           }
         } catch (error) {
-          console.error(`Error searching in category ${category.name}:`, error);
           continue;
         }
       }
 
       return null;
     } catch (error) {
-      console.error('Error in all categories search:', error);
       return null;
     }
   };
@@ -628,12 +574,9 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   // Format and set business data
   const formatAndSetBusinessData = (business: any, categorySlug: string[]) => {
     if (!business) {
-      console.log('❌ No business data to format');
       notFound();
       return;
     }
-
-    console.log('🔄 Formatting business data:', business);
 
     const businessDetails = {
       ...business,
@@ -648,7 +591,21 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       isOpen: business.isOpen !== undefined ? business.isOpen : true,
       description: business.description || `Welcome to ${business.businessName || "our business"}. We provide quality services to our customers.`,
       latitude: business.latitude,
-      longitude: business.longitude
+      longitude: business.longitude,
+      // Add contact_info and business_timing for BusinessViewRightSideComponent
+      contact_info: business.contact_info || {
+        contact_person_name: business.contact_person_name || "Arman khan",
+        email: business.email || "adminerr@gmail.com"
+      },
+      business_timing: business.business_timing || {
+        mon: { open: "09:00", close: "18:00", closed: false },
+        tue: { open: "09:00", close: "18:00", closed: false },
+        wed: { open: "09:00", close: "18:00", closed: false },
+        thu: { open: "09:00", close: "18:00", closed: false },
+        fri: { open: "09:00", close: "18:00", closed: false },
+        sat: { open: "09:00", close: "18:00", closed: false },
+        sun: { open: "09:00", close: "18:00", closed: false }
+      }
     };
 
     setBusinessData(businessDetails);
@@ -696,7 +653,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       setListings(displayListings);
       setFilteredListings(displayListings);
     } catch (error) {
-      console.error('Error fetching category data:', error);
       notFound();
     }
   };
@@ -742,285 +698,298 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             <SimpleBreadcrumb />
           </div>
 
-          {/* Business Header */}
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <div className="flex flex-col md:flex-row gap-6">
-              {/* Business Image with Action Buttons Below */}
-              <div className="md:w-1/3">
-                <img
-                  src={businessData.images && businessData.images[0] ?
-                    (typeof businessData.images[0] === 'string' ?
-                      businessData.images[0] :
-                      businessData.images[0].path ?
-                        `https://allupipay.in/publicsewa/images/${businessData.images[0].path}` :
-                        "/default-listing.jpg"
-                    ) : "/default-listing.jpg"
-                  }
-                  alt={businessData.displayName}
-                  className="w-full h-64 object-cover rounded-lg mb-4"
-                />
+          {/* Main Business Content - Two Column Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Left Column - Main Business Content (3/4 width) */}
+            <div className="lg:col-span-3 space-y-6">
+              {/* Business Header */}
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <div className="flex flex-col md:flex-row gap-6">
+                  {/* Business Image */}
+                  <div className="md:w-1/3">
+                    <img
+                      src={businessData.images && businessData.images[0] ?
+                        (typeof businessData.images[0] === 'string' ?
+                          businessData.images[0] :
+                          businessData.images[0].path ?
+                            `https://allupipay.in/publicsewa/images/${businessData.images[0].path}` :
+                            "/default-listing.jpg"
+                        ) : "/default-listing.jpg"
+                      }
+                      alt={businessData.displayName}
+                      className="w-full h-64 object-cover rounded-lg mb-4"
+                    />
 
-                {/* Combined Action Buttons Section */}
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <h3 className="font-semibold text-lg mb-3 text-gray-800">Quick Actions</h3>
-                  <div className="flex flex-col gap-3">
-                    {businessData.phone ? (
-                      <>
-                        <button
-                          onClick={() => window.open(`tel:${businessData.phone}`)}
-                          className="w-full bg-green-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-                        >
-                          <i className="fas fa-phone"></i>
-                          Call Now
-                        </button>
+                    {/* Action Buttons */}
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <h3 className="font-semibold text-lg mb-3 text-gray-800">Quick Actions</h3>
+                      <div className="flex flex-col gap-3">
+                        {businessData.phone ? (
+                          <>
+                            <button
+                              onClick={() => window.open(`tel:${businessData.phone}`)}
+                              className="w-full bg-green-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                            >
+                              <i className="fas fa-phone"></i>
+                              Call Now
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                const cleanPhone = businessData.phone.replace(/\D/g, '');
+                                const message = `Hello ${businessData.displayName}!\n\nI found your business listing and I'm interested in your services. Could you please provide me with more information?\n\nThank you!`;
+                                const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+                                window.open(whatsappUrl, '_blank');
+                              }}
+                              className="w-full bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
+                            >
+                              WhatsApp
+                            </button>
+                          </>
+                        ) : (
+                          <div className="text-center text-gray-500 py-3">
+                            Phone number not available for contact
+                          </div>
+                        )}
 
                         <button
                           onClick={() => {
-                            const cleanPhone = businessData.phone.replace(/\D/g, '');
-                            const message = `Hello ${businessData.displayName}!\n\nI found your business listing and I'm interested in your services. Could you please provide me with more information?\n\nThank you!`;
-                            const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-                            window.open(whatsappUrl, '_blank');
+                            if (businessData.latitude && businessData.longitude) {
+                              const mapsUrl = `https://www.google.com/maps?q=${businessData.latitude},${businessData.longitude}`;
+                              window.open(mapsUrl, '_blank');
+                            } else if (businessData.location) {
+                              const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(businessData.location)}`;
+                              window.open(mapsUrl, '_blank');
+                            } else {
+                              alert('Location information not available');
+                            }
                           }}
-                          className="w-full bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
+                          className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                         >
-                          WhatsApp
+                          <i className="fas fa-map-marker-alt"></i>
+                          Get Directions
                         </button>
-                      </>
-                    ) : (
-                      <div className="text-center text-gray-500 py-3">
-                        Phone number not available for contact
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Business Info */}
+                  <div className="md:w-2/3">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                      {businessData.displayName}
+                    </h1>
+
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <span key={i} className={`text-lg ${i < Math.floor(businessData.rating || 0) ? "text-yellow-500" : "text-gray-300"}`}>
+                            ★
+                          </span>
+                        ))}
+                        <span className="text-lg font-bold ml-2">{businessData.rating || 0}</span>
+                        <span className="text-gray-600">({businessData.reviewCount || 0} reviews)</span>
+                      </div>
+
+                      {businessData.isOpen ? (
+                        <span className="text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm font-medium">
+                          🟢 Open Now
+                        </span>
+                      ) : (
+                        <span className="text-red-600 bg-red-50 px-3 py-1 rounded-full text-sm font-medium">
+                          🔴 Closed
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Location */}
+                    {businessData.location && (
+                      <div className="flex items-center gap-2 text-gray-600 mb-4">
+                        <span>📍</span>
+                        <span>{businessData.location}</span>
                       </div>
                     )}
 
-                    <button
-                      onClick={() => {
-                        if (businessData.latitude && businessData.longitude) {
-                          const mapsUrl = `https://www.google.com/maps?q=${businessData.latitude},${businessData.longitude}`;
-                          window.open(mapsUrl, '_blank');
-                        } else if (businessData.location) {
-                          const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(businessData.location)}`;
-                          window.open(mapsUrl, '_blank');
-                        } else {
-                          alert('Location information not available');
-                        }
-                      }}
-                      className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <i className="fas fa-map-marker-alt"></i>
-                      Get Directions
-                    </button>
+                    {/* Phone */}
+                    {businessData.phone ? (
+                      <div className="flex items-center gap-2 text-gray-600 mb-4">
+                        <span>📞</span>
+                        <span>{businessData.phone}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-gray-500 mb-4">
+                        <span>📞</span>
+                        <span>Phone number not available</span>
+                      </div>
+                    )}
+
+                    {/* Description */}
+                    {businessData.description && (
+                      <div className="mb-4">
+                        <h3 className="font-semibold text-lg mb-2">About</h3>
+                        <p className="text-gray-700 leading-relaxed">{businessData.description}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Business Info */}
-              <div className="md:w-2/3">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  {businessData.displayName}
-                </h1>
-
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <span key={i} className={`text-lg ${i < Math.floor(businessData.rating || 0) ? "text-yellow-500" : "text-gray-300"}`}>
-                        ★
-                      </span>
+              {/* Services Section */}
+              {businessData.services && businessData.services.length > 0 && (
+                <div className="bg-white rounded-lg shadow-lg p-6">
+                  <h3 className="font-semibold text-xl mb-4">Services Offered</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {businessData.services.map((service: string, index: number) => (
+                      <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <span className="text-blue-800 font-medium">{service}</span>
+                      </div>
                     ))}
-                    <span className="text-lg font-bold ml-2">{businessData.rating || 0}</span>
-                    <span className="text-gray-600">({businessData.reviewCount || 0} reviews)</span>
                   </div>
-
-                  {businessData.isOpen ? (
-                    <span className="text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm font-medium">
-                      🟢 Open Now
-                    </span>
-                  ) : (
-                    <span className="text-red-600 bg-red-50 px-3 py-1 rounded-full text-sm font-medium">
-                      🔴 Closed
-                    </span>
-                  )}
                 </div>
+              )}
 
-                {/* Location */}
-                {businessData.location && (
-                  <div className="flex items-center gap-2 text-gray-600 mb-4">
-                    <span>📍</span>
-                    <span>{businessData.location}</span>
-                  </div>
-                )}
+              {/* Rating & Review Section */}
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <h3 className="font-semibold text-xl mb-6">Rate & Review</h3>
 
-                {/* Phone */}
-                {businessData.phone ? (
-                  <div className="flex items-center gap-2 text-gray-600 mb-4">
-                    <span>📞</span>
-                    <span>{businessData.phone}</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-gray-500 mb-4">
-                    <span>📞</span>
-                    <span>Phone number not available</span>
-                  </div>
-                )}
-
-                {/* Description */}
-                {businessData.description && (
-                  <div className="mb-4">
-                    <h3 className="font-semibold text-lg mb-2">About</h3>
-                    <p className="text-gray-700 leading-relaxed">{businessData.description}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Services Section */}
-          {businessData.services && businessData.services.length > 0 && (
-            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-              <h3 className="font-semibold text-xl mb-4">Services Offered</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {businessData.services.map((service: string, index: number) => (
-                  <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <span className="text-blue-800 font-medium">{service}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Rating & Review Section with Messages */}
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h3 className="font-semibold text-xl mb-6">Rate & Review</h3>
-
-            {/* Big Star Rating */}
-            <div className="flex flex-col items-center justify-center mb-6">
-              <div className="flex items-center gap-2 mb-4">
-                {Array.from({ length: 5 }, (_, i) => (
-                  <span
-                    key={i}
-                    onClick={() => handleStarClick(i + 1, businessData)}
-                    className={`cursor-pointer text-5xl transition-all duration-200 transform hover:scale-110 ${
-                      i < selectedRating
-                        ? "text-yellow-500 drop-shadow-lg"
-                        : "text-gray-300 hover:text-yellow-300"
-                    }`}
-                  >
-                    ★
-                  </span>
-                ))}
-              </div>
-              <span className="text-gray-600 text-lg font-medium">
-                {selectedRating > 0 
-                  ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}` 
-                  : 'Click stars to rate'
-                }
-              </span>
-            </div>
-
-            {/* Current Rating Display and Reviews Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-              {/* Rating Summary */}
-              <div className="lg:col-span-1">
-                <div className="bg-gray-50 rounded-lg p-6 text-center">
-                  <div className="text-4xl font-bold text-gray-900 mb-2">
-                    {businessData.rating || 0}
-                  </div>
-                  <div className="flex items-center justify-center gap-1 mb-2">
+                {/* Big Star Rating */}
+                <div className="flex flex-col items-center justify-center mb-6">
+                  <div className="flex items-center gap-2 mb-4">
                     {Array.from({ length: 5 }, (_, i) => (
                       <span
                         key={i}
-                        className={`text-xl ${
-                          i < Math.floor(businessData.rating || 0) 
-                            ? "text-yellow-500" 
-                            : "text-gray-300"
+                        onClick={() => handleStarClick(i + 1, businessData)}
+                        className={`cursor-pointer text-5xl transition-all duration-200 transform hover:scale-110 ${
+                          i < selectedRating
+                            ? "text-yellow-500 drop-shadow-lg"
+                            : "text-gray-300 hover:text-yellow-300"
                         }`}
                       >
                         ★
                       </span>
                     ))}
                   </div>
-                  <div className="text-gray-600 text-sm">
-                    ({businessData.reviewCount || 0} reviews)
+                  <span className="text-gray-600 text-lg font-medium">
+                    {selectedRating > 0 
+                      ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}` 
+                      : 'Click stars to rate'
+                    }
+                  </span>
+                </div>
+
+                {/* Current Rating Display and Reviews Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                  {/* Rating Summary */}
+                  <div className="lg:col-span-1">
+                    <div className="bg-gray-50 rounded-lg p-6 text-center">
+                      <div className="text-4xl font-bold text-gray-900 mb-2">
+                        {businessData.rating || 0}
+                      </div>
+                      <div className="flex items-center justify-center gap-1 mb-2">
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <span
+                            key={i}
+                            className={`text-xl ${
+                              i < Math.floor(businessData.rating || 0) 
+                                ? "text-yellow-500" 
+                                : "text-gray-300"
+                            }`}
+                          >
+                            ★
+                          </span>
+                        ))}
+                      </div>
+                      <div className="text-gray-600 text-sm">
+                        ({businessData.reviewCount || 0} reviews)
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Review Messages */}
+                  <div className="lg:col-span-2">
+                    <h4 className="font-semibold text-lg mb-4 text-gray-800">Customer Reviews</h4>
+                    
+                    {reviewsLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p className="text-gray-600">Loading reviews...</p>
+                      </div>
+                    ) : reviews.length > 0 ? (
+                      <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                        {reviews.map((review, index) => (
+                          <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                {/* User Avatar */}
+                                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-md">
+                                  {review.username ? review.username.charAt(0).toUpperCase() : 'U'}
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-900">
+                                    {review.username || 'Anonymous User'}
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    {Array.from({ length: 5 }, (_, i) => (
+                                      <span
+                                        key={i}
+                                        className={`text-sm ${
+                                          i < Math.floor(review.rating || 0) 
+                                            ? "text-yellow-500" 
+                                            : "text-gray-300"
+                                        }`}
+                                      >
+                                        ★
+                                      </span>
+                                    ))}
+                                    <span className="text-sm text-gray-500 ml-1">
+                                      {review.rating || 0}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {review.created_at 
+                                  ? new Date(review.created_at).toLocaleDateString('en-IN', {
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })
+                                  : 'Recently'
+                                }
+                              </div>
+                            </div>
+                            
+                            {/* Review Comment */}
+                            {review.review && review.review.trim() !== '' ? (
+                              <p className="text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-3 border-l-4 border-blue-500">
+                                "{review.review}"
+                              </p>
+                            ) : (
+                              <p className="text-gray-500 italic bg-gray-50 rounded-lg p-3">
+                                No comment provided
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                        <div className="text-gray-400 text-6xl mb-4">💬</div>
+                        <h4 className="text-lg font-medium text-gray-600 mb-2">No Reviews Yet</h4>
+                        <p className="text-gray-500 max-w-md mx-auto">
+                          Be the first to share your experience with this business! Click the stars above to leave a review.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Review Messages */}
-              <div className="lg:col-span-2">
-                <h4 className="font-semibold text-lg mb-4 text-gray-800">Customer Reviews</h4>
-                
-                {reviewsLoading ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading reviews...</p>
-                  </div>
-                ) : reviews.length > 0 ? (
-                  <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                    {reviews.map((review, index) => (
-                      <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            {/* User Avatar */}
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-md">
-                              {review.username ? review.username.charAt(0).toUpperCase() : 'U'}
-                            </div>
-                            <div>
-                              <div className="font-medium text-gray-900">
-                                {review.username || 'Anonymous User'}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                {Array.from({ length: 5 }, (_, i) => (
-                                  <span
-                                    key={i}
-                                    className={`text-sm ${
-                                      i < Math.floor(review.rating || 0) 
-                                        ? "text-yellow-500" 
-                                        : "text-gray-300"
-                                    }`}
-                                  >
-                                    ★
-                                  </span>
-                                ))}
-                                <span className="text-sm text-gray-500 ml-1">
-                                  {review.rating || 0}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {review.created_at 
-                              ? new Date(review.created_at).toLocaleDateString('en-IN', {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric'
-                                })
-                              : 'Recently'
-                            }
-                          </div>
-                        </div>
-                        
-                        {/* Review Comment */}
-                        {review.review && review.review.trim() !== '' ? (
-                          <p className="text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-3 border-l-4 border-blue-500">
-                            "{review.review}"
-                          </p>
-                        ) : (
-                          <p className="text-gray-500 italic bg-gray-50 rounded-lg p-3">
-                            No comment provided
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                    <div className="text-gray-400 text-6xl mb-4">💬</div>
-                    <h4 className="text-lg font-medium text-gray-600 mb-2">No Reviews Yet</h4>
-                    <p className="text-gray-500 max-w-md mx-auto">
-                      Be the first to share your experience with this business! Click the stars above to leave a review.
-                    </p>
-                  </div>
-                )}
-              </div>
+            {/* Right Column - BusinessViewRightSideComponent (1/4 width) */}
+            <div className="lg:col-span-1">
+              {extractedBusinessId && (
+                <BusinessViewRightSideComponent businessId={extractedBusinessId} />
+              )}
             </div>
           </div>
         </main>
@@ -1045,7 +1014,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
               <AwesomeLogin
                 onLogin={handleLoginSuccess}
                 onSwitchToSignup={() => {
-                  console.log('🔄 Switching from login to signup modal');
                   setIsLoginModalOpen(false);
                   setShowRegisterModal(true);
                 }}
@@ -1076,7 +1044,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
               <AwesomeSignup
                 onSignup={handleAwesomeSignup}
                 onSwitchToLogin={() => {
-                  console.log('🔄 Switching from signup to login modal');
                   setShowRegisterModal(false);
                   setIsLoginModalOpen(true);
                 }}
@@ -1160,7 +1127,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             <AwesomeLogin
               onLogin={handleLoginSuccess}
               onSwitchToSignup={() => {
-                console.log('🔄 Switching from login to signup modal');
                 setIsLoginModalOpen(false);
                 setShowRegisterModal(true);
               }}
@@ -1191,7 +1157,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             <AwesomeSignup
               onSignup={handleAwesomeSignup}
               onSwitchToLogin={() => {
-                console.log('🔄 Switching from signup to login modal');
                 setShowRegisterModal(false);
                 setIsLoginModalOpen(true);
               }}
@@ -1272,7 +1237,6 @@ async function fetchAndFormatCategories(): Promise<{ fullPath: string; name: str
     });
     return formattedCategories;
   } catch (error) {
-    console.error(error);
     return [];
   }
 }
@@ -1383,7 +1347,6 @@ async function fetchListings(slugArray: string[]) {
         isOpen: true,
       }));
   } catch (e) {
-    console.error('Error fetching listings:', e);
     return [];
   }
 }

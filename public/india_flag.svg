@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="36.293" height="24.898" viewBox="0 0 36.293 24.898">
+    <g data-name="Group 144234">
+        <g data-name="Group 144185">
+            <g data-name="Group 144242">
+                <path data-name="Path 154685" d="M36.293 96.575H0v-7.644a.641.641 0 0 1 .626-.655h35.042a.641.641 0 0 1 .626.655v7.644z" transform="translate(0 -88.276)" style="fill:#ff671f"/>
+                <path data-name="Path 154686" d="M35.668 320.208H.626a.641.641 0 0 1-.626-.655v-7.644h36.293v7.644a.641.641 0 0 1-.625.655z" transform="translate(0 -295.311)" style="fill:#046a38"/>
+                <path data-name="Path 343997" d="M0 0h36.293v8.3H0z" transform="translate(0 8.299)" style="fill:#fff"/>
+                <g data-name="Group 144184" transform="translate(14.625 8.927)">
+                    <path data-name="Path 154687" d="M212.074 215.6a3.522 3.522 0 1 1 3.522-3.522 3.526 3.526 0 0 1-3.522 3.522zm0-6.388a2.867 2.867 0 1 0 2.867 2.867 2.87 2.87 0 0 0-2.867-2.871z" transform="translate(-208.552 -208.553)" style="fill:#06038d"/>
+                    <circle data-name="Ellipse 2665" cx=".399" cy=".399" r=".399" transform="translate(3.122 3.122)" style="fill:#41479b"/>
+                    <path data-name="Path 154688" d="m216.16 254.036-1.015.1-2.179-.1v-.12l2.179-.1 1.015.1z" transform="translate(-212.638 -250.455)" style="fill:#06038d"/>
+                    <path data-name="Path 154689" d="m256 254.036 1.015.1 2.179-.1v-.12l-2.179-.1-1.015.1z" transform="translate(-252.478 -250.455)" style="fill:#06038d"/>
+                    <path data-name="Path 154690" d="m253.915 216.161-.1-1.015.1-2.179h.12l.1 2.179-.1 1.015z" transform="translate(-250.454 -212.639)" style="fill:#06038d"/>
+                    <path data-name="Path 154691" d="m253.915 256-.1 1.015.1 2.18h.12l.1-2.18-.1-1.015z" transform="translate(-250.454 -252.479)" style="fill:#06038d"/>
+                    <path data-name="Path 154692" d="m227.259 227.344-.79-.645-1.469-1.613.085-.085 1.614 1.469.645.79z" transform="translate(-223.779 -223.78)" style="fill:#06038d"/>
+                    <path data-name="Path 154693" d="m255.43 255.516.645.79 1.614 1.469.085-.085-1.469-1.614-.79-.645z" transform="translate(-251.951 -251.952)" style="fill:#06038d"/>
+                    <path data-name="Path 154694" d="m255.43 227.26.645-.79 1.614-1.47.085.085-1.474 1.615-.79.645z" transform="translate(-251.951 -223.78)" style="fill:#06038d"/>
+                    <path data-name="Path 154695" d="m227.259 255.431-.79.645L225 257.69l.085.085 1.614-1.469.645-.79z" transform="translate(-223.779 -251.952)" style="fill:#06038d"/>
+                    <path data-name="Path 154696" d="m218.93 255.366-.9.483-2.053.739-.046-.111 1.974-.929.977-.294z" transform="translate(-215.385 -251.789)" style="fill:#06038d"/>
+                    <path data-name="Path 154697" d="m255.737 240.12.977-.294 1.974-.929-.046-.111-2.053.739-.9.483z" transform="translate(-252.192 -236.543)" style="fill:#06038d"/>
+                    <path data-name="Path 154698" d="m240.008 218.931-.483-.9-.739-2.053.111-.046.929 1.974.294.977z" transform="translate(-236.542 -215.386)" style="fill:#06038d"/>
+                    <path data-name="Path 154699" d="m255.254 255.738.294.977.929 1.974.111-.046-.739-2.053-.483-.9z" transform="translate(-251.788 -252.193)" style="fill:#06038d"/>
+                    <path data-name="Path 154700" d="m218.884 240.12-.977-.294-1.974-.929.046-.111 2.053.739.9.483z" transform="translate(-215.385 -236.543)" style="fill:#06038d"/>
+                    <path data-name="Path 154701" d="m255.691 255.366.9.483 2.053.739.046-.111-1.974-.929-.977-.294z" transform="translate(-252.192 -251.789)" style="fill:#06038d"/>
+                    <path data-name="Path 154702" d="m255.254 218.885.294-.977.929-1.974.111.046-.739 2.053-.483.9z" transform="translate(-251.788 -215.386)" style="fill:#06038d"/>
+                    <path data-name="Path 154703" d="m240.008 255.692-.483.9-.739 2.053.111.046.929-1.974.294-.977z" transform="translate(-236.542 -252.193)" style="fill:#06038d"/>
+                </g>
+                <circle data-name="Ellipse 2666" cx=".539" cy=".539" r=".539" transform="translate(17.608 11.91)" style="fill:#f5f5f5"/>
+                <circle data-name="Ellipse 2667" cx=".323" cy=".323" r=".323" transform="translate(17.824 12.126)" style="fill:#05038d"/>
+            </g>
+        </g>
+    </g>
+</svg>
