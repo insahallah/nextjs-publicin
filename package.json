@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.1.0",
+    "@google/generative-ai": "^0.24.1",
     "bootstrap": "^5.3.8",
     "chart.js": "^4.5.1",
     "datatables.net": "^2.3.4",

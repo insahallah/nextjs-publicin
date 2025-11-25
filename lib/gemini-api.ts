@@ -1,72 +1,90 @@
-const GEMINI_API_KEY = 'AIzaSyDrod28WgdLrppqtNUFDQlQAXRTHYnSfIg';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-export const generateDescription = async (prompt: string): Promise<string> => {
-  try {
-    const response = await fetch(`${GEMINI_API_URL}gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
-          }
-        ],
+// Initialize Gemini Client with direct API key
+const ai = new GoogleGenerativeAI('AIzaSyCbdnJhqaHdOOXw_0gnSCyVL7Av7bFBhww');
+
+const MODELS = [
+   'gemini-2.5-flash',              // Main recommended model
+  'gemini-2.0-flash',              // Fallback
+  'gemini-2.5-flash-lite-preview', // Fallback
+];
+
+export const generateDescription = async (prompt, lang = "en") => {
+  if (!prompt || typeof prompt !== 'string') {
+    throw new Error('Prompt must be a non-empty string');
+  }
+
+  // Hindi and English only
+  const finalPrompt = lang === "hi" 
+    ? `उत्तर केवल हिंदी में दें। स्पष्ट और संक्षिप्त रहें:\n\n${prompt}`
+    : `Respond in English only. Be clear and concise:\n\n${prompt}`;
+
+  const errors = [];
+
+  for (const model of MODELS) {
+    try {
+      const genModel = ai.getGenerativeModel({ 
+        model,
         generationConfig: {
           temperature: 0.7,
           topK: 40,
           topP: 0.95,
           maxOutputTokens: 1024,
         }
-      })
-    });
+      });
 
-    if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
-    }
+      const result = await genModel.generateContent(finalPrompt);
+      const text = result?.response?.text()?.trim();
 
-    const data = await response.json();
-    
-    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-      return data.candidates[0].content.parts[0].text.trim();
-    } else {
-      throw new Error('Invalid response format from Gemini API');
+      if (text && text.length > 0) {
+        console.log(`Successfully generated content using ${model}`);
+        return text;
+      }
+
+    } catch (error) {
+      console.warn(`Model ${model} failed:`, error.message);
+      errors.push({ model, error: error.message });
+      continue;
     }
-  } catch (error) {
-    console.error('Gemini API Error:', error);
-    throw new Error('Failed to generate description. Please try again.');
   }
+
+  throw new Error(`All Gemini AI models failed. Errors: ${JSON.stringify(errors)}`);
 };
 
-export const generateBusinessDescription = async (businessData: {
-  businessName: string;
-  categories: string[];
-  location: string;
-}): Promise<string> => {
-  const prompt = `Create a professional and engaging business description for "${businessData.businessName}" which is a ${businessData.categories.join(', ')} business located in ${businessData.location}. 
+// Streaming version
+export const generateDescriptionStream = async (prompt, lang = "en", onChunk) => {
+  const finalPrompt = lang === "hi" 
+    ? `उत्तर केवल हिंदी में दें:\n\n${prompt}`
+    : prompt;
 
-Requirements:
-- 2-3 short paragraphs
-- Professional and friendly tone
-- Highlight key services/features
-- Include location context
-- SEO-friendly
-- Engaging for potential customers
-- Maximum 150-200 words
+  for (const model of MODELS) {
+    try {
+      const genModel = ai.getGenerativeModel({ 
+        model,
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+        }
+      });
 
-Please provide a compelling business description that will attract customers:`;
+      const result = await genModel.generateContentStream(finalPrompt);
+      
+      let fullText = '';
+      for await (const chunk of result.stream) {
+        const chunkText = chunk.text();
+        fullText += chunkText;
+        onChunk?.(chunkText);
+      }
+      
+      return fullText.trim();
 
-  try {
-    const description = await generateDescription(prompt);
-    return description;
-  } catch (error) {
-    // Fallback description
-    return `${businessData.businessName} is a professional ${businessData.categories[0]} located in ${businessData.location}. We provide high-quality services and products to meet all your needs. Our dedicated team ensures customer satisfaction and excellent service quality. Visit us today to experience the difference!`;
+    } catch (error) {
+      console.warn(`Model ${model} failed:`, error.message);
+      continue;
+    }
   }
+  
+  throw new Error("All Gemini AI models failed for streaming.");
 };

@@ -4,7 +4,7 @@ import ContactDetailsForm from '@/components/ContactDetailsComponent';
 import BusinessTimings from '@/components/BusinessTimingsComponent';
 import ImageUpload from '@/components/ImageUploadComponent';
 import { API_ENDPOINTS2 } from '@/configs/api';
-import { generateBusinessDescription } from '@/lib/gemini-api';
+import { generateDescription } from '@/lib/gemini-api';
 import { useState, useEffect } from 'react';
 
 // Types
@@ -103,6 +103,42 @@ declare global {
   }
 }
 
+// AI Business Description Generator
+const generateBusinessDescription = async (businessData: {
+  businessName: string;
+  categories: string[];
+  location: string;
+  services: string[];
+  language: 'hindi' | 'english';
+}) => {
+  const { businessName, categories, location, services, language } = businessData;
+  
+  const lang = language === 'hindi' ? 'hi' : 'en';
+  
+  const prompt = `
+Business Name: ${businessName}
+Location: ${location}
+Services/Products: ${services.join(', ')}
+
+Please create a comprehensive business description that includes:
+1. Introduction of the business
+2. Key services and products offered
+3. Unique selling points
+4. Target audience
+5. Why customers should choose this business
+
+Make it engaging and professional, around 150-200 words.
+`;
+
+  try {
+    const description = await generateDescription(prompt, lang);
+    return description;
+  } catch (error) {
+    console.error('Error generating AI description:', error);
+    throw new Error('Failed to generate business description');
+  }
+};
+
 const BusinessListingForm = () => {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [mobileNumber, setMobileNumber] = useState('');
@@ -131,6 +167,7 @@ const BusinessListingForm = () => {
   const [isLoadingBlocks, setIsLoadingBlocks] = useState(false);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [descriptionError, setDescriptionError] = useState<string>('');
+  const [descriptionLanguage, setDescriptionLanguage] = useState<'hindi' | 'english'>('english');
 
   const initialFormData: BusinessFormData = {
     businessName: '',
@@ -173,7 +210,7 @@ const BusinessListingForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<keyof BusinessFormData, boolean>>>({});
 
-  // AI DESCRIPTION FUNCTION - Only used in description step
+  // AI DESCRIPTION FUNCTION - With language selection
   const generateAIDescription = async () => {
     if (!formData.businessName || !formData.city) {
       alert('Please fill in business name and location first');
@@ -186,9 +223,10 @@ const BusinessListingForm = () => {
     try {
       const businessData = {
         businessName: formData.businessName,
-        categories: [formData.businessName], // Use business name as category
+        categories: [formData.businessName],
         location: `${formData.city}, ${formData.state}`,
-        services: [formData.businessName]
+        services: [formData.businessName],
+        language: descriptionLanguage
       };
 
       const aiDescription = await generateBusinessDescription(businessData);
@@ -202,7 +240,6 @@ const BusinessListingForm = () => {
       console.error('Error generating AI description:', error);
       setDescriptionError('Failed to generate description. Please write manually.');
       
-      // Set empty description on error
       setFormData(prev => ({
         ...prev,
         description: ''
@@ -661,7 +698,7 @@ const BusinessListingForm = () => {
   const handleStep2Submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateStep2() && location) {
-      setCurrentStep(3); // Go to contact details
+      setCurrentStep(3);
     } else if (!location) {
       alert('Please allow location access to continue');
     } else {
@@ -711,7 +748,7 @@ const BusinessListingForm = () => {
       emails: contactData.emails
     }));
     
-    setCurrentStep(4); // Move to business timings
+    setCurrentStep(4);
   };
 
   // Business Timings Handler
@@ -720,7 +757,7 @@ const BusinessListingForm = () => {
       ...prev,
       businessHours
     }));
-    setCurrentStep(5); // Move to description step after timings
+    setCurrentStep(5);
   };
 
   // Description Step Handler
@@ -735,7 +772,7 @@ const BusinessListingForm = () => {
       return;
     }
 
-    setCurrentStep(6); // Move to image upload step
+    setCurrentStep(6);
   };
 
   // Image Upload Handler
@@ -801,7 +838,7 @@ const BusinessListingForm = () => {
         address: formData.address
       },
       category_info: {
-        categories: [formData.businessName], // Use business name as category
+        categories: [formData.businessName],
         selectedCategoryIds: [],
         selectedMainCategoryId: null,
         selectedSubCategoryId: null,
@@ -1703,18 +1740,18 @@ const BusinessListingForm = () => {
                   </div>
                 )}
 
-                {/* Step 4: Business Timings - USING ORIGINAL COMPONENT */}
+                {/* Step 4: Business Timings */}
                 {currentStep === 4 && (
                   <div>
                     <BusinessTimings
                       onTimingsSubmit={handleBusinessTimingsChange}
                       onBack={() => setCurrentStep(3)}
-                      continueButtonText="Continue to Description"
+                      continueButtonText="Continue to Brief Description"
                     />
                   </div>
                 )}
 
-                {/* Step 5: Business Description - ONLY PLACE WHERE AI DESCRIPTION IS USED */}
+                {/* Step 5: Business Description - UPDATED: Language selection and button below textarea */}
                 {currentStep === 5 && (
                   <div>
                     <div className="mb-6">
@@ -1727,37 +1764,12 @@ const BusinessListingForm = () => {
                     </div>
 
                     <div className="space-y-6">
-                      {/* AI Description Section */}
+                      {/* AI Description Section - Simplified */}
                       <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                        <div className="flex items-center justify-between mb-4">
-                          <div>
-                            <h3 className="font-semibold text-purple-800 mb-1">AI Business Description</h3>
-                            <p className="text-sm text-purple-600">
-                              Generate a professional description using AI
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={generateAIDescription}
-                            disabled={isGeneratingDescription}
-                            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all shadow-md ${!isGeneratingDescription
-                              ? 'bg-gradient-to-r from-purple-500 to-blue-600 text-white hover:from-purple-600 hover:to-blue-700 transform hover:scale-105'
-                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                              }`}
-                          >
-                            {isGeneratingDescription ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                Generating...
-                              </>
-                            ) : (
-                              <>
-                                <span className="text-lg">✨</span>
-                                Generate AI Description
-                              </>
-                            )}
-                          </button>
-                        </div>
+                        <h3 className="font-semibold text-purple-800 mb-2">AI Business Description</h3>
+                        <p className="text-sm text-purple-600 mb-4">
+                          Generate a professional description using AI in your preferred language
+                        </p>
 
                         {/* Requirements Status */}
                         <div className="p-3 bg-white border border-purple-300 rounded-lg">
@@ -1770,6 +1782,11 @@ const BusinessListingForm = () => {
                               {formData.city ? '✅' : '◯'} City: {formData.city || 'Not set'}
                             </div>
                           </div>
+                          {(!formData.businessName || !formData.city) && (
+                            <p className="text-xs text-red-600 mt-2">
+                              Please fill in business name and city to generate AI description
+                            </p>
+                          )}
                         </div>
                       </div>
 
@@ -1786,7 +1803,11 @@ const BusinessListingForm = () => {
                           onBlur={handleBlur}
                           required
                           aria-invalid={errors.description ? 'true' : 'false'}
-                          placeholder="Describe your business, services, products, and what makes you unique..."
+                          placeholder={
+                            descriptionLanguage === 'english' 
+                              ? "Describe your business, services, products, and what makes you unique..."
+                              : "अपने व्यवसाय, सेवाओं, उत्पादों और आपकी विशेषताओं का वर्णन करें..."
+                          }
                           rows={8}
                           className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 resize-none ${errors.description
                             ? 'border-red-500 bg-red-50'
@@ -1796,7 +1817,10 @@ const BusinessListingForm = () => {
                         <div className="mt-2 flex items-start gap-2 text-sm text-blue-600">
                           <span>💡</span>
                           <p>
-                            A good description helps customers understand your business better. Include your services, products, specialties, and what makes you unique.
+                            {descriptionLanguage === 'english'
+                              ? 'A good description helps customers understand your business better. Include your services, products, specialties, and what makes you unique.'
+                              : 'एक अच्छा विवरण ग्राहकों को आपके व्यवसाय को बेहतर ढंग से समझने में मदद करता है। अपनी सेवाओं, उत्पादों, विशेषताओं और आपकी खास बातों को शामिल करें।'
+                            }
                           </p>
                         </div>
                         {errors.description && (
@@ -1805,6 +1829,57 @@ const BusinessListingForm = () => {
                             {errors.description}
                           </p>
                         )}
+                      </div>
+
+                      {/* Language Selection and Generate Button - NOW BELOW TEXTAREA */}
+                      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between p-4 bg-gray-50 rounded-lg border">
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm font-medium text-gray-700">Language:</span>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setDescriptionLanguage('english')}
+                              className={`px-4 py-2 text-sm rounded-md transition-all ${descriptionLanguage === 'english'
+                                ? 'bg-blue-600 text-white shadow-md'
+                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                }`}
+                            >
+                              English
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDescriptionLanguage('hindi')}
+                              className={`px-4 py-2 text-sm rounded-md transition-all ${descriptionLanguage === 'hindi'
+                                ? 'bg-green-600 text-white shadow-md'
+                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                }`}
+                            >
+                              हिंदी
+                            </button>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={generateAIDescription}
+                          disabled={isGeneratingDescription || !formData.businessName || !formData.city}
+                          className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all shadow-md ${!isGeneratingDescription && formData.businessName && formData.city
+                            ? 'bg-gradient-to-r from-purple-500 to-blue-600 text-white hover:from-purple-600 hover:to-blue-700 transform hover:scale-105'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            }`}
+                        >
+                          {isGeneratingDescription ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-ms">✨</span>
+                               AI Description
+                            </>
+                          )}
+                        </button>
                       </div>
 
                       <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -1953,7 +2028,7 @@ const BusinessListingForm = () => {
               <div className="space-y-3">
                 <h3 className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">Business Description</h3>
                 <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
-                  AI-powered description of your business
+                  AI-powered description in Hindi or English
                 </p>
               </div>
             </div>
