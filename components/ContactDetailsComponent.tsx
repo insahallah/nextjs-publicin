@@ -1,17 +1,36 @@
 "use client";
 import { useState, useEffect } from "react";
 
+// Define the contact data structure
+interface ContactData {
+  contactPersonName: string;
+  contactEmail: string;
+  alternateMobile: string;
+  mobileNumbers: string[];
+  whatsappNumbers: string[];
+  emails: string[];
+  contactPersons: string[];
+  sameAsMobile: boolean;
+}
+
+// Define the component props
+interface ContactDetailsFormProps {
+  mobileNumber?: string;
+  onContactSubmit: (data: ContactData) => void;
+  onBack: () => void;
+}
+
 export default function ContactDetailsForm({ 
   mobileNumber = "", 
   onContactSubmit,
   onBack 
-}) {
+}: ContactDetailsFormProps) {
   const [contactPersons, setContactPersons] = useState([{ value: "" }]);
   const [mobileNumbers, setMobileNumbers] = useState([{ value: "" }]);
   const [whatsappNumbers, setWhatsappNumbers] = useState([{ value: "" }]);
   const [emails, setEmails] = useState([{ value: "" }]);
   const [sameAsMobile, setSameAsMobile] = useState(false);
-  const [userData, setUserData] = useState(null);
+  const [userData, setUserData] = useState<{ fullName?: string; name?: string } | null>(null);
 
   // ============= GET USER DATA FROM LOCALSTORAGE =============
   useEffect(() => {
@@ -42,7 +61,7 @@ export default function ContactDetailsForm({
   }, [mobileNumber]);
 
   // ============= LIMIT 3 PER SECTION =============
-  const addField = (setter, list) => {
+  const addField = (setter: React.Dispatch<React.SetStateAction<{ value: string }[]>>, list: { value: string }[]) => {
     if (list.length >= 3) {
       alert("You can only add up to 3 fields");
       return;
@@ -50,13 +69,22 @@ export default function ContactDetailsForm({
     setter([...list, { value: "" }]);
   };
 
-  const updateField = (setter, list, index, value) => {
+  const updateField = (
+    setter: React.Dispatch<React.SetStateAction<{ value: string }[]>>, 
+    list: { value: string }[], 
+    index: number, 
+    value: string
+  ) => {
     const newList = [...list];
     newList[index].value = value;
     setter(newList);
   };
 
-  const removeField = (setter, list, index) => {
+  const removeField = (
+    setter: React.Dispatch<React.SetStateAction<{ value: string }[]>>, 
+    list: { value: string }[], 
+    index: number
+  ) => {
     if (index === 0) return;
     const newList = [...list];
     newList.splice(index, 1);
@@ -64,11 +92,11 @@ export default function ContactDetailsForm({
   };
 
   // ============= HANDLE FORM SUBMISSION =============
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     // Extract ALL contact data (sab fields include karein)
-    const contactData = {
+    const contactData: ContactData = {
       // Basic contact info
       contactPersonName: contactPersons[0]?.value || "",
       contactEmail: emails[0]?.value || "",
@@ -85,9 +113,7 @@ export default function ContactDetailsForm({
     console.log("Contact Data to Submit:", contactData); // Debugging ke liye
 
     // Call parent component's submit handler with complete data
-    if (onContactSubmit) {
-      onContactSubmit(contactData);
-    }
+    onContactSubmit(contactData);
   };
 
   return (
