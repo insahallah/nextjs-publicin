@@ -2301,14 +2301,99 @@ const BusinessListingForm = () => {
                   </div>
                 )}
 
-                {/* Step 5: Business Timings */}
+                {/* Step 5: Business Timings - WITH CUSTOM BUTTON */}
                 {currentStep === 5 && (
                   <div>
-                    <BusinessTimings
-                      onTimingsSubmit={handleBusinessTimingsChange}
-                      onBack={() => setCurrentStep(4)}
-                      continueButtonText="Continue to brief"
-                    />
+                    <div className="mb-6">
+                      <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">
+                        Set Your Business Timings
+                      </h1>
+                      <p className="text-sm text-gray-600">
+                        Set your business opening and closing hours for each day
+                      </p>
+                    </div>
+
+                    {/* Manual Business Timings Implementation */}
+                    <div className="space-y-6">
+                      {Object.entries(formData.businessHours).map(([day, timing]) => (
+                        <div key={day} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={!timing.closed}
+                              onChange={(e) => {
+                                const updatedHours = {
+                                  ...formData.businessHours,
+                                  [day]: {
+                                    ...timing,
+                                    closed: !e.target.checked
+                                  }
+                                };
+                                setFormData(prev => ({ ...prev, businessHours: updatedHours }));
+                              }}
+                              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                            />
+                            <span className="font-medium capitalize">{day}</span>
+                          </div>
+                          {!timing.closed ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="time"
+                                value={timing.open}
+                                onChange={(e) => {
+                                  const updatedHours = {
+                                    ...formData.businessHours,
+                                    [day]: {
+                                      ...timing,
+                                      open: e.target.value
+                                    }
+                                  };
+                                  setFormData(prev => ({ ...prev, businessHours: updatedHours }));
+                                }}
+                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                              <span className="text-gray-500">to</span>
+                              <input
+                                type="time"
+                                value={timing.close}
+                                onChange={(e) => {
+                                  const updatedHours = {
+                                    ...formData.businessHours,
+                                    [day]: {
+                                      ...timing,
+                                      close: e.target.value
+                                    }
+                                  };
+                                  setFormData(prev => ({ ...prev, businessHours: updatedHours }));
+                                }}
+                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </div>
+                          ) : (
+                            <span className="text-red-500 font-medium">Closed</span>
+                          )}
+                        </div>
+                      ))}
+
+                      <div className="flex flex-col sm:flex-row gap-4 pt-6">
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(4)}
+                          className="flex-1 bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-400 transition-colors"
+                        >
+                          Back
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleBusinessTimingsChange(formData.businessHours);
+                          }}
+                          className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                        >
+                          Continue to brief
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
 
