@@ -1,6 +1,6 @@
 'use client';
 
-import ContactDetails from '@/components/ContactDetailsComponent';
+import ContactDetailsForm from '@/components/ContactDetailsComponent';
 import BusinessTimings from '@/components/BusinessTimingsComponent';
 import ImageUpload from '@/components/ImageUploadComponent';
 import { API_ENDPOINTS2 } from '@/configs/api';
@@ -2163,7 +2163,7 @@ const BusinessListingForm = () => {
                 {/* Step 4: Contact Details - UPDATED */}
                 {currentStep === 4 && (
                   <div>
-                    <ContactDetails
+                    <ContactDetailsForm
                       mobileNumber={mobileNumber}
                       onContactSubmit={handleContactDetailsChange}
                       onBack={() => setCurrentStep(3)}
