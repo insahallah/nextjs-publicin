@@ -173,10 +173,10 @@ const BusinessListingForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<keyof BusinessFormData, boolean>>>({});
 
-  // AI DESCRIPTION FUNCTION
+  // AI DESCRIPTION FUNCTION - Only used in description step
   const generateAIDescription = async () => {
-    if (!formData.businessName || !formData.categories.length || !formData.city) {
-      alert('Please fill in business name, categories, and location first');
+    if (!formData.businessName || !formData.city) {
+      alert('Please fill in business name and location first');
       return;
     }
 
@@ -186,9 +186,9 @@ const BusinessListingForm = () => {
     try {
       const businessData = {
         businessName: formData.businessName,
-        categories: formData.categories,
+        categories: [formData.businessName], // Use business name as category
         location: `${formData.city}, ${formData.state}`,
-        services: formData.categories
+        services: [formData.businessName]
       };
 
       const aiDescription = await generateBusinessDescription(businessData);
@@ -200,27 +200,17 @@ const BusinessListingForm = () => {
 
     } catch (error) {
       console.error('Error generating AI description:', error);
-      setDescriptionError('Failed to generate description. Using default description.');
+      setDescriptionError('Failed to generate description. Please write manually.');
       
+      // Set empty description on error
       setFormData(prev => ({
         ...prev,
-        description: `${formData.businessName} is a professional ${formData.categories[0]} located in ${formData.city}, ${formData.state}. We provide high-quality services and products to meet all your needs. Visit us for exceptional service!`
+        description: ''
       }));
     } finally {
       setIsGeneratingDescription(false);
     }
   };
-
-  // AUTO-GENERATE DESCRIPTION WHEN CATEGORIES ARE SELECTED
-  useEffect(() => {
-    if (formData.categories.length > 0 && formData.businessName && formData.city && !formData.description) {
-      const timer = setTimeout(() => {
-        generateAIDescription();
-      }, 1000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [formData.categories, formData.businessName, formData.city]);
 
   // Fetch districts from API
   const fetchDistricts = async () => {
@@ -278,38 +268,6 @@ const BusinessListingForm = () => {
     }
   };
 
-  // Fetch categories from API
-  const fetchCategories = async () => {
-    setIsLoadingCategories(true);
-    try {
-      const response = await fetch(`${API_ENDPOINTS2.AUTH.MAIN_SEARCH}?lang=en`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      if (result.status === 'success') {
-        if (result.data && Array.isArray(result.data.categories)) {
-          setCategories(result.data.categories);
-        } else if (Array.isArray(result.data)) {
-          setCategories(result.data);
-        } else if (Array.isArray(result.categories)) {
-          setCategories(result.categories);
-        } else {
-          setCategories([]);
-        }
-      } else {
-        setCategories([]);
-      }
-    } catch (error) {
-      setCategories([]);
-    } finally {
-      setIsLoadingCategories(false);
-    }
-  };
-
   // Check authentication status on component mount
   useEffect(() => {
     checkAuthStatus();
@@ -347,13 +305,6 @@ const BusinessListingForm = () => {
       window.removeEventListener('userSignedUp', handleUserSignedUp as EventListener);
     };
   }, []);
-
-  // Load categories when reaching step 3
-  useEffect(() => {
-    if (currentStep === 3) {
-      fetchCategories();
-    }
-  }, [currentStep]);
 
   // Fetch blocks when district changes
   useEffect(() => {
@@ -602,114 +553,6 @@ const BusinessListingForm = () => {
     }
   };
 
-  // Category Selection Functions
-  const handleMainCategorySelect = (category: Category) => {
-    setSelectedMainCategory(category);
-    setSelectedSubCategory(null);
-    setSelectedChildCategories([]);
-
-    setFormData(prev => ({
-      ...prev,
-      categories: [category.label],
-      selectedCategoryIds: [category.id],
-      selectedMainCategoryId: category.id,
-      selectedSubCategoryId: null,
-      selectedChildCategoryId: null
-    }));
-
-    // Auto-generate description when category is selected
-    if (formData.businessName && formData.city) {
-      setTimeout(() => {
-        generateAIDescription();
-      }, 500);
-    }
-  };
-
-  const handleSubCategorySelect = (subCategory: SubCategory) => {
-    if (subCategory.hasChildren && subCategory.childcategories.length > 0) {
-      setSelectedSubCategory(subCategory);
-      setSelectedChildCategories([]);
-      setFormData(prev => ({
-        ...prev,
-        categories: [],
-        selectedCategoryIds: [],
-        selectedSubCategoryId: subCategory.id,
-        selectedChildCategoryId: null
-      }));
-    } else {
-      setSelectedSubCategory(subCategory);
-      setSelectedChildCategories([]);
-      
-      const newCategories = [subCategory.label];
-      const newCategoryIds = [subCategory.id];
-
-      setFormData(prev => ({
-        ...prev,
-        categories: newCategories,
-        selectedCategoryIds: newCategoryIds,
-        selectedSubCategoryId: subCategory.id,
-        selectedChildCategoryId: null,
-        selectedMainCategoryId: null
-      }));
-
-      // Auto-generate description when category is selected
-      if (formData.businessName && formData.city) {
-        setTimeout(() => {
-          generateAIDescription();
-        }, 500);
-      }
-    }
-  };
-
-  const handleChildCategorySelect = (childCategory: ChildCategory) => {
-    setSelectedChildCategories([childCategory]);
-
-    const newCategories = [childCategory.label];
-    const newCategoryIds = [childCategory.id];
-
-    setFormData(prev => ({
-      ...prev,
-      categories: newCategories,
-      selectedCategoryIds: newCategoryIds,
-      selectedChildCategoryId: childCategory.id,
-      selectedMainCategoryId: null,
-      selectedSubCategoryId: null
-    }));
-
-    // Auto-generate description when category is selected
-    if (formData.businessName && formData.city) {
-      setTimeout(() => {
-        generateAIDescription();
-      }, 500);
-    }
-  };
-
-  const handleBackToMainCategories = () => {
-    setSelectedMainCategory(null);
-    setSelectedSubCategory(null);
-    setSelectedChildCategories([]);
-    setFormData(prev => ({
-      ...prev,
-      categories: [],
-      selectedCategoryIds: [],
-      selectedMainCategoryId: null,
-      selectedSubCategoryId: null,
-      selectedChildCategoryId: null
-    }));
-  };
-
-  const handleBackToSubCategories = () => {
-    setSelectedSubCategory(null);
-    setSelectedChildCategories([]);
-    setFormData(prev => ({
-      ...prev,
-      categories: [],
-      selectedCategoryIds: [],
-      selectedSubCategoryId: null,
-      selectedChildCategoryId: null
-    }));
-  };
-
   // Business Details Validation
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -818,7 +661,7 @@ const BusinessListingForm = () => {
   const handleStep2Submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateStep2() && location) {
-      setCurrentStep(3);
+      setCurrentStep(3); // Go to contact details
     } else if (!location) {
       alert('Please allow location access to continue');
     } else {
@@ -868,7 +711,7 @@ const BusinessListingForm = () => {
       emails: contactData.emails
     }));
     
-    setCurrentStep(5);
+    setCurrentStep(4); // Move to business timings
   };
 
   // Business Timings Handler
@@ -877,7 +720,7 @@ const BusinessListingForm = () => {
       ...prev,
       businessHours
     }));
-    setCurrentStep(6); // Move to description step after timings
+    setCurrentStep(5); // Move to description step after timings
   };
 
   // Description Step Handler
@@ -892,7 +735,7 @@ const BusinessListingForm = () => {
       return;
     }
 
-    setCurrentStep(7); // Move to image upload step
+    setCurrentStep(6); // Move to image upload step
   };
 
   // Image Upload Handler
@@ -919,11 +762,6 @@ const BusinessListingForm = () => {
     }
 
     const userId = user.id;
-
-    if (formData.selectedCategoryIds.length === 0) {
-      alert('Please select at least one category');
-      return;
-    }
 
     if (!location) {
       alert('Location access is required to complete registration.');
@@ -963,17 +801,11 @@ const BusinessListingForm = () => {
         address: formData.address
       },
       category_info: {
-        categories: formData.categories,
-        selectedCategoryIds: formData.selectedCategoryIds,
-        selectedMainCategoryId: formData.selectedMainCategoryId,
-        selectedSubCategoryId: formData.selectedSubCategoryId,
-        selectedChildCategoryId: formData.selectedChildCategoryId,
-        selectedMainCategory: selectedMainCategory?.label,
-        selectedSubCategory: selectedSubCategory?.label,
-        selectedChildCategories: selectedChildCategories.map(c => c.label),
-        category: selectedMainCategory ? selectedMainCategory.id.replace('main', '') : null,
-        subcategory: selectedSubCategory ? selectedSubCategory.id.replace('sub', '') : null,
-        child: selectedChildCategories.length > 0 ? selectedChildCategories[0].id.replace('child', '') : null
+        categories: [formData.businessName], // Use business name as category
+        selectedCategoryIds: [],
+        selectedMainCategoryId: null,
+        selectedSubCategoryId: null,
+        selectedChildCategoryId: null
       },
       contact_info: {
         contact_person_name: formData.contactPersonName,
@@ -1021,17 +853,6 @@ const BusinessListingForm = () => {
 
       formDataToSend.append('businessName', formData.businessName);
       formDataToSend.append('description', formData.description);
-      
-      if (selectedChildCategories.length > 0) {
-        const categoryId = selectedChildCategories[0].id.replace('child', '');
-        formDataToSend.append('child', categoryId);
-      } else if (selectedSubCategory) {
-        const categoryId = selectedSubCategory.id.replace('sub', '');
-        formDataToSend.append('subcategory', categoryId);
-      } else if (selectedMainCategory) {
-        const categoryId = selectedMainCategory.id.replace('main', '');
-        formDataToSend.append('category', categoryId);
-      }
 
       const response = await fetch(API_ENDPOINTS2.AUTH.BUSINESS_SUBMISSION, {
         method: 'POST',
@@ -1059,9 +880,6 @@ const BusinessListingForm = () => {
         setMobileNumber('');
         setIsMobileVerified(false);
         setLocation(null);
-        setSelectedMainCategory(null);
-        setSelectedSubCategory(null);
-        setSelectedChildCategories([]);
         setSelectedDistrict('');
         setSelectedBlock('');
         setFormData(initialFormData);
@@ -1161,7 +979,7 @@ const BusinessListingForm = () => {
                 className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${currentStep === 3 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
                   }`}
               >
-                Categories
+                Contact Details
               </button>
               <button
                 onClick={() => {
@@ -1171,7 +989,7 @@ const BusinessListingForm = () => {
                 className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${currentStep === 4 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
                   }`}
               >
-                Contact Details
+                Business Timings
               </button>
               <button
                 onClick={() => {
@@ -1181,7 +999,7 @@ const BusinessListingForm = () => {
                 className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${currentStep === 5 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
                   }`}
               >
-                Business Timings
+                Business Description
               </button>
               <button
                 onClick={() => {
@@ -1189,16 +1007,6 @@ const BusinessListingForm = () => {
                   setIsMobileMenuOpen(false);
                 }}
                 className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${currentStep === 6 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
-                  }`}
-              >
-                Business Description
-              </button>
-              <button
-                onClick={() => {
-                  goToStep(7);
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${currentStep === 7 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
                   }`}
               >
                 Upload Images
@@ -1252,7 +1060,7 @@ const BusinessListingForm = () => {
                   }`}>
                   3
                 </div>
-                <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Categories</span>
+                <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Contact</span>
               </button>
 
               <button
@@ -1266,7 +1074,7 @@ const BusinessListingForm = () => {
                   }`}>
                   4
                 </div>
-                <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Contact</span>
+                <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Timings</span>
               </button>
 
               <button
@@ -1280,7 +1088,7 @@ const BusinessListingForm = () => {
                   }`}>
                   5
                 </div>
-                <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Timings</span>
+                <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Description</span>
               </button>
 
               <button
@@ -1293,20 +1101,6 @@ const BusinessListingForm = () => {
                   : 'border-gray-300 text-gray-400'
                   }`}>
                   6
-                </div>
-                <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Description</span>
-              </button>
-
-              <button
-                onClick={() => goToStep(7)}
-                className={`flex flex-col sm:flex-row items-center space-x-0 sm:space-x-3 text-center min-w-0 flex-1 ${currentStep >= 7 ? 'text-blue-600' : 'text-gray-400'
-                  }`}
-              >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 flex-shrink-0 ${currentStep >= 7
-                  ? 'bg-blue-600 border-blue-600 text-white'
-                  : 'border-gray-300 text-gray-400'
-                  }`}>
-                  7
                 </div>
                 <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Images</span>
               </button>
@@ -1566,7 +1360,7 @@ const BusinessListingForm = () => {
                   </div>
                 )}
 
-                {/* Step 2: Business Details - WITHOUT DESCRIPTION */}
+                {/* Step 2: Business Details */}
                 {currentStep === 2 && (
                   <div>
                     <div className="mb-6">
@@ -1891,514 +1685,37 @@ const BusinessListingForm = () => {
                           disabled={!location}
                           className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {location ? 'Continue to Categories' : 'Allow Location to Continue'}
+                          {location ? 'Continue to Contact Details' : 'Allow Location to Continue'}
                         </button>
                       </div>
                     </form>
                   </div>
                 )}
 
-                {/* Step 3: Category Selection - WITH AI BUTTON */}
+                {/* Step 3: Contact Details */}
                 {currentStep === 3 && (
-                  <div>
-                    <div className="mb-6">
-                      <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">
-                        Select Business Categories
-                      </h1>
-                      <p className="text-sm text-gray-600">
-                        Choose your business category - AI description will be generated automatically
-                      </p>
-                    </div>
-
-                    {/* AI DESCRIPTION SECTION */}
-                    <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-semibold text-purple-800 mb-1">AI Business Description</h3>
-                          <p className="text-sm text-purple-600">
-                            Select a category below to automatically generate your business description
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={generateAIDescription}
-                          disabled={!formData.categories.length || isGeneratingDescription}
-                          className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all shadow-md ${formData.categories.length > 0 && !isGeneratingDescription
-                            ? 'bg-gradient-to-r from-purple-500 to-blue-600 text-white hover:from-purple-600 hover:to-blue-700 transform hover:scale-105'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            }`}
-                        >
-                          {isGeneratingDescription ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <span className="text-lg">✨</span>
-                              Generate AI Description
-                            </>
-                          )}
-                        </button>
-                      </div>
-
-                      {/* Description Preview */}
-                      {formData.description && (
-                        <div className="mt-4 p-3 bg-white border border-purple-300 rounded-lg">
-                          <h4 className="font-medium text-purple-700 mb-2">Generated Description:</h4>
-                          <p className="text-sm text-gray-700">{formData.description}</p>
-                        </div>
-                      )}
-
-                      {/* Requirements Status */}
-                      <div className="mt-3 p-3 bg-white border border-purple-300 rounded-lg">
-                        <p className="text-sm font-medium text-purple-800 mb-2">AI Generation Requirements:</p>
-                        <div className="space-y-1 text-sm">
-                          <div className={`flex items-center gap-2 ${formData.businessName ? 'text-green-600' : 'text-gray-500'}`}>
-                            {formData.businessName ? '✅' : '◯'} Business Name: {formData.businessName || 'Not set'}
-                          </div>
-                          <div className={`flex items-center gap-2 ${formData.categories.length > 0 ? 'text-green-600' : 'text-gray-500'}`}>
-                            {formData.categories.length > 0 ? '✅' : '◯'} Business Category: {formData.categories[0] || 'Not selected'}
-                          </div>
-                          <div className={`flex items-center gap-2 ${formData.city ? 'text-green-600' : 'text-gray-500'}`}>
-                            {formData.city ? '✅' : '◯'} City: {formData.city || 'Not set'}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {isLoadingCategories ? (
-                      <div className="flex flex-col items-center justify-center py-12">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                        <div className="text-lg text-gray-600">Loading categories...</div>
-                      </div>
-                    ) : categories.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12">
-                        <div className="text-red-500 text-lg mb-4">❌ No categories available</div>
-                        <button
-                          onClick={fetchCategories}
-                          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          Retry Loading Categories
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-6">
-                        {/* Breadcrumb Navigation */}
-                        {(selectedMainCategory || selectedSubCategory) && (
-                          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-                            <button
-                              onClick={handleBackToMainCategories}
-                              className="text-blue-600 hover:text-blue-800 font-medium"
-                            >
-                              All Categories
-                            </button>
-                            {selectedMainCategory && (
-                              <>
-                                <span>›</span>
-                                {selectedSubCategory ? (
-                                  <button
-                                    onClick={handleBackToSubCategories}
-                                    className="text-blue-600 hover:text-blue-800 font-medium"
-                                  >
-                                    {selectedMainCategory.label}
-                                  </button>
-                                ) : (
-                                  <span className="text-gray-900 font-medium">{selectedMainCategory.label}</span>
-                                )}
-                              </>
-                            )}
-                            {selectedSubCategory && (
-                              <>
-                                <span>›</span>
-                                <span className="text-gray-900 font-medium">{selectedSubCategory.label}</span>
-                              </>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Main Categories View */}
-                        {!selectedMainCategory && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
-                            {categories.map((category) => (
-                              <div
-                                key={category.id}
-                                onClick={() => handleMainCategorySelect(category)}
-                                className="p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50 border-gray-200 bg-white text-gray-700"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3">
-                                    {category.emoji && (
-                                      <span className="text-xl">{category.emoji}</span>
-                                    )}
-                                    <span className="font-medium text-sm sm:text-base">{category.label}</span>
-                                  </div>
-                                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                  </svg>
-                                </div>
-                                {category.hasSubcategories && (
-                                  <div className="mt-2 text-xs text-gray-500">
-                                    {category.subcategories.length} sub-categories available
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Sub Categories View */}
-                        {selectedMainCategory && !selectedSubCategory && (
-                          <div className="space-y-3 max-h-96 overflow-y-auto">
-                            {selectedMainCategory.subcategories.map((subCategory) => {
-                              const isSelected = formData.selectedCategoryIds.includes(subCategory.id);
-
-                              return (
-                                <div
-                                  key={subCategory.id}
-                                  onClick={() => handleSubCategorySelect(subCategory)}
-                                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${isSelected
-                                    ? 'border-green-500 bg-green-50 text-green-700'
-                                    : 'hover:border-blue-300 hover:bg-blue-50 border-gray-200 bg-white text-gray-700'
-                                    }`}
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                      {subCategory.emoji && (
-                                        <span className="text-xl">{subCategory.emoji}</span>
-                                      )}
-                                      <span className="font-medium text-sm sm:text-base">{subCategory.label}</span>
-                                      {!subCategory.hasChildren || subCategory.childcategories.length === 0 ? (
-                                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                                          Direct Select
-                                        </span>
-                                      ) : (
-                                        <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
-                                          Has Child Categories
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      {isSelected && (
-                                        <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                        </svg>
-                                      )}
-                                      {subCategory.hasChildren && subCategory.childcategories.length > 0 && (
-                                        <span className="text-xs text-gray-500">
-                                          {subCategory.childcategories.length} options
-                                        </span>
-                                      )}
-                                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                      </svg>
-                                    </div>
-                                  </div>
-
-                                  {isSelected && (
-                                    <div className="mt-2 text-xs text-green-600 font-medium">
-                                      ✓ Selected
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {/* Child Categories View */}
-                        {selectedSubCategory && selectedSubCategory.hasChildren && selectedSubCategory.childcategories.length > 0 && (
-                          <div className="space-y-4">
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                              <div className="flex items-center gap-2 mb-2">
-                                <button
-                                  onClick={handleBackToSubCategories}
-                                  className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1"
-                                >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                  </svg>
-                                  Back
-                                </button>
-                                <span className="text-gray-400">›</span>
-                                <span className="text-blue-900 font-semibold">{selectedMainCategory?.label}</span>
-                              </div>
-                              <h3 className="font-semibold text-blue-900 text-lg">
-                                {selectedSubCategory.label}
-                              </h3>
-                              <p className="text-sm text-blue-700 mt-1">
-                                Select one category that best matches your business
-                              </p>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
-                              {selectedSubCategory.childcategories.map((childCategory) => {
-                                const isSelected = selectedChildCategories.some(child => child.id === childCategory.id);
-
-                                return (
-                                  <div
-                                    key={childCategory.id}
-                                    onClick={() => handleChildCategorySelect(childCategory)}
-                                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${isSelected
-                                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                                      }`}
-                                  >
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-3">
-                                        {childCategory.emoji && (
-                                          <span className="text-xl">{childCategory.emoji}</span>
-                                        )}
-                                        <span className="font-medium text-sm sm:text-base">{childCategory.label}</span>
-                                      </div>
-                                      {isSelected ? (
-                                        <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                        </svg>
-                                      ) : (
-                                        <div className="w-5 h-5 border-2 border-gray-300 rounded"></div>
-                                      )}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-
-                            {selectedChildCategories.length > 0 && (
-                              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                <h4 className="font-semibold text-green-800 mb-2">
-                                  Selected Category
-                                </h4>
-                                <div className="flex flex-wrap gap-2">
-                                  {selectedChildCategories.map((child) => (
-                                    <span
-                                      key={child.id}
-                                      className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium"
-                                    >
-                                      {child.emoji && <span className="mr-1">{child.emoji}</span>}
-                                      {child.label}
-                                    </span>
-                                  ))}
-                                </div>
-                                <p className="text-green-700 text-sm mt-2">
-                                  ✓ Category selected successfully! You can now complete your business listing.
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {selectedSubCategory && (!selectedSubCategory.hasChildren || selectedSubCategory.childcategories.length === 0) && (
-                          <div className="space-y-4">
-                            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                              <h3 className="font-semibold text-green-800 mb-2">
-                                ✅ Category Selected Successfully!
-                              </h3>
-                              <p className="text-green-700">
-                                You have selected: <strong>{selectedSubCategory.label}</strong>
-                              </p>
-                              <div className="mt-2 bg-white border border-green-300 rounded-lg p-3">
-                                <div className="flex items-center gap-2">
-                                  {selectedSubCategory.emoji && (
-                                    <span className="text-xl">{selectedSubCategory.emoji}</span>
-                                  )}
-                                  <span className="font-medium text-green-800">{selectedSubCategory.label}</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="flex flex-col sm:flex-row gap-4">
-                              <button
-                                type="button"
-                                onClick={handleBackToSubCategories}
-                                className="flex-1 bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-400 transition-colors"
-                              >
-                                Change Category
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setCurrentStep(4)}
-                                className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                              >
-                                Continue to Contact Details
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {formData.selectedCategoryIds.length > 0 && (
-                          <div className="border-t pt-6 mt-6">
-                            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                              <h3 className="font-semibold text-green-800 mb-2">
-                                ✅ Categories Selected Successfully!
-                              </h3>
-                              <p className="text-green-700">
-                                You have selected {formData.categories.length} category for your business.
-                              </p>
-                              <div className="mt-2 flex flex-wrap gap-2">
-                                {formData.categories.map((category, index) => (
-                                  <span
-                                    key={index}
-                                    className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium"
-                                  >
-                                    {category}
-                                  </span>
-                                ))}
-                              </div>
-
-                              {/* Description Status */}
-                              {formData.description && (
-                                <div className="mt-4 p-3 bg-white border border-green-300 rounded-lg">
-                                  <h4 className="font-medium text-green-700 mb-2">✅ AI Description Generated!</h4>
-                                  <p className="text-sm text-gray-700">{formData.description}</p>
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex flex-col sm:flex-row gap-4">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedMainCategory(null);
-                                  setSelectedSubCategory(null);
-                                  setSelectedChildCategories([]);
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    categories: [],
-                                    selectedCategoryIds: [],
-                                    selectedMainCategoryId: null,
-                                    selectedSubCategoryId: null,
-                                    selectedChildCategoryId: null
-                                  }));
-                                }}
-                                className="flex-1 bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-400 transition-colors"
-                              >
-                                Change Categories
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setCurrentStep(4)}
-                                className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                              >
-                                Continue to Contact Details
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Step 4: Contact Details */}
-                {currentStep === 4 && (
                   <div>
                     <ContactDetailsForm
                       mobileNumber={mobileNumber}
                       onContactSubmit={handleContactDetailsChange}
-                      onBack={() => setCurrentStep(3)}
+                      onBack={() => setCurrentStep(2)}
                     />
                   </div>
                 )}
 
-                {/* Step 5: Business Timings - WITH CUSTOM BUTTON */}
-                {currentStep === 5 && (
+                {/* Step 4: Business Timings - USING ORIGINAL COMPONENT */}
+                {currentStep === 4 && (
                   <div>
-                    <div className="mb-6">
-                      <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">
-                        Set Your Business Timings
-                      </h1>
-                      <p className="text-sm text-gray-600">
-                        Set your business opening and closing hours for each day
-                      </p>
-                    </div>
-
-                    {/* Manual Business Timings Implementation */}
-                    <div className="space-y-6">
-                      {Object.entries(formData.businessHours).map(([day, timing]) => (
-                        <div key={day} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="checkbox"
-                              checked={!timing.closed}
-                              onChange={(e) => {
-                                const updatedHours = {
-                                  ...formData.businessHours,
-                                  [day]: {
-                                    ...timing,
-                                    closed: !e.target.checked
-                                  }
-                                };
-                                setFormData(prev => ({ ...prev, businessHours: updatedHours }));
-                              }}
-                              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                            />
-                            <span className="font-medium capitalize">{day}</span>
-                          </div>
-                          {!timing.closed ? (
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="time"
-                                value={timing.open}
-                                onChange={(e) => {
-                                  const updatedHours = {
-                                    ...formData.businessHours,
-                                    [day]: {
-                                      ...timing,
-                                      open: e.target.value
-                                    }
-                                  };
-                                  setFormData(prev => ({ ...prev, businessHours: updatedHours }));
-                                }}
-                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                              <span className="text-gray-500">to</span>
-                              <input
-                                type="time"
-                                value={timing.close}
-                                onChange={(e) => {
-                                  const updatedHours = {
-                                    ...formData.businessHours,
-                                    [day]: {
-                                      ...timing,
-                                      close: e.target.value
-                                    }
-                                  };
-                                  setFormData(prev => ({ ...prev, businessHours: updatedHours }));
-                                }}
-                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </div>
-                          ) : (
-                            <span className="text-red-500 font-medium">Closed</span>
-                          )}
-                        </div>
-                      ))}
-
-                      <div className="flex flex-col sm:flex-row gap-4 pt-6">
-                        <button
-                          type="button"
-                          onClick={() => setCurrentStep(4)}
-                          className="flex-1 bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-400 transition-colors"
-                        >
-                          Back
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleBusinessTimingsChange(formData.businessHours);
-                          }}
-                          className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                        >
-                          Continue to brief
-                        </button>
-                      </div>
-                    </div>
+                    <BusinessTimings
+                      onTimingsSubmit={handleBusinessTimingsChange}
+                      onBack={() => setCurrentStep(3)}
+                      continueButtonText="Continue to Description"
+                    />
                   </div>
                 )}
 
-                {/* Step 6: Business Description */}
-                {currentStep === 6 && (
+                {/* Step 5: Business Description - ONLY PLACE WHERE AI DESCRIPTION IS USED */}
+                {currentStep === 5 && (
                   <div>
                     <div className="mb-6">
                       <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">
@@ -2422,8 +1739,8 @@ const BusinessListingForm = () => {
                           <button
                             type="button"
                             onClick={generateAIDescription}
-                            disabled={!formData.categories.length || isGeneratingDescription}
-                            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all shadow-md ${formData.categories.length > 0 && !isGeneratingDescription
+                            disabled={isGeneratingDescription}
+                            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all shadow-md ${!isGeneratingDescription
                               ? 'bg-gradient-to-r from-purple-500 to-blue-600 text-white hover:from-purple-600 hover:to-blue-700 transform hover:scale-105'
                               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                               }`}
@@ -2448,9 +1765,6 @@ const BusinessListingForm = () => {
                           <div className="space-y-1 text-sm">
                             <div className={`flex items-center gap-2 ${formData.businessName ? 'text-green-600' : 'text-gray-500'}`}>
                               {formData.businessName ? '✅' : '◯'} Business Name: {formData.businessName || 'Not set'}
-                            </div>
-                            <div className={`flex items-center gap-2 ${formData.categories.length > 0 ? 'text-green-600' : 'text-gray-500'}`}>
-                              {formData.categories.length > 0 ? '✅' : '◯'} Business Category: {formData.categories[0] || 'Not selected'}
                             </div>
                             <div className={`flex items-center gap-2 ${formData.city ? 'text-green-600' : 'text-gray-500'}`}>
                               {formData.city ? '✅' : '◯'} City: {formData.city || 'Not set'}
@@ -2496,7 +1810,7 @@ const BusinessListingForm = () => {
                       <div className="flex flex-col sm:flex-row gap-4 pt-4">
                         <button
                           type="button"
-                          onClick={() => setCurrentStep(5)}
+                          onClick={() => setCurrentStep(4)}
                           className="flex-1 bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-400 transition-colors"
                         >
                           Back
@@ -2514,12 +1828,12 @@ const BusinessListingForm = () => {
                   </div>
                 )}
 
-                {/* Step 7: Image Upload */}
-                {currentStep === 7 && (
+                {/* Step 6: Image Upload */}
+                {currentStep === 6 && (
                   <div>
                     <ImageUpload
                       onImageUpload={handleImageUpload}
-                      onBack={() => setCurrentStep(6)}
+                      onBack={() => setCurrentStep(5)}
                       onSubmit={handleFinalSubmit}
                       maxImages={10}
                     />
@@ -2531,14 +1845,14 @@ const BusinessListingForm = () => {
         </div>
       </div>
 
-      {/* 7 Simple Steps Section */}
+      {/* 6 Simple Steps Section */}
       <div id="businessliststepid" className="section bg-white py-12 sm:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-8 sm:mb-12">
-            Get a FREE Business Listing in 7 Simple Steps
+            Get a FREE Business Listing in 6 Simple Steps
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-8 sm:gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-8 sm:gap-12">
             <div className="text-center group">
               <div className="mb-6 flex justify-center">
                 <div className="relative">
@@ -2584,34 +1898,13 @@ const BusinessListingForm = () => {
             <div className="text-center group">
               <div className="mb-6 flex justify-center">
                 <div className="relative">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center transform group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-xl">
-                    <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                    </svg>
-                  </div>
-                  <div className="absolute -top-2 -right-2 bg-white border-2 border-purple-500 text-purple-600 rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-bold shadow-lg">
-                    3
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <h3 className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">Select Categories</h3>
-                <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
-                  Choose relevant categories for your business
-                </p>
-              </div>
-            </div>
-
-            <div className="text-center group">
-              <div className="mb-6 flex justify-center">
-                <div className="relative">
                   <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-2xl flex items-center justify-center transform group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-xl">
                     <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                     </svg>
                   </div>
                   <div className="absolute -top-2 -right-2 bg-white border-2 border-yellow-500 text-yellow-600 rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-bold shadow-lg">
-                    4
+                    3
                   </div>
                 </div>
               </div>
@@ -2632,7 +1925,7 @@ const BusinessListingForm = () => {
                     </svg>
                   </div>
                   <div className="absolute -top-2 -right-2 bg-white border-2 border-red-500 text-red-600 rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-bold shadow-lg">
-                    5
+                    4
                   </div>
                 </div>
               </div>
@@ -2653,7 +1946,7 @@ const BusinessListingForm = () => {
                     </svg>
                   </div>
                   <div className="absolute -top-2 -right-2 bg-white border-2 border-indigo-500 text-indigo-600 rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-bold shadow-lg">
-                    6
+                    5
                   </div>
                 </div>
               </div>
@@ -2674,7 +1967,7 @@ const BusinessListingForm = () => {
                     </svg>
                   </div>
                   <div className="absolute -top-2 -right-2 bg-white border-2 border-pink-500 text-pink-600 rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-bold shadow-lg">
-                    7
+                    6
                   </div>
                 </div>
               </div>
