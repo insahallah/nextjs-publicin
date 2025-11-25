@@ -42,20 +42,20 @@ export default function ImageUpload({
     }
   };
 
-  // Handle drag over
-  const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+  // Handle drag over - FIXED: Generic DragEvent
+  const handleDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     setIsDragging(true);
   }, []);
 
-  // Handle drag leave
-  const handleDragLeave = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+  // Handle drag leave - FIXED: Generic DragEvent
+  const handleDragLeave = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     setIsDragging(false);
   }, []);
 
-  // Handle drop - FIXED: Changed from HTMLLIElement to HTMLDivElement
-  const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+  // Handle drop - FIXED: Generic DragEvent
+  const handleDrop = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     setIsDragging(false);
     
@@ -167,13 +167,14 @@ export default function ImageUpload({
       </p>
 
       <form onSubmit={handleSubmit}>
-        {/* Upload Area - FIXED: Changed from li to div */}
+        {/* Upload Area - FIXED: Using div instead of li */}
         <div
           className={`upload-container ${isDragging ? 'dragging' : ''}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
+          aria-label="Upload photo"
         >
           <div className="upload-icon">📷</div>
           <h3 style={{ marginBottom: 8, color: isDragging ? "#007bff" : "#333" }}>
