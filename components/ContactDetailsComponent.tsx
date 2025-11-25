@@ -18,26 +18,26 @@ interface ContactDetailsFormProps {
   onBack: () => void;
 }
 
-export default function ContactDetailsForm({
-  mobileNumber = "",
-  onContactSubmit,
-  onBack,
-}: ContactDetailsFormProps) {
+export default function ContactDetailsForm(props: ContactDetailsFormProps) {
+  const { mobileNumber = "", onContactSubmit, onBack } = props;
+
   const [contactPersons, setContactPersons] = useState<{ value: string }[]>([
     { value: "" },
   ]);
   const [mobileNumbers, setMobileNumbers] = useState<{ value: string }[]>([
     { value: "" },
   ]);
-  const [whatsappNumbers, setWhatsappNumbers] = useState<
-    { value: string }[]
-  >([{ value: "" }]);
+  const [whatsappNumbers, setWhatsappNumbers] = useState<{ value: string }[]>([
+    { value: "" },
+  ]);
   const [emails, setEmails] = useState<{ value: string }[]>([{ value: "" }]);
   const [sameAsMobile, setSameAsMobile] = useState<boolean>(false);
-  const [userData, setUserData] = useState<{ fullName?: string; name?: string } | null>(
-    null
-  );
+  const [userData, setUserData] = useState<{
+    fullName?: string;
+    name?: string;
+  } | null>(null);
 
+  // ============= GET USER DATA FROM LOCALSTORAGE =============
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedUserData = localStorage.getItem("userData");
@@ -45,6 +45,7 @@ export default function ContactDetailsForm({
         const user = JSON.parse(storedUserData);
         setUserData(user);
 
+        // Auto-fill contact person with user's name
         if (user.fullName || user.name) {
           setContactPersons([{ value: user.fullName || user.name }]);
         }
@@ -52,14 +53,19 @@ export default function ContactDetailsForm({
     }
   }, []);
 
+  // ============= AUTO-FILL MOBILE NUMBER =============
   useEffect(() => {
     if (mobileNumber) {
+      // Auto-fill first mobile number field
       setMobileNumbers([{ value: mobileNumber }]);
+
+      // Auto-check "Same as Mobile" and fill WhatsApp
       setSameAsMobile(true);
       setWhatsappNumbers([{ value: mobileNumber }]);
     }
   }, [mobileNumber]);
 
+  // ============= LIMIT 3 PER SECTION =============
   const addField = (
     setter: React.Dispatch<React.SetStateAction<{ value: string }[]>>,
     list: { value: string }[]
@@ -93,25 +99,35 @@ export default function ContactDetailsForm({
     setter(newList);
   };
 
+  // ============= HANDLE FORM SUBMISSION =============
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Extract ALL contact data (sab fields include karein)
     const contactData: ContactData = {
+      // Basic contact info
       contactPersonName: contactPersons[0]?.value || "",
       contactEmail: emails[0]?.value || "",
-      alternateMobile: mobileNumbers.length > 1 ? mobileNumbers[1]?.value : "",
-      mobileNumbers: mobileNumbers.map((i) => i.value),
-      whatsappNumbers: whatsappNumbers.map((i) => i.value),
-      emails: emails.map((i) => i.value),
-      contactPersons: contactPersons.map((i) => i.value),
+      alternateMobile:
+        mobileNumbers.length > 1 ? mobileNumbers[1]?.value : "",
+
+      // Additional details for complete data
+      mobileNumbers: mobileNumbers.map((item) => item.value),
+      whatsappNumbers: whatsappNumbers.map((item) => item.value),
+      emails: emails.map((item) => item.value),
+      contactPersons: contactPersons.map((item) => item.value),
       sameAsMobile: sameAsMobile,
     };
 
+    console.log("Contact Data to Submit:", contactData); // Debugging ke liye
+
+    // Call parent component's submit handler with complete data
     onContactSubmit(contactData);
   };
 
   return (
     <div style={{ maxWidth: 500, margin: "auto" }}>
+      {/* ================= CSS FOR FLOAT INPUT ================= */}
       <style>{`
         .float-container {
           position: relative;
@@ -149,13 +165,49 @@ export default function ContactDetailsForm({
           background-color: #f0f8ff;
           border-color: #007bff;
         }
+        .auto-filled:focus {
+          background-color: #fff;
+          border-color: #007bff;
+        }
       `}</style>
 
-      <h2
-        style={{ fontSize: 26, fontWeight: 700, marginBottom: 20 }}
-      >
+      <h2 style={{ fontSize: 26, fontWeight: 700, marginBottom: 20 }}>
         Add Contact Details
       </h2>
+
+      {/* Auto-fill Notifications */}
+      <div style={{ marginBottom: 20 }}>
+        {userData && (userData.fullName || userData.name) && (
+          <div
+            style={{
+              backgroundColor: "#f0f8ff",
+              border: "1px solid #007bff",
+              borderRadius: "6px",
+              padding: "10px 12px",
+              marginBottom: "10px",
+              fontSize: "14px",
+              color: "#007bff",
+            }}
+          >
+            ✅ Contact Person auto-filled from your profile
+          </div>
+        )}
+
+        {mobileNumber && (
+          <div
+            style={{
+              backgroundColor: "#f0f8ff",
+              border: "1px solid #007bff",
+              borderRadius: "6px",
+              padding: "10px 12px",
+              fontSize: "14px",
+              color: "#007bff",
+            }}
+          >
+            ✅ Mobile number auto-filled from your profile
+          </div>
+        )}
+      </div>
 
       <form onSubmit={handleSubmit}>
         {/* ================= CONTACT PERSON ================= */}
@@ -165,16 +217,29 @@ export default function ContactDetailsForm({
               <div className="float-container" style={{ flex: 1 }}>
                 <input
                   type="text"
-                  className="float-input"
+                  className={`float-input ${
+                    i === 0 && userData && (userData.fullName || userData.name)
+                      ? "auto-filled"
+                      : ""
+                  }`}
                   placeholder=" "
                   value={item.value}
                   onChange={(e) =>
-                    updateField(setContactPersons, contactPersons, i, e.target.value)
+                    updateField(
+                      setContactPersons,
+                      contactPersons,
+                      i,
+                      e.target.value
+                    )
                   }
                   required
                 />
                 <label className="float-label">
-                  Contact Person {i === 0 && "*"}
+                  Contact Person *
+                  {i === 0 &&
+                    userData &&
+                    (userData.fullName || userData.name) &&
+                    " (Auto-filled)"}
                 </label>
               </div>
 
@@ -189,6 +254,20 @@ export default function ContactDetailsForm({
                 />
               )}
             </div>
+
+            {/* Helper text for contact person */}
+            {i === 0 && userData && (userData.fullName || userData.name) && (
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#007bff",
+                  marginTop: "4px",
+                  fontStyle: "italic",
+                }}
+              >
+                You can change this name if needed
+              </div>
+            )}
           </div>
         ))}
 
@@ -210,14 +289,40 @@ export default function ContactDetailsForm({
         {/* ================= MOBILE NUMBERS ================= */}
         {mobileNumbers.map((item, i) => (
           <div key={i} style={{ marginBottom: 18 }}>
-            <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <div
+                style={{
+                  minWidth: 90,
+                  border: "1px solid #ccc",
+                  borderRadius: 6,
+                  padding: "10px 12px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <img
+                  src="/india_flag.svg"
+                  style={{ width: 18 }}
+                  alt="India Flag"
+                />
+                <span>+91</span>
+              </div>
+
               <div className="float-container" style={{ flex: 1 }}>
                 <input
-                  className="float-input"
+                  className={`float-input ${
+                    i === 0 && mobileNumber ? "auto-filled" : ""
+                  }`}
                   placeholder=" "
                   value={item.value}
                   onChange={(e) => {
-                    updateField(setMobileNumbers, mobileNumbers, i, e.target.value);
+                    updateField(
+                      setMobileNumbers,
+                      mobileNumbers,
+                      i,
+                      e.target.value
+                    );
                     if (sameAsMobile && i === 0) {
                       setWhatsappNumbers([{ value: e.target.value }]);
                     }
@@ -225,14 +330,17 @@ export default function ContactDetailsForm({
                   required
                 />
                 <label className="float-label">
-                  Mobile Number {i === 0 && "*"}
+                  Mobile Number {i === 0 ? "*" : ""}
+                  {i === 0 && mobileNumber && " (Auto-filled)"}
                 </label>
               </div>
 
               {i > 0 && (
                 <img
                   src="/remove.svg"
-                  onClick={() => removeField(setMobileNumbers, mobileNumbers, i)}
+                  onClick={() =>
+                    removeField(setMobileNumbers, mobileNumbers, i)
+                  }
                   style={{ width: 18, height: 18, cursor: "pointer" }}
                   alt="Remove"
                 />
@@ -257,7 +365,15 @@ export default function ContactDetailsForm({
         </button>
 
         {/* ================= SAME AS MOBILE CHECKBOX ================= */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            marginTop: -5,
+            marginBottom: 20,
+          }}
+        >
           <input
             type="checkbox"
             checked={sameAsMobile}
@@ -275,13 +391,34 @@ export default function ContactDetailsForm({
           <span style={{ color: "#007BFF" }}>Same As Mobile Number</span>
         </div>
 
-        {/* ================= WHATSAPP ================= */}
+        {/* ================= WHATSAPP NUMBERS ================= */}
         {whatsappNumbers.map((item, i) => (
           <div key={i} style={{ marginBottom: 18 }}>
-            <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <div
+                style={{
+                  minWidth: 90,
+                  border: "1px solid #ccc",
+                  borderRadius: 6,
+                  padding: "10px 12px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <img
+                  src="/whatsapp.svg"
+                  style={{ width: 18 }}
+                  alt="WhatsApp"
+                />
+                <span>+91</span>
+              </div>
+
               <div className="float-container" style={{ flex: 1 }}>
                 <input
-                  className="float-input"
+                  className={`float-input ${
+                    i === 0 && sameAsMobile ? "auto-filled" : ""
+                  }`}
                   placeholder=" "
                   value={item.value}
                   disabled={sameAsMobile}
@@ -296,7 +433,8 @@ export default function ContactDetailsForm({
                   required
                 />
                 <label className="float-label">
-                  WhatsApp Number {i === 0 && "*"}
+                  WhatsApp Number *
+                  {sameAsMobile && " (Auto-filled from mobile)"}
                 </label>
               </div>
 
@@ -311,6 +449,20 @@ export default function ContactDetailsForm({
                 />
               )}
             </div>
+
+            {/* Helper text for WhatsApp */}
+            {sameAsMobile && i === 0 && (
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#007bff",
+                  marginTop: "4px",
+                  fontStyle: "italic",
+                }}
+              >
+                Uncheck "Same as Mobile" to edit WhatsApp number separately
+              </div>
+            )}
           </div>
         ))}
 
@@ -324,26 +476,28 @@ export default function ContactDetailsForm({
             color: sameAsMobile ? "#aaa" : "#007BFF",
             fontSize: 14,
             cursor: sameAsMobile ? "not-allowed" : "pointer",
-            marginBottom: 20,
+            marginBottom: 25,
           }}
         >
           + Add WhatsApp Number
         </button>
 
-        {/* ================= EMAILS ================= */}
+        {/* ================= EMAIL ================= */}
         {emails.map((item, i) => (
           <div key={i} style={{ marginBottom: 18 }}>
-            <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <div className="float-container" style={{ flex: 1 }}>
                 <input
                   type="email"
                   className="float-input"
                   placeholder=" "
                   value={item.value}
-                  onChange={(e) => updateField(setEmails, emails, i, e.target.value)}
+                  onChange={(e) =>
+                    updateField(setEmails, emails, i, e.target.value)
+                  }
                 />
                 <label className="float-label">
-                  Email Address {i === 0 && "*"}
+                  Email Address {i === 0 ? "*" : ""}
                 </label>
               </div>
 
@@ -368,13 +522,13 @@ export default function ContactDetailsForm({
             color: "#007BFF",
             fontSize: 14,
             cursor: "pointer",
-            marginBottom: 25,
+            marginBottom: 30,
           }}
         >
           + Add Another Email
         </button>
 
-        {/* ================= BUTTONS ================= */}
+        {/* ================= NAVIGATION BUTTONS ================= */}
         <div style={{ display: "flex", gap: 12 }}>
           <button
             type="button"
