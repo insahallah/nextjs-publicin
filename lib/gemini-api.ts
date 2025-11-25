@@ -4,12 +4,12 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const ai = new GoogleGenerativeAI('AIzaSyCbdnJhqaHdOOXw_0gnSCyVL7Av7bFBhww');
 
 const MODELS = [
-   'gemini-2.5-flash',              // Main recommended model
+  'gemini-2.5-flash',              // Main recommended model
   'gemini-2.0-flash',              // Fallback
   'gemini-2.5-flash-lite-preview', // Fallback
 ];
 
-export const generateDescription = async (prompt, lang = "en") => {
+export const generateDescription = async (prompt: string, lang: string = "en"): Promise<string> => {
   if (!prompt || typeof prompt !== 'string') {
     throw new Error('Prompt must be a non-empty string');
   }
@@ -19,7 +19,7 @@ export const generateDescription = async (prompt, lang = "en") => {
     ? `उत्तर केवल हिंदी में दें। स्पष्ट और संक्षिप्त रहें:\n\n${prompt}`
     : `Respond in English only. Be clear and concise:\n\n${prompt}`;
 
-  const errors = [];
+  const errors: { model: string; error: string }[] = [];
 
   for (const model of MODELS) {
     try {
@@ -42,8 +42,8 @@ export const generateDescription = async (prompt, lang = "en") => {
       }
 
     } catch (error) {
-      console.warn(`Model ${model} failed:`, error.message);
-      errors.push({ model, error: error.message });
+      console.warn(`Model ${model} failed:`, (error as Error).message);
+      errors.push({ model, error: (error as Error).message });
       continue;
     }
   }
@@ -52,10 +52,16 @@ export const generateDescription = async (prompt, lang = "en") => {
 };
 
 // Streaming version
-export const generateDescriptionStream = async (prompt, lang = "en", onChunk) => {
+export const generateDescriptionStream = async (
+  prompt: string, 
+  lang: string = "en", 
+  onChunk?: (chunk: string) => void
+): Promise<string> => {
   const finalPrompt = lang === "hi" 
     ? `उत्तर केवल हिंदी में दें:\n\n${prompt}`
     : prompt;
+
+  const errors: { model: string; error: string }[] = [];
 
   for (const model of MODELS) {
     try {
@@ -81,10 +87,11 @@ export const generateDescriptionStream = async (prompt, lang = "en", onChunk) =>
       return fullText.trim();
 
     } catch (error) {
-      console.warn(`Model ${model} failed:`, error.message);
+      console.warn(`Model ${model} failed:`, (error as Error).message);
+      errors.push({ model, error: (error as Error).message });
       continue;
     }
   }
   
-  throw new Error("All Gemini AI models failed for streaming.");
+  throw new Error(`All Gemini AI models failed for streaming. Errors: ${JSON.stringify(errors)}`);
 };
