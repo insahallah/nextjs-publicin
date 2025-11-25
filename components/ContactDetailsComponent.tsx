@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
 
-// Define the contact data structure
 interface ContactData {
   contactPersonName: string;
   contactEmail: string;
@@ -13,7 +12,6 @@ interface ContactData {
   sameAsMobile: boolean;
 }
 
-// Define the component props
 interface ContactDetailsFormProps {
   mobileNumber?: string;
   onContactSubmit: (data: ContactData) => void;
@@ -25,11 +23,11 @@ export default function ContactDetailsForm({
   onContactSubmit,
   onBack 
 }: ContactDetailsFormProps) {
-  const [contactPersons, setContactPersons] = useState([{ value: "" }]);
-  const [mobileNumbers, setMobileNumbers] = useState([{ value: "" }]);
-  const [whatsappNumbers, setWhatsappNumbers] = useState([{ value: "" }]);
-  const [emails, setEmails] = useState([{ value: "" }]);
-  const [sameAsMobile, setSameAsMobile] = useState(false);
+  const [contactPersons, setContactPersons] = useState<{ value: string }[]>([{ value: "" }]);
+  const [mobileNumbers, setMobileNumbers] = useState<{ value: string }[]>([{ value: "" }]);
+  const [whatsappNumbers, setWhatsappNumbers] = useState<{ value: string }[]>([{ value: "" }]);
+  const [emails, setEmails] = useState<{ value: string }[]>([{ value: "" }]);
+  const [sameAsMobile, setSameAsMobile] = useState<boolean>(false);
   const [userData, setUserData] = useState<{ fullName?: string; name?: string } | null>(null);
 
   // ============= GET USER DATA FROM LOCALSTORAGE =============
