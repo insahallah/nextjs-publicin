@@ -4,6 +4,7 @@ import ContactDetailsForm from '@/components/ContactDetailsComponent';
 import BusinessTimings from '@/components/BusinessTimingsComponent';
 import ImageUpload from '@/components/ImageUploadComponent';
 import { API_ENDPOINTS2 } from '@/configs/api';
+import { generateBusinessDescription } from '@/lib/gemini-api';
 import { useState, useEffect } from 'react';
 
 // Types
@@ -43,6 +44,9 @@ interface BusinessFormData {
   
   // Images
   businessImages: File[];
+
+  // NEW: AI Generated Description
+  description: string;
 }
 
 interface LocationData {
@@ -145,7 +149,11 @@ const BusinessListingForm = () => {
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
   const [isLoadingBlocks, setIsLoadingBlocks] = useState(false);
 
-  // Initialize formData WITH all new fields
+  // NEW STATE FOR AI DESCRIPTION
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const [descriptionError, setDescriptionError] = useState<string>('');
+
+  // Initialize formData WITH description field
   const initialFormData: BusinessFormData = {
     businessName: '',
     pincode: '',
@@ -178,7 +186,8 @@ const BusinessListingForm = () => {
       saturday: { open: '09:00', close: '18:00', closed: false },
       sunday: { open: '09:00', close: '18:00', closed: true }
     },
-    businessImages: []
+    businessImages: [],
+    description: '' // NEW: Description field
   };
 
   const [formData, setFormData] = useState<BusinessFormData>(initialFormData);
@@ -186,29 +195,22 @@ const BusinessListingForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<keyof BusinessFormData, boolean>>>({});
 
-  // Handler functions for new components - UPDATED
+  // Handler functions for new components
   const handleContactDetailsChange = (contactData: any) => {
-   // console.log("Received contact data in parent:", contactData);
-    
     setFormData(prev => ({
       ...prev,
-      // Basic fields jo aapko chahiye
       contactPersonName: contactData.contactPersonName,
       contactEmail: contactData.contactEmail,
       alternateMobile: contactData.alternateMobile,
-      
-      // Additional fields agar chahiye to
       mobileNumbers: contactData.mobileNumbers,
       whatsappNumbers: contactData.whatsappNumbers,
       emails: contactData.emails
     }));
     
-    // Automatically next step pe move karein
     setCurrentStep(5);
   };
 
   const handleBusinessTimingsChange = (businessHours: BusinessFormData['businessHours']) => {
-    //console.log("Received business timings:", businessHours);
     setFormData(prev => ({
       ...prev,
       businessHours
@@ -216,12 +218,62 @@ const BusinessListingForm = () => {
   };
 
   const handleImageUpload = (files: File[]) => {
-   // console.log("Received business images:", files);
     setFormData(prev => ({
       ...prev,
       businessImages: files
     }));
   };
+
+  // NEW FUNCTION: GENERATE AI DESCRIPTION
+  const generateAIDescription = async () => {
+    if (!formData.businessName || !formData.categories.length || !formData.city) {
+      alert('Please fill in business name, categories, and location first');
+      return;
+    }
+
+    setIsGeneratingDescription(true);
+    setDescriptionError('');
+
+    try {
+      const businessData = {
+        businessName: formData.businessName,
+        categories: formData.categories,
+        location: `${formData.city}, ${formData.state}`,
+        services: formData.categories
+      };
+
+      const aiDescription = await generateBusinessDescription(businessData);
+      
+      setFormData(prev => ({
+        ...prev,
+        description: aiDescription
+      }));
+
+    } catch (error) {
+      console.error('Error generating AI description:', error);
+      setDescriptionError('Failed to generate description. Using default description.');
+      
+      // Fallback description
+      setFormData(prev => ({
+        ...prev,
+        description: `${formData.businessName} is a professional ${formData.categories[0]} located in ${formData.city}, ${formData.state}. We provide high-quality services and products to meet all your needs. Visit us for exceptional service!`
+      }));
+    } finally {
+      setIsGeneratingDescription(false);
+    }
+  };
+
+  // AUTO-GENERATE DESCRIPTION WHEN CATEGORIES ARE SELECTED
+  useEffect(() => {
+    if (formData.categories.length > 0 && formData.businessName && formData.city && !formData.description) {
+      // Auto-generate description after a short delay
+      const timer = setTimeout(() => {
+        generateAIDescription();
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [formData.categories, formData.businessName, formData.city]);
 
   // Fetch districts from API
   const fetchDistricts = async () => {
@@ -314,7 +366,7 @@ const BusinessListingForm = () => {
   // Check authentication status on component mount
   useEffect(() => {
     checkAuthStatus();
-    fetchDistricts(); // Load districts on component mount
+    fetchDistricts();
 
     const handleUserLoggedIn = (event: CustomEvent) => {
       const userData = (event as CustomEvent).detail.user;
@@ -347,7 +399,6 @@ const BusinessListingForm = () => {
       window.removeEventListener('userLoggedIn', handleUserLoggedIn as EventListener);
       window.removeEventListener('userSignedUp', handleUserSignedUp as EventListener);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load categories when reaching step 3
@@ -361,7 +412,7 @@ const BusinessListingForm = () => {
   useEffect(() => {
     if (selectedDistrict) {
       fetchBlocks(selectedDistrict);
-      setSelectedBlock(''); // Reset block when district changes
+      setSelectedBlock('');
     } else {
       setBlocks([]);
     }
@@ -492,7 +543,6 @@ const BusinessListingForm = () => {
     if (currentStep === 2 && isMobileVerified) {
       getCurrentLocation();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, isMobileVerified]);
 
   // Get user location automatically
@@ -605,7 +655,7 @@ const BusinessListingForm = () => {
     }
   };
 
-  // UPDATED Category Selection Functions
+  // Category Selection Functions
   const handleMainCategorySelect = (category: Category) => {
     setSelectedMainCategory(category);
     setSelectedSubCategory(null);
@@ -686,7 +736,7 @@ const BusinessListingForm = () => {
   };
 
   // Business Details Validation
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
 
     if (name === 'pincode') {
@@ -702,7 +752,7 @@ const BusinessListingForm = () => {
     }
   };
 
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
     validateField(name as keyof BusinessFormData, value);
@@ -753,6 +803,11 @@ const BusinessListingForm = () => {
       case 'state':
         if (!stringValue.trim()) error = 'State is required';
         break;
+
+      case 'description':
+        if (!stringValue.trim()) error = 'Business description is required';
+        else if (stringValue.trim().length < 50) error = 'Description should be at least 50 characters';
+        break;
     }
 
     setErrors(prev => ({
@@ -764,7 +819,7 @@ const BusinessListingForm = () => {
   const validateStep2 = (): boolean => {
     const requiredFields: (keyof BusinessFormData)[] = [
       'businessName', 'pincode', 'buildingNumber', 'buildingName',
-      'street', 'landmark', 'district', 'block', 'state'
+      'street', 'landmark', 'district', 'block', 'state', 'description'
     ];
 
     requiredFields.forEach(field => {
@@ -796,7 +851,7 @@ const BusinessListingForm = () => {
     }
   };
 
-  // Handle district selection - ID send करें
+  // Handle district selection
   const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const districtId = e.target.value;
     setSelectedDistrict(districtId);
@@ -805,13 +860,13 @@ const BusinessListingForm = () => {
     if (selectedDistrictObj) {
       setFormData(prev => ({
         ...prev,
-        district: districtId, // ID send करें, name नहीं
-        city: selectedDistrictObj.district_name // City के लिए name रख सकते हैं
+        district: districtId,
+        city: selectedDistrictObj.district_name
       }));
     }
   };
 
-  // Handle block selection - ID send करें
+  // Handle block selection
   const handleBlockChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const blockId = e.target.value;
     setSelectedBlock(blockId);
@@ -820,15 +875,14 @@ const BusinessListingForm = () => {
     if (selectedBlockObj) {
       setFormData(prev => ({
         ...prev,
-        block: blockId, // ID send करें, name नहीं
-        village: selectedBlockObj.block_name // Village के लिए name रख सकते हैं
+        block: blockId,
+        village: selectedBlockObj.block_name
       }));
     }
   };
 
-  // UPDATED Final API Submission - All data in separate formats
+  // UPDATED Final API Submission - Includes description
   const handleFinalSubmit = async (e?: React.FormEvent | File[]) => {
-    // Check if e is FormEvent
     if (e && 'preventDefault' in e) {
       e.preventDefault();
     }
@@ -854,12 +908,12 @@ const BusinessListingForm = () => {
       return;
     }
 
-    if (!formData.businessName || !formData.pincode || !formData.district || !formData.block || !formData.state) {
-      alert('Please fill all required fields');
+    if (!formData.businessName || !formData.pincode || !formData.district || !formData.block || !formData.state || !formData.description) {
+      alert('Please fill all required fields including description');
       return;
     }
 
-    // COMPLETE DATA OBJECT FOR CONSOLE - JSON format mein
+    // COMPLETE DATA OBJECT WITH DESCRIPTION
     const completeBusinessData = {
       user_info: {
         userId: userId,
@@ -880,7 +934,7 @@ const BusinessListingForm = () => {
         block: formData.block,
         district_name: districts.find(d => d.id.toString() === formData.district)?.district_name || '',
         block_name: blocks.find(b => b.id.toString() === formData.block)?.block_name || '',
-        description: formData.businessName || 'Business listing'
+        description: formData.description // AI GENERATED DESCRIPTION
       },
       location_data: {
         latitude: formData.latitude?.toString() || '',
@@ -896,7 +950,6 @@ const BusinessListingForm = () => {
         selectedMainCategory: selectedMainCategory?.label,
         selectedSubCategory: selectedSubCategory?.label,
         selectedChildCategories: selectedChildCategories.map(c => c.label),
-        // Category IDs for API
         category: selectedMainCategory ? selectedMainCategory.id.replace('main', '') : null,
         subcategory: selectedSubCategory ? selectedSubCategory.id.replace('sub', '') : null,
         child: selectedChildCategories.length > 0 ? selectedChildCategories[0].id.replace('child', '') : null
@@ -920,19 +973,18 @@ const BusinessListingForm = () => {
       }
     };
 
-    // // CONSOLE MEIN COMPLETE DATA DISPLAY
-    // console.log('🚀 === COMPLETE BUSINESS SUBMISSION DATA === 🚀');
-    // console.log('📋 FULL DATA IN JSON FORMAT:');
-    // console.log(JSON.stringify(completeBusinessData, null, 2));
+    console.log('🚀 === COMPLETE BUSINESS SUBMISSION DATA === 🚀');
+    console.log('📋 FULL DATA IN JSON FORMAT:');
+    console.log(JSON.stringify(completeBusinessData, null, 2));
     
-    // console.log('📊 DATA BREAKDOWN:');
-    // console.log('👤 User Info:', completeBusinessData.user_info);
-    // console.log('🏢 Business Details:', completeBusinessData.business_details);
-    // console.log('📍 Location Data:', completeBusinessData.location_data);
-    // console.log('📂 Category Info:', completeBusinessData.category_info);
-    // console.log('📞 Contact Info:', completeBusinessData.contact_info);
-    // console.log('⏰ Business Timing:', completeBusinessData.business_timing);
-    // console.log('🖼️ Business Images:', completeBusinessData.business_images);
+    console.log('📊 DATA BREAKDOWN:');
+    console.log('👤 User Info:', completeBusinessData.user_info);
+    console.log('🏢 Business Details:', completeBusinessData.business_details);
+    console.log('📍 Location Data:', completeBusinessData.location_data);
+    console.log('📂 Category Info:', completeBusinessData.category_info);
+    console.log('📞 Contact Info:', completeBusinessData.contact_info);
+    console.log('⏰ Business Timing:', completeBusinessData.business_timing);
+    console.log('🖼️ Business Images:', completeBusinessData.business_images);
 
     setIsLoading(true);
 
@@ -943,22 +995,22 @@ const BusinessListingForm = () => {
       formDataToSend.append('userId', userId.toString());
       formDataToSend.append('mobile', mobileNumber);
 
-      // BUSINESS DETAILS - Alag format mein
+      // BUSINESS DETAILS - INCLUDES DESCRIPTION
       formDataToSend.append('business_details', JSON.stringify(completeBusinessData.business_details));
 
-      // CATEGORY INFO - Alag format mein
+      // CATEGORY INFO
       formDataToSend.append('category_info', JSON.stringify(completeBusinessData.category_info));
 
-      // LOCATION DATA - Alag format mein
+      // LOCATION DATA
       formDataToSend.append('location_data', JSON.stringify(completeBusinessData.location_data));
 
-      // CONTACT INFO - Alag format mein
+      // CONTACT INFO
       formDataToSend.append('contact_info', JSON.stringify(completeBusinessData.contact_info));
 
-      // BUSINESS TIMING - Alag format mein
+      // BUSINESS TIMING
       formDataToSend.append('business_timing', JSON.stringify(completeBusinessData.business_timing));
 
-      // BUSINESS IMAGES - Alag format mein (files separately)
+      // BUSINESS IMAGES
       if (formData.businessImages.length > 0) {
         formData.businessImages.forEach((file, index) => {
           formDataToSend.append(`business_images_${index}`, file);
@@ -970,6 +1022,7 @@ const BusinessListingForm = () => {
 
       // Additional fields for backward compatibility
       formDataToSend.append('businessName', formData.businessName);
+      formDataToSend.append('description', formData.description); // DESCRIPTION SEND KARENGE
       
       // Category selection for backward compatibility
       if (selectedChildCategories.length > 0) {
@@ -1012,8 +1065,8 @@ const BusinessListingForm = () => {
       }
 
       if (result.success) {
-        alert('Business listing created successfully!');
-      window.location.href = '/my-businesses';
+        alert('Business listing created successfully with AI description!');
+        window.location.href = '/my-businesses';
 
         // Reset form
         setCurrentStep(1);
@@ -1295,6 +1348,14 @@ const BusinessListingForm = () => {
                       </div>
                       <span className="text-gray-700">Showcase Your Product & Service Offerings</span>
                     </div>
+
+                    {/* NEW AI FEATURE */}
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center mt-0.5">
+                        <span className="text-white text-xs">AI</span>
+                      </div>
+                      <span className="text-gray-700">AI-Powered Business Description Generation</span>
+                    </div>
                   </div>
 
                   <div className="text-xs text-gray-600 text-center border-t border-gray-200 pt-4">
@@ -1496,7 +1557,7 @@ const BusinessListingForm = () => {
                   </div>
                 )}
 
-                {/* Step 2: Business Details */}
+                {/* Step 2: Business Details - UPDATED WITH AI DESCRIPTION */}
                 {currentStep === 2 && (
                   <div>
                     <div className="mb-6">
@@ -1806,6 +1867,82 @@ const BusinessListingForm = () => {
                             {errors.state}
                           </p>
                         )}
+                      </div>
+
+                      {/* AI DESCRIPTION SECTION - NEW */}
+                      <div className="border-t pt-6 mt-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                            Business Description *
+                          </label>
+                          <button
+                            type="button"
+                            onClick={generateAIDescription}
+                            disabled={isGeneratingDescription || !formData.businessName || !formData.categories.length}
+                            className="flex items-center gap-2 px-4 py-2 text-sm bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-lg hover:from-purple-600 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                          >
+                            {isGeneratingDescription ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <span>✨</span>
+                                AI Generate
+                              </>
+                            )}
+                          </button>
+                        </div>
+
+                        <div className="relative">
+                          <textarea
+                            id="description"
+                            name="description"
+                            value={formData.description}
+                            onChange={handleChange}
+                            onBlur={handleBlur}
+                            required
+                            aria-invalid={errors.description ? 'true' : 'false'}
+                            placeholder="Business description will be automatically generated based on your business details. You can also edit it manually."
+                            rows={5}
+                            className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 resize-none ${errors.description
+                              ? 'border-red-500 bg-red-50'
+                              : 'border-gray-300 hover:border-gray-400'
+                              }`}
+                          />
+                          
+                          {isGeneratingDescription && (
+                            <div className="absolute inset-0 bg-white bg-opacity-80 rounded-lg flex items-center justify-center">
+                              <div className="flex items-center gap-2 text-purple-600">
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+                                <span>AI is generating your description...</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {errors.description && (
+                          <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                            <span>⚠</span>
+                            {errors.description}
+                          </p>
+                        )}
+                        
+                        {descriptionError && (
+                          <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                            <p className="text-orange-700 text-sm">{descriptionError}</p>
+                          </div>
+                        )}
+                        
+                        <div className="mt-2 flex items-start gap-2 text-sm text-gray-500">
+                          <span>💡</span>
+                          <p>
+                            AI-powered description helps customers understand your business better. 
+                            It's automatically generated based on your business name, categories, and location.
+                            You can edit the generated description as needed.
+                          </p>
+                        </div>
                       </div>
 
                       <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -2160,7 +2297,7 @@ const BusinessListingForm = () => {
                   </div>
                 )}
 
-                {/* Step 4: Contact Details - UPDATED */}
+                {/* Step 4: Contact Details */}
                 {currentStep === 4 && (
                   <div>
                     <ContactDetailsForm
@@ -2246,7 +2383,7 @@ const BusinessListingForm = () => {
               <div className="space-y-3">
                 <h3 className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-green-600 transition-colors">Business Details</h3>
                 <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
-                  Add name, address, district, block
+                  Add name, address, district, block + AI Description
                 </p>
               </div>
             </div>
