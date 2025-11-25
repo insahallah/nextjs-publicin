@@ -1746,7 +1746,6 @@ const BusinessListingForm = () => {
                     <BusinessTimings
                       onTimingsSubmit={handleBusinessTimingsChange}
                       onBack={() => setCurrentStep(3)}
-                      continueButtonText="Continue to Brief Description"
                     />
                   </div>
                 )}
