@@ -28,24 +28,16 @@ interface BusinessFormData {
   latitude: number | null;
   longitude: number | null;
   address: string;
-  
-  // Contact Details
   contactPersonName: string;
   contactEmail: string;
   alternateMobile: string;
   mobileNumbers?: string[];
   whatsappNumbers?: string[];
   emails?: string[];
-  
-  // Business Timings
   businessHours: {
     [key: string]: { open: string; close: string; closed: boolean };
   };
-  
-  // Images
   businessImages: File[];
-
-  // NEW: AI Generated Description
   description: string;
 }
 
@@ -69,7 +61,6 @@ interface ApiResponse {
   user?: any;
 }
 
-// District and Block Interfaces
 interface District {
   id: number;
   district_name: string;
@@ -84,7 +75,6 @@ interface Block {
   hi_name: string;
 }
 
-// Category Interfaces
 interface ChildCategory {
   id: string;
   label: string;
@@ -107,7 +97,6 @@ interface Category {
   hasSubcategories: boolean;
 }
 
-// Custom Event Types
 declare global {
   interface Window {
     dispatchEvent(event: CustomEvent): void;
@@ -122,38 +111,27 @@ const BusinessListingForm = () => {
   const [locationError, setLocationError] = useState("");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  // Login state management
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<UserData | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(false);
   const [mobileCheckMessage, setMobileCheckMessage] = useState('');
-
-  // Password state for login
   const [password, setPassword] = useState('');
   const [showPasswordField, setShowPasswordField] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-
-  // Category states
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedMainCategory, setSelectedMainCategory] = useState<Category | null>(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState<SubCategory | null>(null);
   const [selectedChildCategories, setSelectedChildCategories] = useState<ChildCategory[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
-
-  // District and Block states
   const [districts, setDistricts] = useState<District[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [selectedDistrict, setSelectedDistrict] = useState<string>('');
   const [selectedBlock, setSelectedBlock] = useState<string>('');
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
   const [isLoadingBlocks, setIsLoadingBlocks] = useState(false);
-
-  // NEW STATE FOR AI DESCRIPTION
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [descriptionError, setDescriptionError] = useState<string>('');
 
-  // Initialize formData WITH description field
   const initialFormData: BusinessFormData = {
     businessName: '',
     pincode: '',
@@ -187,7 +165,7 @@ const BusinessListingForm = () => {
       sunday: { open: '09:00', close: '18:00', closed: true }
     },
     businessImages: [],
-    description: '' // NEW: Description field
+    description: ''
   };
 
   const [formData, setFormData] = useState<BusinessFormData>(initialFormData);
@@ -195,36 +173,7 @@ const BusinessListingForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<keyof BusinessFormData, boolean>>>({});
 
-  // Handler functions for new components
-  const handleContactDetailsChange = (contactData: any) => {
-    setFormData(prev => ({
-      ...prev,
-      contactPersonName: contactData.contactPersonName,
-      contactEmail: contactData.contactEmail,
-      alternateMobile: contactData.alternateMobile,
-      mobileNumbers: contactData.mobileNumbers,
-      whatsappNumbers: contactData.whatsappNumbers,
-      emails: contactData.emails
-    }));
-    
-    setCurrentStep(5);
-  };
-
-  const handleBusinessTimingsChange = (businessHours: BusinessFormData['businessHours']) => {
-    setFormData(prev => ({
-      ...prev,
-      businessHours
-    }));
-  };
-
-  const handleImageUpload = (files: File[]) => {
-    setFormData(prev => ({
-      ...prev,
-      businessImages: files
-    }));
-  };
-
-  // NEW FUNCTION: GENERATE AI DESCRIPTION
+  // AI DESCRIPTION FUNCTION
   const generateAIDescription = async () => {
     if (!formData.businessName || !formData.categories.length || !formData.city) {
       alert('Please fill in business name, categories, and location first');
@@ -253,7 +202,6 @@ const BusinessListingForm = () => {
       console.error('Error generating AI description:', error);
       setDescriptionError('Failed to generate description. Using default description.');
       
-      // Fallback description
       setFormData(prev => ({
         ...prev,
         description: `${formData.businessName} is a professional ${formData.categories[0]} located in ${formData.city}, ${formData.state}. We provide high-quality services and products to meet all your needs. Visit us for exceptional service!`
@@ -266,7 +214,6 @@ const BusinessListingForm = () => {
   // AUTO-GENERATE DESCRIPTION WHEN CATEGORIES ARE SELECTED
   useEffect(() => {
     if (formData.categories.length > 0 && formData.businessName && formData.city && !formData.description) {
-      // Auto-generate description after a short delay
       const timer = setTimeout(() => {
         generateAIDescription();
       }, 1000);
@@ -331,7 +278,7 @@ const BusinessListingForm = () => {
     }
   };
 
-  // Fetch categories from API with proper error handling
+  // Fetch categories from API
   const fetchCategories = async () => {
     setIsLoadingCategories(true);
     try {
@@ -669,6 +616,13 @@ const BusinessListingForm = () => {
       selectedSubCategoryId: null,
       selectedChildCategoryId: null
     }));
+
+    // Auto-generate description when category is selected
+    if (formData.businessName && formData.city) {
+      setTimeout(() => {
+        generateAIDescription();
+      }, 500);
+    }
   };
 
   const handleSubCategorySelect = (subCategory: SubCategory) => {
@@ -685,28 +639,49 @@ const BusinessListingForm = () => {
     } else {
       setSelectedSubCategory(subCategory);
       setSelectedChildCategories([]);
+      
+      const newCategories = [subCategory.label];
+      const newCategoryIds = [subCategory.id];
+
       setFormData(prev => ({
         ...prev,
-        categories: [subCategory.label],
-        selectedCategoryIds: [subCategory.id],
+        categories: newCategories,
+        selectedCategoryIds: newCategoryIds,
         selectedSubCategoryId: subCategory.id,
         selectedChildCategoryId: null,
         selectedMainCategoryId: null
       }));
+
+      // Auto-generate description when category is selected
+      if (formData.businessName && formData.city) {
+        setTimeout(() => {
+          generateAIDescription();
+        }, 500);
+      }
     }
   };
 
   const handleChildCategorySelect = (childCategory: ChildCategory) => {
     setSelectedChildCategories([childCategory]);
 
+    const newCategories = [childCategory.label];
+    const newCategoryIds = [childCategory.id];
+
     setFormData(prev => ({
       ...prev,
-      categories: [childCategory.label],
-      selectedCategoryIds: [childCategory.id],
+      categories: newCategories,
+      selectedCategoryIds: newCategoryIds,
       selectedChildCategoryId: childCategory.id,
       selectedMainCategoryId: null,
       selectedSubCategoryId: null
     }));
+
+    // Auto-generate description when category is selected
+    if (formData.businessName && formData.city) {
+      setTimeout(() => {
+        generateAIDescription();
+      }, 500);
+    }
   };
 
   const handleBackToMainCategories = () => {
@@ -819,7 +794,7 @@ const BusinessListingForm = () => {
   const validateStep2 = (): boolean => {
     const requiredFields: (keyof BusinessFormData)[] = [
       'businessName', 'pincode', 'buildingNumber', 'buildingName',
-      'street', 'landmark', 'district', 'block', 'state', 'description'
+      'street', 'landmark', 'district', 'block', 'state'
     ];
 
     requiredFields.forEach(field => {
@@ -881,7 +856,54 @@ const BusinessListingForm = () => {
     }
   };
 
-  // UPDATED Final API Submission - Includes description
+  // Contact Details Handler
+  const handleContactDetailsChange = (contactData: any) => {
+    setFormData(prev => ({
+      ...prev,
+      contactPersonName: contactData.contactPersonName,
+      contactEmail: contactData.contactEmail,
+      alternateMobile: contactData.alternateMobile,
+      mobileNumbers: contactData.mobileNumbers,
+      whatsappNumbers: contactData.whatsappNumbers,
+      emails: contactData.emails
+    }));
+    
+    setCurrentStep(5);
+  };
+
+  // Business Timings Handler
+  const handleBusinessTimingsChange = (businessHours: BusinessFormData['businessHours']) => {
+    setFormData(prev => ({
+      ...prev,
+      businessHours
+    }));
+    setCurrentStep(6); // Move to description step after timings
+  };
+
+  // Description Step Handler
+  const handleDescriptionSubmit = () => {
+    if (!formData.description.trim()) {
+      alert('Please generate or enter a business description');
+      return;
+    }
+
+    if (formData.description.trim().length < 50) {
+      alert('Description should be at least 50 characters long');
+      return;
+    }
+
+    setCurrentStep(7); // Move to image upload step
+  };
+
+  // Image Upload Handler
+  const handleImageUpload = (files: File[]) => {
+    setFormData(prev => ({
+      ...prev,
+      businessImages: files
+    }));
+  };
+
+  // Final API Submission
   const handleFinalSubmit = async (e?: React.FormEvent | File[]) => {
     if (e && 'preventDefault' in e) {
       e.preventDefault();
@@ -913,7 +935,6 @@ const BusinessListingForm = () => {
       return;
     }
 
-    // COMPLETE DATA OBJECT WITH DESCRIPTION
     const completeBusinessData = {
       user_info: {
         userId: userId,
@@ -934,7 +955,7 @@ const BusinessListingForm = () => {
         block: formData.block,
         district_name: districts.find(d => d.id.toString() === formData.district)?.district_name || '',
         block_name: blocks.find(b => b.id.toString() === formData.block)?.block_name || '',
-        description: formData.description // AI GENERATED DESCRIPTION
+        description: formData.description
       },
       location_data: {
         latitude: formData.latitude?.toString() || '',
@@ -974,43 +995,21 @@ const BusinessListingForm = () => {
     };
 
     console.log('🚀 === COMPLETE BUSINESS SUBMISSION DATA === 🚀');
-    console.log('📋 FULL DATA IN JSON FORMAT:');
     console.log(JSON.stringify(completeBusinessData, null, 2));
-    
-    console.log('📊 DATA BREAKDOWN:');
-    console.log('👤 User Info:', completeBusinessData.user_info);
-    console.log('🏢 Business Details:', completeBusinessData.business_details);
-    console.log('📍 Location Data:', completeBusinessData.location_data);
-    console.log('📂 Category Info:', completeBusinessData.category_info);
-    console.log('📞 Contact Info:', completeBusinessData.contact_info);
-    console.log('⏰ Business Timing:', completeBusinessData.business_timing);
-    console.log('🖼️ Business Images:', completeBusinessData.business_images);
 
     setIsLoading(true);
 
     try {
       const formDataToSend = new FormData();
 
-      // User and basic info
       formDataToSend.append('userId', userId.toString());
       formDataToSend.append('mobile', mobileNumber);
-
-      // BUSINESS DETAILS - INCLUDES DESCRIPTION
       formDataToSend.append('business_details', JSON.stringify(completeBusinessData.business_details));
-
-      // CATEGORY INFO
       formDataToSend.append('category_info', JSON.stringify(completeBusinessData.category_info));
-
-      // LOCATION DATA
       formDataToSend.append('location_data', JSON.stringify(completeBusinessData.location_data));
-
-      // CONTACT INFO
       formDataToSend.append('contact_info', JSON.stringify(completeBusinessData.contact_info));
-
-      // BUSINESS TIMING
       formDataToSend.append('business_timing', JSON.stringify(completeBusinessData.business_timing));
 
-      // BUSINESS IMAGES
       if (formData.businessImages.length > 0) {
         formData.businessImages.forEach((file, index) => {
           formDataToSend.append(`business_images_${index}`, file);
@@ -1020,11 +1019,9 @@ const BusinessListingForm = () => {
         formDataToSend.append('use_default_image', 'true');
       }
 
-      // Additional fields for backward compatibility
       formDataToSend.append('businessName', formData.businessName);
-      formDataToSend.append('description', formData.description); // DESCRIPTION SEND KARENGE
+      formDataToSend.append('description', formData.description);
       
-      // Category selection for backward compatibility
       if (selectedChildCategories.length > 0) {
         const categoryId = selectedChildCategories[0].id.replace('child', '');
         formDataToSend.append('child', categoryId);
@@ -1034,16 +1031,6 @@ const BusinessListingForm = () => {
       } else if (selectedMainCategory) {
         const categoryId = selectedMainCategory.id.replace('main', '');
         formDataToSend.append('category', categoryId);
-      }
-
-      // Log FormData contents before sending
-      console.log('📤 === FORM DATA TO SEND TO API ===');
-      for (let [key, value] of formDataToSend.entries()) {
-        if (key.startsWith('business_images_')) {
-          console.log(`${key}:`, (value as File).name, '(File)');
-        } else {
-          console.log(`${key}:`, value);
-        }
       }
 
       const response = await fetch(API_ENDPOINTS2.AUTH.BUSINESS_SUBMISSION, {
@@ -1068,7 +1055,6 @@ const BusinessListingForm = () => {
         alert('Business listing created successfully with AI description!');
         window.location.href = '/my-businesses';
 
-        // Reset form
         setCurrentStep(1);
         setMobileNumber('');
         setIsMobileVerified(false);
@@ -1205,6 +1191,16 @@ const BusinessListingForm = () => {
                 className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${currentStep === 6 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
                   }`}
               >
+                Business Description
+              </button>
+              <button
+                onClick={() => {
+                  goToStep(7);
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${currentStep === 7 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+                  }`}
+              >
                 Upload Images
               </button>
             </div>
@@ -1298,6 +1294,20 @@ const BusinessListingForm = () => {
                   }`}>
                   6
                 </div>
+                <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Description</span>
+              </button>
+
+              <button
+                onClick={() => goToStep(7)}
+                className={`flex flex-col sm:flex-row items-center space-x-0 sm:space-x-3 text-center min-w-0 flex-1 ${currentStep >= 7 ? 'text-blue-600' : 'text-gray-400'
+                  }`}
+              >
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 flex-shrink-0 ${currentStep >= 7
+                  ? 'bg-blue-600 border-blue-600 text-white'
+                  : 'border-gray-300 text-gray-400'
+                  }`}>
+                  7
+                </div>
                 <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Images</span>
               </button>
             </div>
@@ -1349,7 +1359,6 @@ const BusinessListingForm = () => {
                       <span className="text-gray-700">Showcase Your Product & Service Offerings</span>
                     </div>
 
-                    {/* NEW AI FEATURE */}
                     <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center mt-0.5">
                         <span className="text-white text-xs">AI</span>
@@ -1557,7 +1566,7 @@ const BusinessListingForm = () => {
                   </div>
                 )}
 
-                {/* Step 2: Business Details - UPDATED WITH AI DESCRIPTION */}
+                {/* Step 2: Business Details - WITHOUT DESCRIPTION */}
                 {currentStep === 2 && (
                   <div>
                     <div className="mb-6">
@@ -1869,82 +1878,6 @@ const BusinessListingForm = () => {
                         )}
                       </div>
 
-                      {/* AI DESCRIPTION SECTION - NEW */}
-                      <div className="border-t pt-6 mt-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                            Business Description *
-                          </label>
-                          <button
-                            type="button"
-                            onClick={generateAIDescription}
-                            disabled={isGeneratingDescription || !formData.businessName || !formData.categories.length}
-                            className="flex items-center gap-2 px-4 py-2 text-sm bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-lg hover:from-purple-600 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
-                          >
-                            {isGeneratingDescription ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                Generating...
-                              </>
-                            ) : (
-                              <>
-                                <span>✨</span>
-                                AI Generate
-                              </>
-                            )}
-                          </button>
-                        </div>
-
-                        <div className="relative">
-                          <textarea
-                            id="description"
-                            name="description"
-                            value={formData.description}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                            required
-                            aria-invalid={errors.description ? 'true' : 'false'}
-                            placeholder="Business description will be automatically generated based on your business details. You can also edit it manually."
-                            rows={5}
-                            className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 resize-none ${errors.description
-                              ? 'border-red-500 bg-red-50'
-                              : 'border-gray-300 hover:border-gray-400'
-                              }`}
-                          />
-                          
-                          {isGeneratingDescription && (
-                            <div className="absolute inset-0 bg-white bg-opacity-80 rounded-lg flex items-center justify-center">
-                              <div className="flex items-center gap-2 text-purple-600">
-                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
-                                <span>AI is generating your description...</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {errors.description && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                            <span>⚠</span>
-                            {errors.description}
-                          </p>
-                        )}
-                        
-                        {descriptionError && (
-                          <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                            <p className="text-orange-700 text-sm">{descriptionError}</p>
-                          </div>
-                        )}
-                        
-                        <div className="mt-2 flex items-start gap-2 text-sm text-gray-500">
-                          <span>💡</span>
-                          <p>
-                            AI-powered description helps customers understand your business better. 
-                            It's automatically generated based on your business name, categories, and location.
-                            You can edit the generated description as needed.
-                          </p>
-                        </div>
-                      </div>
-
                       <div className="flex flex-col sm:flex-row gap-4 pt-4">
                         <button
                           type="button"
@@ -1958,14 +1891,14 @@ const BusinessListingForm = () => {
                           disabled={!location}
                           className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {location ? 'Save to Continue' : 'Allow Location to Continue'}
+                          {location ? 'Continue to Categories' : 'Allow Location to Continue'}
                         </button>
                       </div>
                     </form>
                   </div>
                 )}
 
-                {/* Step 3: Category Selection */}
+                {/* Step 3: Category Selection - WITH AI BUTTON */}
                 {currentStep === 3 && (
                   <div>
                     <div className="mb-6">
@@ -1973,13 +1906,65 @@ const BusinessListingForm = () => {
                         Select Business Categories
                       </h1>
                       <p className="text-sm text-gray-600">
-                        {!selectedMainCategory
-                          ? 'Choose a main category to get started'
-                          : !selectedSubCategory
-                            ? 'Now select a sub-category'
-                            : 'Select specific child categories for your business'
-                        }
+                        Choose your business category - AI description will be generated automatically
                       </p>
+                    </div>
+
+                    {/* AI DESCRIPTION SECTION */}
+                    <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-semibold text-purple-800 mb-1">AI Business Description</h3>
+                          <p className="text-sm text-purple-600">
+                            Select a category below to automatically generate your business description
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={generateAIDescription}
+                          disabled={!formData.categories.length || isGeneratingDescription}
+                          className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all shadow-md ${formData.categories.length > 0 && !isGeneratingDescription
+                            ? 'bg-gradient-to-r from-purple-500 to-blue-600 text-white hover:from-purple-600 hover:to-blue-700 transform hover:scale-105'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            }`}
+                        >
+                          {isGeneratingDescription ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-lg">✨</span>
+                              Generate AI Description
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Description Preview */}
+                      {formData.description && (
+                        <div className="mt-4 p-3 bg-white border border-purple-300 rounded-lg">
+                          <h4 className="font-medium text-purple-700 mb-2">Generated Description:</h4>
+                          <p className="text-sm text-gray-700">{formData.description}</p>
+                        </div>
+                      )}
+
+                      {/* Requirements Status */}
+                      <div className="mt-3 p-3 bg-white border border-purple-300 rounded-lg">
+                        <p className="text-sm font-medium text-purple-800 mb-2">AI Generation Requirements:</p>
+                        <div className="space-y-1 text-sm">
+                          <div className={`flex items-center gap-2 ${formData.businessName ? 'text-green-600' : 'text-gray-500'}`}>
+                            {formData.businessName ? '✅' : '◯'} Business Name: {formData.businessName || 'Not set'}
+                          </div>
+                          <div className={`flex items-center gap-2 ${formData.categories.length > 0 ? 'text-green-600' : 'text-gray-500'}`}>
+                            {formData.categories.length > 0 ? '✅' : '◯'} Business Category: {formData.categories[0] || 'Not selected'}
+                          </div>
+                          <div className={`flex items-center gap-2 ${formData.city ? 'text-green-600' : 'text-gray-500'}`}>
+                            {formData.city ? '✅' : '◯'} City: {formData.city || 'Not set'}
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     {isLoadingCategories ? (
@@ -2260,6 +2245,14 @@ const BusinessListingForm = () => {
                                   </span>
                                 ))}
                               </div>
+
+                              {/* Description Status */}
+                              {formData.description && (
+                                <div className="mt-4 p-3 bg-white border border-green-300 rounded-lg">
+                                  <h4 className="font-medium text-green-700 mb-2">✅ AI Description Generated!</h4>
+                                  <p className="text-sm text-gray-700">{formData.description}</p>
+                                </div>
+                              )}
                             </div>
 
                             <div className="flex flex-col sm:flex-row gap-4">
@@ -2312,21 +2305,136 @@ const BusinessListingForm = () => {
                 {currentStep === 5 && (
                   <div>
                     <BusinessTimings
-                      onTimingsSubmit={(timingsData) => {
-                        handleBusinessTimingsChange(timingsData);
-                        setCurrentStep(6);
-                      }}
+                      onTimingsSubmit={handleBusinessTimingsChange}
                       onBack={() => setCurrentStep(4)}
+                      continueButtonText="Continue to brief"
                     />
                   </div>
                 )}
 
-                {/* Step 6: Image Upload */}
+                {/* Step 6: Business Description */}
                 {currentStep === 6 && (
+                  <div>
+                    <div className="mb-6">
+                      <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">
+                        Write About Your Business
+                      </h1>
+                      <p className="text-sm text-gray-600">
+                        Describe your business to help customers understand what you offer
+                      </p>
+                    </div>
+
+                    <div className="space-y-6">
+                      {/* AI Description Section */}
+                      <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h3 className="font-semibold text-purple-800 mb-1">AI Business Description</h3>
+                            <p className="text-sm text-purple-600">
+                              Generate a professional description using AI
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={generateAIDescription}
+                            disabled={!formData.categories.length || isGeneratingDescription}
+                            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all shadow-md ${formData.categories.length > 0 && !isGeneratingDescription
+                              ? 'bg-gradient-to-r from-purple-500 to-blue-600 text-white hover:from-purple-600 hover:to-blue-700 transform hover:scale-105'
+                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              }`}
+                          >
+                            {isGeneratingDescription ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-lg">✨</span>
+                                Generate AI Description
+                              </>
+                            )}
+                          </button>
+                        </div>
+
+                        {/* Requirements Status */}
+                        <div className="p-3 bg-white border border-purple-300 rounded-lg">
+                          <p className="text-sm font-medium text-purple-800 mb-2">AI Generation Requirements:</p>
+                          <div className="space-y-1 text-sm">
+                            <div className={`flex items-center gap-2 ${formData.businessName ? 'text-green-600' : 'text-gray-500'}`}>
+                              {formData.businessName ? '✅' : '◯'} Business Name: {formData.businessName || 'Not set'}
+                            </div>
+                            <div className={`flex items-center gap-2 ${formData.categories.length > 0 ? 'text-green-600' : 'text-gray-500'}`}>
+                              {formData.categories.length > 0 ? '✅' : '◯'} Business Category: {formData.categories[0] || 'Not selected'}
+                            </div>
+                            <div className={`flex items-center gap-2 ${formData.city ? 'text-green-600' : 'text-gray-500'}`}>
+                              {formData.city ? '✅' : '◯'} City: {formData.city || 'Not set'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Description Textarea */}
+                      <div>
+                        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+                          Business Description *
+                        </label>
+                        <textarea
+                          id="description"
+                          name="description"
+                          value={formData.description}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          required
+                          aria-invalid={errors.description ? 'true' : 'false'}
+                          placeholder="Describe your business, services, products, and what makes you unique..."
+                          rows={8}
+                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 resize-none ${errors.description
+                            ? 'border-red-500 bg-red-50'
+                            : 'border-gray-300 hover:border-gray-400'
+                            }`}
+                        />
+                        <div className="mt-2 flex items-start gap-2 text-sm text-blue-600">
+                          <span>💡</span>
+                          <p>
+                            A good description helps customers understand your business better. Include your services, products, specialties, and what makes you unique.
+                          </p>
+                        </div>
+                        {errors.description && (
+                          <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                            <span>⚠</span>
+                            {errors.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(5)}
+                          className="flex-1 bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-400 transition-colors"
+                        >
+                          Back
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDescriptionSubmit}
+                          disabled={!formData.description.trim() || formData.description.trim().length < 50}
+                          className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Continue to Image Upload
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 7: Image Upload */}
+                {currentStep === 7 && (
                   <div>
                     <ImageUpload
                       onImageUpload={handleImageUpload}
-                      onBack={() => setCurrentStep(5)}
+                      onBack={() => setCurrentStep(6)}
                       onSubmit={handleFinalSubmit}
                       maxImages={10}
                     />
@@ -2338,14 +2446,14 @@ const BusinessListingForm = () => {
         </div>
       </div>
 
-      {/* 6 Simple Steps Section */}
+      {/* 7 Simple Steps Section */}
       <div id="businessliststepid" className="section bg-white py-12 sm:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-8 sm:mb-12">
-            Get a FREE Business Listing in 6 Simple Steps
+            Get a FREE Business Listing in 7 Simple Steps
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-8 sm:gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-8 sm:gap-12">
             <div className="text-center group">
               <div className="mb-6 flex justify-center">
                 <div className="relative">
@@ -2383,7 +2491,7 @@ const BusinessListingForm = () => {
               <div className="space-y-3">
                 <h3 className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-green-600 transition-colors">Business Details</h3>
                 <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
-                  Add name, address, district, block + AI Description
+                  Add name, address, district, block details
                 </p>
               </div>
             </div>
@@ -2456,7 +2564,7 @@ const BusinessListingForm = () => {
                 <div className="relative">
                   <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center transform group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-xl">
                     <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                   </div>
                   <div className="absolute -top-2 -right-2 bg-white border-2 border-indigo-500 text-indigo-600 rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-bold shadow-lg">
@@ -2465,7 +2573,28 @@ const BusinessListingForm = () => {
                 </div>
               </div>
               <div className="space-y-3">
-                <h3 className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">Upload Images</h3>
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">Business Description</h3>
+                <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
+                  AI-powered description of your business
+                </p>
+              </div>
+            </div>
+
+            <div className="text-center group">
+              <div className="mb-6 flex justify-center">
+                <div className="relative">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl flex items-center justify-center transform group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-xl">
+                    <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div className="absolute -top-2 -right-2 bg-white border-2 border-pink-500 text-pink-600 rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-bold shadow-lg">
+                    7
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-pink-600 transition-colors">Upload Images</h3>
                 <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
                   Add photos of your business
                 </p>
