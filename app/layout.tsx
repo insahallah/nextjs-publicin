@@ -1,31 +1,50 @@
 import './globals.css';
-
 export const metadata = {
   title: {
-    default: 'Publicin - Business Listing Platform',
-    template: '%s | Publicin'
+    default: 'PublicIn – Jharkhand No. 1 Business & Rural Listing Platform',
+    template: '%s | PublicIn'
   },
-  description: 'Doctor, salon, service center, dukaan, ya freelancer dhundo — humari smart directory aapko sahi service samay par dhundne mein madad karti hai.',
-  keywords: 'business listing, directory, doctors, salon, services, india, publicin',
-  authors: [{ name: 'Publicin' }],
+
+  description:
+    'Doctor, salon, service center, dukaan, ya freelancer dhundna ho — PublicIn aapko sahi business samay par dhundne mein madad karta hai. Gaon se shahar tak: dhan selling, sabji selling, gobar selling, tree selling, bike selling, kawadi wala aur har rural service ek jagah.',
+
+  keywords:
+    'business listing, directory, doctors, salon, services, india, publicin, jharkhand, ranchi, dhan selling, paddy selling, sabji selling, vegetable selling, gobar selling, cow dung selling, tree selling, timber selling, bike selling, byke selling, kawadi wala, scrap buyer, scrap seller, rural business, village services, gaon services, mandi, farmer help, local search platform',
+
+  authors: [{ name: 'PublicIn' }],
+
   openGraph: {
-    title: 'Publicin - Business Listing Platform',
-    description: 'Find the best businesses and services near you',
+    title: 'PublicIn – Jharkhand Business & Rural Services Platform',
+    description:
+      'PublicIn par paaye shahar aur gaon ke behtareen businesses, services aur rural marketplace listings. Doctor, salon, service center ya rural kaam — sab yahin milega.',
     type: 'website',
     locale: 'en_IN',
     url: 'https://publicin.in',
-    siteName: 'Publicin',
+    siteName: 'PublicIn',
+    images: [
+      {
+        url: '/seo.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'PublicIn Business Listing'
+      }
+    ]
   },
+
   twitter: {
     card: 'summary_large_image',
-    title: 'Publicin - Business Listing Platform',
-    description: 'Find the best businesses and services near you',
+    title: 'PublicIn – Jharkhand Business & Rural Services',
+    description:
+      'PublicIn par paaye doctor, salon, dukaan, service center, freelancer aur rural marketplace listings.',
+    images: ['/seo.jpg']
   },
+
   robots: {
     index: true,
     follow: true,
   },
-}
+};
+
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

@@ -24,11 +24,11 @@ interface Business {
   category_id: string
   subcategory_id: string
   childcategory_id: string
-  // New fields for category hierarchy
   parent_category_data?: any
   sub_category_data?: any
   child_category_data?: any
   category_data?: any
+  business_name?: string
 }
 
 interface ApiBusiness {
@@ -56,7 +56,6 @@ interface ApiBusiness {
   }>
   image_count: number
   primary_image: string
-  // Category hierarchy data
   parent_category_data?: any
   sub_category_data?: any
   child_category_data?: any
@@ -76,7 +75,6 @@ export default function MyBusinesses() {
   const [error, setError] = useState<string>('')
   const router = useRouter()
 
-  // Format address from business data
   const formatAddress = (business: ApiBusiness): string => {
     const addressParts = [
       business.building_name,
@@ -90,7 +88,6 @@ export default function MyBusinesses() {
     return addressParts.join(', ') || business.address || 'Address not provided'
   }
 
-  // Format date to display
   const formatCreatedDate = (dateString: string): string => {
     try {
       const date = new Date(dateString);
@@ -104,23 +101,18 @@ export default function MyBusinesses() {
     }
   }
 
-  // Get business image - use primary_image first, then first image from images array
   const getBusinessImage = (business: ApiBusiness): string => {
-    // Use primary_image if available
     if (business.primary_image && business.primary_image !== 'null') {
       return business.primary_image
     }
 
-    // Use first image from images array if available
     if (business.images && business.images.length > 0) {
       return business.images[0].full_url
     }
 
-    // Fallback to category-based default image
     return getDefaultImage(business.category_id)
   }
 
-  // Helper function to get default image based on category
   const getDefaultImage = (categoryId: number): string => {
     const categoryImages: { [key: string]: string } = {
       '1': 'https://images.jdmagicbox.com/comp/def_content/computer_training_institutes/default-computer-training-institutes-0.jpg',
@@ -135,7 +127,6 @@ export default function MyBusinesses() {
     return categoryImages[categoryId.toString()] || 'https://images.jdmagicbox.com/comp/def_content/businesses/default-businesses-0.jpg'
   }
 
-  // Calculate profile score based on business data completeness
   const calculateProfileScore = (business: ApiBusiness): number => {
     if (business.profile_score && business.profile_score > 0) {
       return business.profile_score
@@ -167,7 +158,6 @@ export default function MyBusinesses() {
     return Math.min(score, 100)
   }
 
-  // Get category hierarchy path like "Doctors > Child Health > Neonatologists"
   const getCategoryPath = (business: ApiBusiness): string => {
     const parts = [];
     
@@ -186,7 +176,6 @@ export default function MyBusinesses() {
     return parts.join(' > ');
   }
 
-  // Generate URL slug from text - Improved version
   const generateSlug = (text: string): string => {
     if (!text) return '';
     
@@ -194,27 +183,27 @@ export default function MyBusinesses() {
       .toString()
       .toLowerCase()
       .trim()
-      .replace(/\s+/g, '-')           // Replace spaces with -
-      .replace(/&/g, '-and-')         // Replace & with 'and'
-      .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
-      .replace(/\-\-+/g, '-')         // Replace multiple - with single -
-      .replace(/^-+/, '')             // Trim - from start of text
-      .replace(/-+$/, '');            // Trim - from end of text
+      .replace(/\s+/g, '-')
+      .replace(/&/g, '-and-')
+      .replace(/[^\w\-]+/g, '')
+      .replace(/\-\-+/g, '-')
+      .replace(/^-+/, '')
+      .replace(/-+$/, '');
   }
 
-  // Generate business URL based on category hierarchy - FIXED VERSION
-  const generateBusinessUrl = (business: ApiBusiness): string => {
+  const generateBusinessUrl = (business: Business): string => {
     const basePath = '/list';
     const businessId = business.id;
     
-    // Business name ko URL-friendly format mein convert karo
-    const businessName = generateSlug(business.business_name || 'efinepay');
+    const businessName = business.business_name || business.name;
+    const businessNameSlug = generateSlug(businessName || `business-${businessId}`);
     
     let categoryPath = '';
     
-    // Build category path based on available hierarchy
     if (business.parent_category_data?.name) {
       categoryPath += `/${generateSlug(business.parent_category_data.name)}`;
+    } else {
+      categoryPath += '/business';
     }
     
     if (business.sub_category_data?.name) {
@@ -225,27 +214,24 @@ export default function MyBusinesses() {
       categoryPath += `/${generateSlug(business.child_category_data.subcategory_name)}`;
     }
     
-    // Add category ID based on what's available
     if (business.childcategory_id) {
       categoryPath += `/child${business.childcategory_id}`;
     } else if (business.subcategory_id) {
       categoryPath += `/sub${business.subcategory_id}`;
     } else if (business.category_id) {
       categoryPath += `/cat${business.category_id}`;
+    } else {
+      categoryPath += '/general';
     }
     
-    const finalUrl = `${basePath}${categoryPath}/${businessName}/${businessId}`;
-    console.log('Generated URL:', finalUrl);
-    return finalUrl;
+    return `${basePath}${categoryPath}/${businessNameSlug}/${businessId}`;
   }
 
-  // Handle business click
-  const handleBusinessClick = (business: ApiBusiness) => {
+  const handleBusinessClick = (business: Business) => {
     const url = generateBusinessUrl(business);
     router.push(url);
   }
 
-  // Get status text
   const getStatusText = (status: string): string => {
     if (typeof status === 'string') {
       return status
@@ -292,13 +278,13 @@ export default function MyBusinesses() {
       }
 
       const result: ApiResponse = await response.json();
-      console.log("API Response:", result);
 
       if (result.success && result.data) {
         const transformedBusinesses: Business[] = result.data.map(
           (business: ApiBusiness) => ({
             id: business.id?.toString() || "",
-            name: business.business_name || "Unnamed Business",
+            name: business.business_name || `Business ${business.id}`,
+            business_name: business.business_name,
             address: formatAddress(business),
             image: getBusinessImage(business),
             profileScore: calculateProfileScore(business),
@@ -317,14 +303,10 @@ export default function MyBusinesses() {
             district_name: business.district_name,
             village: business.village,
             pin_code: business.pin_code,
-
-            // safe image handling – no crash even if images missing
             image_path:
               business.primary_image ||
               business.images?.[0]?.image_path ||
               "",
-
-            // SAFE ID conversion
             category_id: business.category_id
               ? business.category_id.toString()
               : "",
@@ -334,8 +316,6 @@ export default function MyBusinesses() {
             childcategory_id: business.childcategory_id
               ? business.childcategory_id.toString()
               : "",
-
-            // Category hierarchy data
             parent_category_data: business.parent_category_data,
             sub_category_data: business.sub_category_data,
             child_category_data: business.child_category_data,
@@ -348,7 +328,6 @@ export default function MyBusinesses() {
         throw new Error(result.message || "No businesses found");
       }
     } catch (err) {
-      console.error("Error fetching businesses:", err);
       setError(
         err instanceof Error
           ? err.message
@@ -369,7 +348,7 @@ export default function MyBusinesses() {
   }
 
   const handleEditBusiness = (businessId: string) => {
-    console.log('Edit business:', businessId)
+    // Add edit business functionality here
   }
 
   useEffect(() => {
@@ -377,10 +356,10 @@ export default function MyBusinesses() {
   }, [])
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return '#22c55e' // Green
-    if (score >= 60) return '#3b82f6' // Blue
-    if (score >= 40) return '#f59e0b' // Yellow/Orange
-    return '#ef4444' // Red
+    if (score >= 80) return '#22c55e'
+    if (score >= 60) return '#3b82f6'
+    if (score >= 40) return '#f59e0b'
+    return '#ef4444'
   }
 
   const getScoreText = (score: number) => {
@@ -451,7 +430,6 @@ export default function MyBusinesses() {
       <div className="businesses-list">
         {businesses.map((business) => (
           <div key={business.id} className="jd_favli pointer">
-            {/* Created Date Header */}
             <div className="created-date-header">
               <div className="created-date-text">
                 Created on: {formatCreatedDate(business.created_at)}
@@ -462,7 +440,7 @@ export default function MyBusinesses() {
               <div className="business-image-section">
                 <div 
                   className="imageZoom jd_fav_img clickable-element" 
-                  onClick={() => handleBusinessClick(business as any)}
+                  onClick={() => handleBusinessClick(business)}
                 >
                   <div className="imageZoom jd_fav_img">
                     <img
@@ -478,25 +456,25 @@ export default function MyBusinesses() {
                 </div>
 
                 <div className="jd_fav_content">
-                  {/* Category Path - Business Name ke upar */}
                   <div 
                     className="category-path font13 color666 mb-5 clickable-element"
-                    onClick={() => handleBusinessClick(business as any)}
+                    onClick={() => handleBusinessClick(business)}
                   >
                     {business.category || "Business Category"}
                   </div>
                   
                   <div 
                     className="clickable-content"
-                    onClick={() => handleBusinessClick(business as any)}
+                    onClick={() => handleBusinessClick(business)}
                   >
                     <div>
-                      <div className="jd_fav_title font24 fw700 color111 mb-10 clickable-element">{business.name}</div>
+                      <div className="jd_fav_title font24 fw700 color111 mb-10 clickable-element">
+                        {business.name}
+                      </div>
                       <div className="jd_fav_address font15 color111 mb-10 clickable-element">{business.address}</div>
                     </div>
                   </div>
 
-                  {/* Buttons moved below the address */}
                   <div className="mybusiness_btnbox">
                     <button className="bluefill_animate mybusiness_button font14 fw500 colorFFF mr-15">
                       Advertise Now
@@ -519,7 +497,6 @@ export default function MyBusinesses() {
                 </div>
               </div>
 
-              {/* Profile Score Section - Now on the right side */}
               <div className="pscore">
                 <div className="score-circle-container">
                   <svg height="80" width="80" className="score-circle">
@@ -645,7 +622,6 @@ export default function MyBusinesses() {
           gap: 20px;
         }
 
-        /* JustDial Style Card */
         .jd_favli {
           background: white;
           border-radius: 8px;
@@ -667,7 +643,6 @@ export default function MyBusinesses() {
           cursor: pointer;
         }
 
-        /* Created Date Header */
         .created-date-header {
           background: #f8fafc;
           padding: 12px 20px;
@@ -731,7 +706,6 @@ export default function MyBusinesses() {
           flex-direction: column;
         }
 
-        /* Category Path - Simple text like in the image */
         .category-path {
           font-size: 13px;
           color: #666;
@@ -739,7 +713,6 @@ export default function MyBusinesses() {
           line-height: 1.3;
         }
 
-        /* CLICKABLE ELEMENTS - HOVER EFFECTS (UNDERLINE REMOVED) */
         .clickable-element {
           cursor: pointer;
           transition: all 0.3s ease;
@@ -761,17 +734,14 @@ export default function MyBusinesses() {
 
         .jd_fav_title.clickable-element:hover {
           color: #007bff;
-          /* UNDERLINE REMOVED */
         }
 
         .jd_fav_address.clickable-element:hover {
           color: #007bff;
-          /* UNDERLINE REMOVED */
         }
 
         .category-path.clickable-element:hover {
           color: #007bff;
-          /* UNDERLINE REMOVED */
         }
 
         .clickable-content {
@@ -826,7 +796,6 @@ export default function MyBusinesses() {
           min-height: 40px;
         }
 
-        /* Blue Fill Button */
         .bluefill_animate {
           background: linear-gradient(135deg, #007bff, #0056b3);
           color: white;
@@ -839,7 +808,6 @@ export default function MyBusinesses() {
           box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
         }
 
-        /* Blue White Fill Button */
         .blue_whitefill_animate {
           background: white;
           color: #007bff;
@@ -875,7 +843,6 @@ export default function MyBusinesses() {
           left: 100%;
         }
 
-        /* Profile Score Section - Now on the right side */
         .pscore {
           display: flex;
           flex-direction: column;
@@ -1026,7 +993,6 @@ export default function MyBusinesses() {
           background: #059669;
         }
 
-        /* Enhanced Responsive Design */
         @media (max-width: 1024px) {
           .my-businesses-container {
             padding: 20px;

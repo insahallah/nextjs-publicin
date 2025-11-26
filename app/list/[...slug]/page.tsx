@@ -33,9 +33,22 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   const [breadcrumbPath, setBreadcrumbPath] = useState<{path: string, name: string, isClickable: boolean}[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
-  const [extractedBusinessId, setExtractedBusinessId] = useState<string>('');
+  const [extractedBusinessId, setExtractedBusinessId] = useState('');
+  const [activeTab, setActiveTab] = useState('overview');
+  const [isMobile, setIsMobile] = useState(false);
 
   const router = useRouter();
+
+  // Responsive check
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
 
   // Add this useEffect to extract business ID from URL
   useEffect(() => {
@@ -46,13 +59,12 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         if (slug && Array.isArray(slug) && slug.length >= 2) {
           const lastSegment = slug[slug.length - 1];
           
-          // Check if last segment is a numeric ID (business ID)
           if (/^\d+$/.test(lastSegment)) {
             setExtractedBusinessId(lastSegment);
           }
         }
       } catch (error) {
-        // Silent error handling
+        console.error('Error extracting business ID:', error);
       }
     };
 
@@ -67,25 +79,19 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         if (slug && Array.isArray(slug)) {
           const breadcrumbs = [];
           
-          // Add Home as first breadcrumb
           breadcrumbs.push({ 
             path: '', 
             name: 'Home', 
             isClickable: true 
           });
 
-          // Generate breadcrumbs from slug
           for (let i = 0; i < slug.length; i++) {
             const pathSegment = slug.slice(0, i + 1).join('/');
             const displayName = slug[i].split('-').map(word => 
               word.charAt(0).toUpperCase() + word.slice(1)
             ).join(' ');
             
-            // Check if this is a business page (ends with numeric ID)
             const isBusinessPage = i === slug.length - 1 && /^\d+$/.test(slug[i]);
-            
-            // For category pages, only make clickable if it's not the last segment
-            // For business pages, make all category segments clickable except the business ID
             const isClickable = !isBusinessPage && i < slug.length - 1;
             
             breadcrumbs.push({ 
@@ -98,7 +104,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           setBreadcrumbPath(breadcrumbs);
         }
       } catch (error) {
-        // Silent error handling
+        console.error('Error generating breadcrumb:', error);
       }
     };
 
@@ -111,7 +117,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       setIsLoginModalOpen(true);
     };
 
-    const handleUserLoggedIn = () => {
+    const handleUserLoggedIn = (event: any) => {
       setTimeout(() => {
         const userId = getCurrentUserId();
         
@@ -159,11 +165,12 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       if (userDataStr) {
         try {
           const userData = JSON.parse(userDataStr);
+          
           if (userData?.id) {
             return String(userData.id);
           }
         } catch (error) {
-          // Silent error handling
+          console.error('Error parsing userData:', error);
         }
       }
       
@@ -175,6 +182,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       return null;
       
     } catch (error) {
+      console.error('Error getting user ID:', error);
       return null;
     }
   };
@@ -239,6 +247,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       try {
         response = await res.json();
       } catch (jsonErr) {
+        console.error("Error parsing JSON response:", jsonErr);
         alert("Failed to submit review: Invalid server response");
         return;
       }
@@ -250,11 +259,11 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       alert("✅ Review submitted successfully!");
       closeReviewModal();
       
-      // Refresh reviews after submitting new review
       if (businessData?.id) {
         fetchReviews(businessData.id);
       }
     } catch (err: any) {
+      console.error("Error submitting review:", err);
       alert("Failed to submit review: " + err.message);
     }
   };
@@ -278,7 +287,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       if (res.ok) {
         const data = await res.json();
         
-        // Handle both response formats
         if (data && (data.status === "success" || data.reviews)) {
           const reviewsData = data.data || data.reviews || [];
           setReviews(reviewsData);
@@ -289,6 +297,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         setReviews([]);
       }
     } catch (error) {
+      console.error('Error fetching reviews:', error);
       setReviews([]);
     } finally {
       setReviewsLoading(false);
@@ -355,6 +364,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         alert(data.message || 'Login failed. Please try again.');
       }
     } catch (error) {
+      console.error('Login error in ListPage:', error);
       alert('Login failed. Please check your connection and try again.');
     }
   };
@@ -388,16 +398,13 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     if (!isClickable) return;
     
     if (path === '') {
-      // Home button
       router.push('/');
     } else {
-      // Navigate to the category path - use the same structure as your app
-      // This should match your Next.js dynamic routing
       router.push(`/${path}`);
     }
   };
 
-  // For now, let's make a simpler version that only shows breadcrumb without clickable links
+  // Simple Breadcrumb Component
   const SimpleBreadcrumb = () => {
     return (
       <div className="flex items-center gap-2 text-sm text-gray-600 flex-wrap">
@@ -412,6 +419,334 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       </div>
     );
   };
+
+  // Business Tabs Component
+  const BusinessTabs = () => {
+    const tabs = [
+      { id: 'overview', label: 'Overview', icon: '📋' },
+      { id: 'review', label: 'Review', icon: '⭐' },
+      { id: 'info', label: 'Info', icon: 'ℹ️' }
+    ];
+
+    return (
+      <div className="bg-white border-b border-gray-200 lg:hidden sticky top-0 z-10">
+        <div className="flex">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 py-4 px-2 text-center font-medium text-sm border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <span className="block text-lg mb-1">{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Overview Tab Content
+  const OverviewTab = () => (
+    <div className="space-y-6">
+      {/* Business Header */}
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Business Image */}
+          <div className="md:w-1/3">
+            <img
+              src={businessData.images && businessData.images[0] ?
+                (typeof businessData.images[0] === 'string' ?
+                  businessData.images[0] :
+                  businessData.images[0].path ?
+                    `https://allupipay.in/publicsewa/images/${businessData.images[0].path}` :
+                    "/default-listing.jpg"
+                ) : "/default-listing.jpg"
+              }
+              alt={businessData.displayName}
+              className="w-full h-64 object-cover rounded-lg mb-4"
+            />
+
+            {/* Action Buttons */}
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <h3 className="font-semibold text-lg mb-3 text-gray-800">Quick Actions</h3>
+              <div className="flex flex-col gap-3">
+                {businessData.phone ? (
+                  <>
+                    <button
+                      onClick={() => window.open(`tel:${businessData.phone}`)}
+                      className="w-full bg-green-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <i className="fas fa-phone"></i>
+                      Call Now
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        const cleanPhone = businessData.phone.replace(/\D/g, '');
+                        const message = `Hello ${businessData.displayName}!\n\nI found your business listing and I'm interested in your services. Could you please provide me with more information?\n\nThank you!`;
+                        const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+                        window.open(whatsappUrl, '_blank');
+                      }}
+                      className="w-full bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
+                    >
+                      WhatsApp
+                    </button>
+                  </>
+                ) : (
+                  <div className="text-center text-gray-500 py-3">
+                    Phone number not available for contact
+                  </div>
+                )}
+
+                <button
+                  onClick={() => {
+                    if (businessData.latitude && businessData.longitude) {
+                      const mapsUrl = `https://www.google.com/maps?q=${businessData.latitude},${businessData.longitude}`;
+                      window.open(mapsUrl, '_blank');
+                    } else if (businessData.location) {
+                      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(businessData.location)}`;
+                      window.open(mapsUrl, '_blank');
+                    } else {
+                      alert('Location information not available');
+                    }
+                  }}
+                  className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <i className="fas fa-map-marker-alt"></i>
+                  Get Directions
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Business Info */}
+          <div className="md:w-2/3">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {businessData.displayName}
+            </h1>
+
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center gap-1">
+                {Array.from({ length: 5 }, (_, i) => (
+                  <span key={i} className={`text-lg ${i < Math.floor(businessData.rating || 0) ? "text-yellow-500" : "text-gray-300"}`}>
+                    ★
+                  </span>
+                ))}
+                <span className="text-lg font-bold ml-2">{businessData.rating || 0}</span>
+                <span className="text-gray-600">({businessData.reviewCount || 0} reviews)</span>
+              </div>
+
+              {businessData.isOpen ? (
+                <span className="text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm font-medium">
+                  🟢 Open Now
+                </span>
+              ) : (
+                <span className="text-red-600 bg-red-50 px-3 py-1 rounded-full text-sm font-medium">
+                  🔴 Closed
+                </span>
+              )}
+            </div>
+
+            {/* Location */}
+            {businessData.location && (
+              <div className="flex items-center gap-2 text-gray-600 mb-4">
+                <span>📍</span>
+                <span>{businessData.location}</span>
+              </div>
+            )}
+
+            {/* Phone */}
+            {businessData.phone ? (
+              <div className="flex items-center gap-2 text-gray-600 mb-4">
+                <span>📞</span>
+                <span>{businessData.phone}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-gray-500 mb-4">
+                <span>📞</span>
+                <span>Phone number not available</span>
+              </div>
+            )}
+
+            {/* Description */}
+            {businessData.description && (
+              <div className="mb-4">
+                <h3 className="font-semibold text-lg mb-2">About</h3>
+                <p className="text-gray-700 leading-relaxed">{businessData.description}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Services Section */}
+      {businessData.services && businessData.services.length > 0 && (
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <h3 className="font-semibold text-xl mb-4">Services Offered</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {businessData.services.map((service: string, index: number) => (
+              <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <span className="text-blue-800 font-medium">{service}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // Review Tab Content
+  const ReviewTab = () => (
+    <div className="bg-white rounded-lg shadow-lg p-6">
+      <h3 className="font-semibold text-xl mb-6">Rate & Review</h3>
+
+      {/* Big Star Rating */}
+      <div className="flex flex-col items-center justify-center mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          {Array.from({ length: 5 }, (_, i) => (
+            <span
+              key={i}
+              onClick={() => handleStarClick(i + 1, businessData)}
+              className={`cursor-pointer text-5xl transition-all duration-200 transform hover:scale-110 ${
+                i < selectedRating
+                  ? "text-yellow-500 drop-shadow-lg"
+                  : "text-gray-300 hover:text-yellow-300"
+              }`}
+            >
+              ★
+            </span>
+          ))}
+        </div>
+        <span className="text-gray-600 text-lg font-medium">
+          {selectedRating > 0 
+            ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}` 
+            : 'Click stars to rate'
+          }
+        </span>
+      </div>
+
+      {/* Current Rating Display and Reviews Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Rating Summary */}
+        <div className="lg:col-span-1">
+          <div className="bg-gray-50 rounded-lg p-6 text-center">
+            <div className="text-4xl font-bold text-gray-900 mb-2">
+              {businessData.rating || 0}
+            </div>
+            <div className="flex items-center justify-center gap-1 mb-2">
+              {Array.from({ length: 5 }, (_, i) => (
+                <span
+                  key={i}
+                  className={`text-xl ${
+                    i < Math.floor(businessData.rating || 0) 
+                      ? "text-yellow-500" 
+                      : "text-gray-300"
+                  }`}
+                >
+                  ★
+                </span>
+              ))}
+            </div>
+            <div className="text-gray-600 text-sm">
+              ({businessData.reviewCount || 0} reviews)
+            </div>
+          </div>
+        </div>
+
+        {/* Review Messages */}
+        <div className="lg:col-span-2">
+          <h4 className="font-semibold text-lg mb-4 text-gray-800">Customer Reviews</h4>
+          
+          {reviewsLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading reviews...</p>
+            </div>
+          ) : reviews.length > 0 ? (
+            <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+              {reviews.map((review, index) => (
+                <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-md">
+                        {review.username ? review.username.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900">
+                          {review.username || 'Anonymous User'}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: 5 }, (_, i) => (
+                            <span
+                              key={i}
+                              className={`text-sm ${
+                                i < Math.floor(review.rating || 0) 
+                                  ? "text-yellow-500" 
+                                  : "text-gray-300"
+                              }`}
+                            >
+                              ★
+                            </span>
+                          ))}
+                          <span className="text-sm text-gray-500 ml-1">
+                            {review.rating || 0}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {review.created_at 
+                        ? new Date(review.created_at).toLocaleDateString('en-IN', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })
+                        : 'Recently'
+                      }
+                    </div>
+                  </div>
+                  
+                  {review.review && review.review.trim() !== '' ? (
+                    <p className="text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-3 border-l-4 border-blue-500">
+                      "{review.review}"
+                    </p>
+                  ) : (
+                    <p className="text-gray-500 italic bg-gray-50 rounded-lg p-3">
+                      No comment provided
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+              <div className="text-gray-400 text-6xl mb-4">💬</div>
+              <h4 className="text-lg font-medium text-gray-600 mb-2">No Reviews Yet</h4>
+              <p className="text-gray-500 max-w-md mx-auto">
+                Be the first to share your experience with this business! Click the stars above to leave a review.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Info Tab Content - BusinessViewRightSideComponent show karein mobile me
+  const InfoTab = () => (
+    <div className="lg:hidden">
+      {extractedBusinessId && (
+        <div className="bg-white rounded-lg shadow-lg">
+          <BusinessViewRightSideComponent businessId={extractedBusinessId} />
+        </div>
+      )}
+    </div>
+  );
 
   // Determine if this is a category page or business details page
   useEffect(() => {
@@ -430,7 +765,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           const lastSegment = slug[slug.length - 1];
           const secondLastSegment = slug[slug.length - 2];
 
-          // Check if last segment is a numeric ID (business ID)
           if (/^\d+$/.test(lastSegment)) {
             setPageType('business');
             const businessId = lastSegment;
@@ -442,11 +776,11 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           }
         }
 
-        // Otherwise, it's a category listings page
         setPageType('category');
         await fetchCategoryData(slug);
 
       } catch (error) {
+        console.error('Error determining page type:', error);
         notFound();
       } finally {
         setLoading(false);
@@ -493,6 +827,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       notFound();
 
     } catch (error) {
+      console.error('Error fetching business details:', error);
       notFound();
     }
   };
@@ -533,6 +868,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
       return null;
     } catch (error) {
+      console.error('Error in direct business fetch:', error);
       return null;
     }
   };
@@ -567,6 +903,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
       return null;
     } catch (error) {
+      console.error('Error in all categories search:', error);
       return null;
     }
   };
@@ -592,7 +929,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       description: business.description || `Welcome to ${business.businessName || "our business"}. We provide quality services to our customers.`,
       latitude: business.latitude,
       longitude: business.longitude,
-      // Add contact_info and business_timing for BusinessViewRightSideComponent
       contact_info: business.contact_info || {
         contact_person_name: business.contact_person_name || "Arman khan",
         email: business.email || "adminerr@gmail.com"
@@ -618,7 +954,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       categorySlug: categorySlug.join('/')
     });
 
-    // Fetch reviews after setting business data
     if (businessDetails.id) {
       fetchReviews(businessDetails.id);
     }
@@ -653,6 +988,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       setListings(displayListings);
       setFilteredListings(displayListings);
     } catch (error) {
+      console.error('Error fetching category data:', error);
       notFound();
     }
   };
@@ -694,299 +1030,34 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
               </button>
             </div>
 
-            {/* Simple Breadcrumb Navigation (Non-clickable) */}
+            {/* Simple Breadcrumb Navigation */}
             <SimpleBreadcrumb />
           </div>
 
-          {/* Main Business Content - Two Column Layout */}
+          {/* Mobile Tabs */}
+          <BusinessTabs />
+
+          {/* Main Business Content - Responsive Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Left Column - Main Business Content (3/4 width) */}
+            {/* Left Column - Main Business Content (3/4 width on desktop) */}
             <div className="lg:col-span-3 space-y-6">
-              {/* Business Header */}
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <div className="flex flex-col md:flex-row gap-6">
-                  {/* Business Image */}
-                  <div className="md:w-1/3">
-                    <img
-                      src={businessData.images && businessData.images[0] ?
-                        (typeof businessData.images[0] === 'string' ?
-                          businessData.images[0] :
-                          businessData.images[0].path ?
-                            `https://allupipay.in/publicsewa/images/${businessData.images[0].path}` :
-                            "/default-listing.jpg"
-                        ) : "/default-listing.jpg"
-                      }
-                      alt={businessData.displayName}
-                      className="w-full h-64 object-cover rounded-lg mb-4"
-                    />
-
-                    {/* Action Buttons */}
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <h3 className="font-semibold text-lg mb-3 text-gray-800">Quick Actions</h3>
-                      <div className="flex flex-col gap-3">
-                        {businessData.phone ? (
-                          <>
-                            <button
-                              onClick={() => window.open(`tel:${businessData.phone}`)}
-                              className="w-full bg-green-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-                            >
-                              <i className="fas fa-phone"></i>
-                              Call Now
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                const cleanPhone = businessData.phone.replace(/\D/g, '');
-                                const message = `Hello ${businessData.displayName}!\n\nI found your business listing and I'm interested in your services. Could you please provide me with more information?\n\nThank you!`;
-                                const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-                                window.open(whatsappUrl, '_blank');
-                              }}
-                              className="w-full bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
-                            >
-                              WhatsApp
-                            </button>
-                          </>
-                        ) : (
-                          <div className="text-center text-gray-500 py-3">
-                            Phone number not available for contact
-                          </div>
-                        )}
-
-                        <button
-                          onClick={() => {
-                            if (businessData.latitude && businessData.longitude) {
-                              const mapsUrl = `https://www.google.com/maps?q=${businessData.latitude},${businessData.longitude}`;
-                              window.open(mapsUrl, '_blank');
-                            } else if (businessData.location) {
-                              const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(businessData.location)}`;
-                              window.open(mapsUrl, '_blank');
-                            } else {
-                              alert('Location information not available');
-                            }
-                          }}
-                          className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                        >
-                          <i className="fas fa-map-marker-alt"></i>
-                          Get Directions
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Business Info */}
-                  <div className="md:w-2/3">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                      {businessData.displayName}
-                    </h1>
-
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: 5 }, (_, i) => (
-                          <span key={i} className={`text-lg ${i < Math.floor(businessData.rating || 0) ? "text-yellow-500" : "text-gray-300"}`}>
-                            ★
-                          </span>
-                        ))}
-                        <span className="text-lg font-bold ml-2">{businessData.rating || 0}</span>
-                        <span className="text-gray-600">({businessData.reviewCount || 0} reviews)</span>
-                      </div>
-
-                      {businessData.isOpen ? (
-                        <span className="text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm font-medium">
-                          🟢 Open Now
-                        </span>
-                      ) : (
-                        <span className="text-red-600 bg-red-50 px-3 py-1 rounded-full text-sm font-medium">
-                          🔴 Closed
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Location */}
-                    {businessData.location && (
-                      <div className="flex items-center gap-2 text-gray-600 mb-4">
-                        <span>📍</span>
-                        <span>{businessData.location}</span>
-                      </div>
-                    )}
-
-                    {/* Phone */}
-                    {businessData.phone ? (
-                      <div className="flex items-center gap-2 text-gray-600 mb-4">
-                        <span>📞</span>
-                        <span>{businessData.phone}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-gray-500 mb-4">
-                        <span>📞</span>
-                        <span>Phone number not available</span>
-                      </div>
-                    )}
-
-                    {/* Description */}
-                    {businessData.description && (
-                      <div className="mb-4">
-                        <h3 className="font-semibold text-lg mb-2">About</h3>
-                        <p className="text-gray-700 leading-relaxed">{businessData.description}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
+              {/* Mobile View: Tab Content */}
+              <div className="lg:hidden">
+                {activeTab === 'overview' && <OverviewTab />}
+                {activeTab === 'review' && <ReviewTab />}
+                {activeTab === 'info' && <InfoTab />}
               </div>
 
-              {/* Services Section */}
-              {businessData.services && businessData.services.length > 0 && (
-                <div className="bg-white rounded-lg shadow-lg p-6">
-                  <h3 className="font-semibold text-xl mb-4">Services Offered</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {businessData.services.map((service: string, index: number) => (
-                      <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <span className="text-blue-800 font-medium">{service}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Rating & Review Section */}
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h3 className="font-semibold text-xl mb-6">Rate & Review</h3>
-
-                {/* Big Star Rating */}
-                <div className="flex flex-col items-center justify-center mb-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <span
-                        key={i}
-                        onClick={() => handleStarClick(i + 1, businessData)}
-                        className={`cursor-pointer text-5xl transition-all duration-200 transform hover:scale-110 ${
-                          i < selectedRating
-                            ? "text-yellow-500 drop-shadow-lg"
-                            : "text-gray-300 hover:text-yellow-300"
-                        }`}
-                      >
-                        ★
-                      </span>
-                    ))}
-                  </div>
-                  <span className="text-gray-600 text-lg font-medium">
-                    {selectedRating > 0 
-                      ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}` 
-                      : 'Click stars to rate'
-                    }
-                  </span>
-                </div>
-
-                {/* Current Rating Display and Reviews Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                  {/* Rating Summary */}
-                  <div className="lg:col-span-1">
-                    <div className="bg-gray-50 rounded-lg p-6 text-center">
-                      <div className="text-4xl font-bold text-gray-900 mb-2">
-                        {businessData.rating || 0}
-                      </div>
-                      <div className="flex items-center justify-center gap-1 mb-2">
-                        {Array.from({ length: 5 }, (_, i) => (
-                          <span
-                            key={i}
-                            className={`text-xl ${
-                              i < Math.floor(businessData.rating || 0) 
-                                ? "text-yellow-500" 
-                                : "text-gray-300"
-                            }`}
-                          >
-                            ★
-                          </span>
-                        ))}
-                      </div>
-                      <div className="text-gray-600 text-sm">
-                        ({businessData.reviewCount || 0} reviews)
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Review Messages */}
-                  <div className="lg:col-span-2">
-                    <h4 className="font-semibold text-lg mb-4 text-gray-800">Customer Reviews</h4>
-                    
-                    {reviewsLoading ? (
-                      <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                        <p className="text-gray-600">Loading reviews...</p>
-                      </div>
-                    ) : reviews.length > 0 ? (
-                      <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                        {reviews.map((review, index) => (
-                          <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-3">
-                                {/* User Avatar */}
-                                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-md">
-                                  {review.username ? review.username.charAt(0).toUpperCase() : 'U'}
-                                </div>
-                                <div>
-                                  <div className="font-medium text-gray-900">
-                                    {review.username || 'Anonymous User'}
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    {Array.from({ length: 5 }, (_, i) => (
-                                      <span
-                                        key={i}
-                                        className={`text-sm ${
-                                          i < Math.floor(review.rating || 0) 
-                                            ? "text-yellow-500" 
-                                            : "text-gray-300"
-                                        }`}
-                                      >
-                                        ★
-                                      </span>
-                                    ))}
-                                    <span className="text-sm text-gray-500 ml-1">
-                                      {review.rating || 0}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {review.created_at 
-                                  ? new Date(review.created_at).toLocaleDateString('en-IN', {
-                                      year: 'numeric',
-                                      month: 'short',
-                                      day: 'numeric'
-                                    })
-                                  : 'Recently'
-                                }
-                              </div>
-                            </div>
-                            
-                            {/* Review Comment */}
-                            {review.review && review.review.trim() !== '' ? (
-                              <p className="text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-3 border-l-4 border-blue-500">
-                                "{review.review}"
-                              </p>
-                            ) : (
-                              <p className="text-gray-500 italic bg-gray-50 rounded-lg p-3">
-                                No comment provided
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                        <div className="text-gray-400 text-6xl mb-4">💬</div>
-                        <h4 className="text-lg font-medium text-gray-600 mb-2">No Reviews Yet</h4>
-                        <p className="text-gray-500 max-w-md mx-auto">
-                          Be the first to share your experience with this business! Click the stars above to leave a review.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
+              {/* Desktop View: Overview aur Review hi dikhega */}
+              <div className="hidden lg:block space-y-6">
+                <OverviewTab />
+                <ReviewTab />
+                {/* Desktop me InfoTab nahi dikhega kyunki sidebar me hai */}
               </div>
             </div>
 
-            {/* Right Column - BusinessViewRightSideComponent (1/4 width) */}
-            <div className="lg:col-span-1">
+            {/* Right Column - BusinessViewRightSideComponent (1/4 width on desktop) - Mobile me hidden */}
+            <div className="hidden lg:block lg:col-span-1">
               {extractedBusinessId && (
                 <BusinessViewRightSideComponent businessId={extractedBusinessId} />
               )}
@@ -1097,7 +1168,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
               </button>
             </div>
 
-            {/* Simple Breadcrumb Navigation (Non-clickable) */}
+            {/* Simple Breadcrumb Navigation */}
             <SimpleBreadcrumb />
           </div>
 
@@ -1237,6 +1308,7 @@ async function fetchAndFormatCategories(): Promise<{ fullPath: string; name: str
     });
     return formattedCategories;
   } catch (error) {
+    console.error(error);
     return [];
   }
 }
@@ -1347,6 +1419,7 @@ async function fetchListings(slugArray: string[]) {
         isOpen: true,
       }));
   } catch (e) {
+    console.error('Error fetching listings:', e);
     return [];
   }
 }
