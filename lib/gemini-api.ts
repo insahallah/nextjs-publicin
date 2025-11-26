@@ -1,26 +1,31 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const ai = new GoogleGenerativeAI('AIzaSyCbdnJhqaHdOOXw_0gnSCyVL7Av7bFBhww');
+const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+
+if (!apiKey) {
+  throw new Error("NEXT_PUBLIC_GEMINI_API_KEY is missing in .env");
+}
+
+const ai = new GoogleGenerativeAI(apiKey);
 
 const MODELS = [
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-2.5-flash-lite-preview',
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "gemini-2.5-flash-lite-preview",
 ];
 
 export const generateDescription = async (
   prompt: string,
   lang: string = "en"
 ): Promise<string> => {
-
-  if (!prompt || typeof prompt !== "string") {
+  if (!prompt?.trim()) {
     throw new Error("Prompt must be a non-empty string");
   }
 
   const finalPrompt =
     lang === "hi"
-      ? `उत्तर केवल हिंदी में दें। स्पष्ट और संक्षिप्त रहें:\n\n${prompt}`
-      : `Respond in English only. Be clear and concise:\n\n${prompt}`;
+      ? `उत्तर केवल हिंदी में दें। स्पष्ट और संक्षिप्त रहें:\n${prompt}`
+      : `Respond only in English. Be clear and concise:\n${prompt}`;
 
   const errors: { model: string; error: string }[] = [];
 
@@ -39,14 +44,11 @@ export const generateDescription = async (
       const result = await genModel.generateContent(finalPrompt);
       const text = result?.response?.text()?.trim();
 
-      if (text && text.length > 0) {
-        return text;
-      }
-
+      if (text) return text;
     } catch (error) {
       errors.push({ model, error: (error as Error).message });
     }
   }
 
-  throw new Error(`All Gemini models failed. Errors: ${JSON.stringify(errors)}`);
+  throw new Error(`All Gemini models failed: ${JSON.stringify(errors)}`);
 };

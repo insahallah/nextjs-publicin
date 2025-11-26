@@ -1,10 +1,11 @@
 'use client';
 
-import ContactDetailsForm from '@/components/ContactDetailsComponent';
+import ContactDetails from '@/components/ContactDetailsComponent';
 import BusinessTimings from '@/components/BusinessTimingsComponent';
 import ImageUpload from '@/components/ImageUploadComponent';
+import BilingualTextGenerator from '@/components/AiGeneratorDescription';
+
 import { API_ENDPOINTS2 } from '@/configs/api';
-import { generateDescription } from '@/lib/gemini-api';
 import { useState, useEffect } from 'react';
 
 // Types
@@ -28,17 +29,25 @@ interface BusinessFormData {
   latitude: number | null;
   longitude: number | null;
   address: string;
+
+  // Contact Details
   contactPersonName: string;
   contactEmail: string;
   alternateMobile: string;
   mobileNumbers?: string[];
   whatsappNumbers?: string[];
   emails?: string[];
+
+  // Business Timings
   businessHours: {
     [key: string]: { open: string; close: string; closed: boolean };
   };
+
+  // Images
   businessImages: File[];
-  description: string;
+
+  // NEW: AI Generated Description
+  businessDescription?: string;
 }
 
 interface LocationData {
@@ -61,6 +70,7 @@ interface ApiResponse {
   user?: any;
 }
 
+// District and Block Interfaces
 interface District {
   id: number;
   district_name: string;
@@ -75,6 +85,7 @@ interface Block {
   hi_name: string;
 }
 
+// Category Interfaces
 interface ChildCategory {
   id: string;
   label: string;
@@ -97,47 +108,12 @@ interface Category {
   hasSubcategories: boolean;
 }
 
+// Custom Event Types
 declare global {
   interface Window {
     dispatchEvent(event: CustomEvent): void;
   }
 }
-
-// AI Business Description Generator
-const generateBusinessDescription = async (businessData: {
-  businessName: string;
-  categories: string[];
-  location: string;
-  services: string[];
-  language: 'hindi' | 'english';
-}) => {
-  const { businessName, categories, location, services, language } = businessData;
-  
-  const lang = language === 'hindi' ? 'hi' : 'en';
-  
-  const prompt = `
-Business Name: ${businessName}
-Location: ${location}
-Services/Products: ${services.join(', ')}
-
-Please create a comprehensive business description that includes:
-1. Introduction of the business
-2. Key services and products offered
-3. Unique selling points
-4. Target audience
-5. Why customers should choose this business
-
-Make it engaging and professional, around 150-200 words.
-`;
-
-  try {
-    const description = await generateDescription(prompt, lang);
-    return description;
-  } catch (error) {
-    console.error('Error generating AI description:', error);
-    throw new Error('Failed to generate business description');
-  }
-};
 
 const BusinessListingForm = () => {
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -147,28 +123,34 @@ const BusinessListingForm = () => {
   const [locationError, setLocationError] = useState("");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Login state management
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<UserData | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(false);
   const [mobileCheckMessage, setMobileCheckMessage] = useState('');
+
+  // Password state for login
   const [password, setPassword] = useState('');
   const [showPasswordField, setShowPasswordField] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Category states
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedMainCategory, setSelectedMainCategory] = useState<Category | null>(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState<SubCategory | null>(null);
   const [selectedChildCategories, setSelectedChildCategories] = useState<ChildCategory[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+
+  // District and Block states
   const [districts, setDistricts] = useState<District[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [selectedDistrict, setSelectedDistrict] = useState<string>('');
   const [selectedBlock, setSelectedBlock] = useState<string>('');
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
   const [isLoadingBlocks, setIsLoadingBlocks] = useState(false);
-  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
-  const [descriptionError, setDescriptionError] = useState<string>('');
-  const [descriptionLanguage, setDescriptionLanguage] = useState<'hindi' | 'english'>('english');
 
+  // Initialize formData WITH all new fields including businessDescription
   const initialFormData: BusinessFormData = {
     businessName: '',
     pincode: '',
@@ -202,7 +184,7 @@ const BusinessListingForm = () => {
       sunday: { open: '09:00', close: '18:00', closed: true }
     },
     businessImages: [],
-    description: ''
+    businessDescription: '' // NEW: AI generated description
   };
 
   const [formData, setFormData] = useState<BusinessFormData>(initialFormData);
@@ -210,51 +192,62 @@ const BusinessListingForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<keyof BusinessFormData, boolean>>>({});
 
-  // AI DESCRIPTION FUNCTION - With language selection
-  const generateAIDescription = async () => {
-    if (!formData.businessName || !formData.city) {
-      alert('Please fill in business name and location first');
-      return;
-    }
+  // Handler functions for new components - UPDATED
+  const handleContactDetailsChange = (contactData: any) => {
+    console.log("Received contact data in parent:", contactData);
 
-    setIsGeneratingDescription(true);
-    setDescriptionError('');
+    setFormData(prev => ({
+      ...prev,
+      // Basic fields jo aapko chahiye
+      contactPersonName: contactData.contactPersonName,
+      contactEmail: contactData.contactEmail,
+      alternateMobile: contactData.alternateMobile,
 
-    try {
-      const businessData = {
-        businessName: formData.businessName,
-        categories: [formData.businessName],
-        location: `${formData.city}, ${formData.state}`,
-        services: [formData.businessName],
-        language: descriptionLanguage
-      };
+      // Additional fields agar chahiye to
+      mobileNumbers: contactData.mobileNumbers,
+      whatsappNumbers: contactData.whatsappNumbers,
+      emails: contactData.emails
+    }));
 
-      const aiDescription = await generateBusinessDescription(businessData);
-      
+    // Automatically next step pe move karein
+    setCurrentStep(5);
+  };
+
+  const handleBusinessTimingsChange = (businessHours: BusinessFormData['businessHours']) => {
+    console.log("Received business timings:", businessHours);
+    setFormData(prev => ({
+      ...prev,
+      businessHours
+    }));
+  };
+
+  const handleImageUpload = (files: File[]) => {
+    console.log("Received business images:", files);
+    setFormData(prev => ({
+      ...prev,
+      businessImages: files
+    }));
+  };
+
+  // NEW: Handler for AI generated description
+  const handleDescriptionGenerated = (desc: string) => {
+    console.log("🔄 handleDescriptionGenerated called with:", desc);
+
+    if (desc && desc.trim() !== '') {
       setFormData(prev => ({
         ...prev,
-        description: aiDescription
+        businessDescription: desc.trim()
       }));
-
-    } catch (error) {
-      console.error('Error generating AI description:', error);
-      setDescriptionError('Failed to generate description. Please write manually.');
-      
-      setFormData(prev => ({
-        ...prev,
-        description: ''
-      }));
-    } finally {
-      setIsGeneratingDescription(false);
     }
   };
+
 
   // Fetch districts from API
   const fetchDistricts = async () => {
     setIsLoadingDistricts(true);
     try {
       const response = await fetch(`${API_ENDPOINTS2.AUTH.DISTRICT_LIST}?lang=en`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -279,11 +272,11 @@ const BusinessListingForm = () => {
   // Fetch blocks based on selected district
   const fetchBlocks = async (districtId: string) => {
     if (!districtId) return;
-    
+
     setIsLoadingBlocks(true);
     try {
       const response = await fetch(`${API_ENDPOINTS2.AUTH.GET_BLOCK}?district_id=${districtId}&lang=en`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -305,10 +298,42 @@ const BusinessListingForm = () => {
     }
   };
 
+  // Fetch categories from API with proper error handling
+  const fetchCategories = async () => {
+    setIsLoadingCategories(true);
+    try {
+      const response = await fetch(`${API_ENDPOINTS2.AUTH.MAIN_SEARCH}?lang=en`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.status === 'success') {
+        if (result.data && Array.isArray(result.data.categories)) {
+          setCategories(result.data.categories);
+        } else if (Array.isArray(result.data)) {
+          setCategories(result.data);
+        } else if (Array.isArray(result.categories)) {
+          setCategories(result.categories);
+        } else {
+          setCategories([]);
+        }
+      } else {
+        setCategories([]);
+      }
+    } catch (error) {
+      setCategories([]);
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  };
+
   // Check authentication status on component mount
   useEffect(() => {
     checkAuthStatus();
-    fetchDistricts();
+    fetchDistricts(); // Load districts on component mount
 
     const handleUserLoggedIn = (event: CustomEvent) => {
       const userData = (event as CustomEvent).detail.user;
@@ -341,13 +366,21 @@ const BusinessListingForm = () => {
       window.removeEventListener('userLoggedIn', handleUserLoggedIn as EventListener);
       window.removeEventListener('userSignedUp', handleUserSignedUp as EventListener);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Load categories when reaching step 3
+  useEffect(() => {
+    if (currentStep === 3) {
+      fetchCategories();
+    }
+  }, [currentStep]);
 
   // Fetch blocks when district changes
   useEffect(() => {
     if (selectedDistrict) {
       fetchBlocks(selectedDistrict);
-      setSelectedBlock('');
+      setSelectedBlock(''); // Reset block when district changes
     } else {
       setBlocks([]);
     }
@@ -478,6 +511,7 @@ const BusinessListingForm = () => {
     if (currentStep === 2 && isMobileVerified) {
       getCurrentLocation();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, isMobileVerified]);
 
   // Get user location automatically
@@ -590,8 +624,88 @@ const BusinessListingForm = () => {
     }
   };
 
+  // UPDATED Category Selection Functions
+  const handleMainCategorySelect = (category: Category) => {
+    setSelectedMainCategory(category);
+    setSelectedSubCategory(null);
+    setSelectedChildCategories([]);
+
+    setFormData(prev => ({
+      ...prev,
+      categories: [category.label],
+      selectedCategoryIds: [category.id],
+      selectedMainCategoryId: category.id,
+      selectedSubCategoryId: null,
+      selectedChildCategoryId: null
+    }));
+  };
+
+  const handleSubCategorySelect = (subCategory: SubCategory) => {
+    if (subCategory.hasChildren && subCategory.childcategories.length > 0) {
+      setSelectedSubCategory(subCategory);
+      setSelectedChildCategories([]);
+      setFormData(prev => ({
+        ...prev,
+        categories: [],
+        selectedCategoryIds: [],
+        selectedSubCategoryId: subCategory.id,
+        selectedChildCategoryId: null
+      }));
+    } else {
+      setSelectedSubCategory(subCategory);
+      setSelectedChildCategories([]);
+      setFormData(prev => ({
+        ...prev,
+        categories: [subCategory.label],
+        selectedCategoryIds: [subCategory.id],
+        selectedSubCategoryId: subCategory.id,
+        selectedChildCategoryId: null,
+        selectedMainCategoryId: null
+      }));
+    }
+  };
+
+  const handleChildCategorySelect = (childCategory: ChildCategory) => {
+    setSelectedChildCategories([childCategory]);
+
+    setFormData(prev => ({
+      ...prev,
+      categories: [childCategory.label],
+      selectedCategoryIds: [childCategory.id],
+      selectedChildCategoryId: childCategory.id,
+      selectedMainCategoryId: null,
+      selectedSubCategoryId: null
+    }));
+  };
+
+  const handleBackToMainCategories = () => {
+    setSelectedMainCategory(null);
+    setSelectedSubCategory(null);
+    setSelectedChildCategories([]);
+    setFormData(prev => ({
+      ...prev,
+      categories: [],
+      selectedCategoryIds: [],
+      selectedMainCategoryId: null,
+      selectedSubCategoryId: null,
+      selectedChildCategoryId: null
+    }));
+  };
+
+  const handleBackToSubCategories = () => {
+    setSelectedSubCategory(null);
+    setSelectedChildCategories([]);
+    setFormData(prev => ({
+      ...prev,
+      categories: [],
+      selectedCategoryIds: [],
+      selectedSubCategoryId: null,
+      selectedChildCategoryId: null
+    }));
+  };
+
   // Business Details Validation
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
     if (name === 'pincode') {
@@ -607,7 +721,7 @@ const BusinessListingForm = () => {
     }
   };
 
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
     validateField(name as keyof BusinessFormData, value);
@@ -658,11 +772,6 @@ const BusinessListingForm = () => {
       case 'state':
         if (!stringValue.trim()) error = 'State is required';
         break;
-
-      case 'description':
-        if (!stringValue.trim()) error = 'Business description is required';
-        else if (stringValue.trim().length < 50) error = 'Description should be at least 50 characters';
-        break;
     }
 
     setErrors(prev => ({
@@ -706,85 +815,39 @@ const BusinessListingForm = () => {
     }
   };
 
-  // Handle district selection
+  // Handle district selection - ID send करें
   const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const districtId = e.target.value;
     setSelectedDistrict(districtId);
-    
+
     const selectedDistrictObj = districts.find(d => d.id.toString() === districtId);
     if (selectedDistrictObj) {
       setFormData(prev => ({
         ...prev,
-        district: districtId,
-        city: selectedDistrictObj.district_name
+        district: districtId, // ID send करें, name नहीं
+        city: selectedDistrictObj.district_name // City के लिए name रख सकते हैं
       }));
     }
   };
 
-  // Handle block selection
+  // Handle block selection - ID send करें
   const handleBlockChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const blockId = e.target.value;
     setSelectedBlock(blockId);
-    
+
     const selectedBlockObj = blocks.find(b => b.id.toString() === blockId);
     if (selectedBlockObj) {
       setFormData(prev => ({
         ...prev,
-        block: blockId,
-        village: selectedBlockObj.block_name
+        block: blockId, // ID send करें, name नहीं
+        village: selectedBlockObj.block_name // Village के लिए name रख सकते हैं
       }));
     }
   };
 
-  // Contact Details Handler
-  const handleContactDetailsChange = (contactData: any) => {
-    setFormData(prev => ({
-      ...prev,
-      contactPersonName: contactData.contactPersonName,
-      contactEmail: contactData.contactEmail,
-      alternateMobile: contactData.alternateMobile,
-      mobileNumbers: contactData.mobileNumbers,
-      whatsappNumbers: contactData.whatsappNumbers,
-      emails: contactData.emails
-    }));
-    
-    setCurrentStep(4);
-  };
-
-  // Business Timings Handler
-  const handleBusinessTimingsChange = (businessHours: BusinessFormData['businessHours']) => {
-    setFormData(prev => ({
-      ...prev,
-      businessHours
-    }));
-    setCurrentStep(5);
-  };
-
-  // Description Step Handler
-  const handleDescriptionSubmit = () => {
-    if (!formData.description.trim()) {
-      alert('Please generate or enter a business description');
-      return;
-    }
-
-    if (formData.description.trim().length < 50) {
-      alert('Description should be at least 50 characters long');
-      return;
-    }
-
-    setCurrentStep(6);
-  };
-
-  // Image Upload Handler
-  const handleImageUpload = (files: File[]) => {
-    setFormData(prev => ({
-      ...prev,
-      businessImages: files
-    }));
-  };
-
-  // Final API Submission
+  // UPDATED Final API Submission - All data in separate formats including AI description
   const handleFinalSubmit = async (e?: React.FormEvent | File[]) => {
+    // Check if e is FormEvent
     if (e && 'preventDefault' in e) {
       e.preventDefault();
     }
@@ -800,16 +863,22 @@ const BusinessListingForm = () => {
 
     const userId = user.id;
 
+    if (formData.selectedCategoryIds.length === 0) {
+      alert('Please select at least one category');
+      return;
+    }
+
     if (!location) {
       alert('Location access is required to complete registration.');
       return;
     }
 
-    if (!formData.businessName || !formData.pincode || !formData.district || !formData.block || !formData.state || !formData.description) {
-      alert('Please fill all required fields including description');
+    if (!formData.businessName || !formData.pincode || !formData.district || !formData.block || !formData.state) {
+      alert('Please fill all required fields');
       return;
     }
 
+    // COMPLETE DATA OBJECT FOR CONSOLE - JSON format mein
     const completeBusinessData = {
       user_info: {
         userId: userId,
@@ -830,7 +899,7 @@ const BusinessListingForm = () => {
         block: formData.block,
         district_name: districts.find(d => d.id.toString() === formData.district)?.district_name || '',
         block_name: blocks.find(b => b.id.toString() === formData.block)?.block_name || '',
-        description: formData.description
+        description: formData.businessDescription || formData.businessName || 'Business listing' // NEW: Use AI description
       },
       location_data: {
         latitude: formData.latitude?.toString() || '',
@@ -838,11 +907,18 @@ const BusinessListingForm = () => {
         address: formData.address
       },
       category_info: {
-        categories: [formData.businessName],
-        selectedCategoryIds: [],
-        selectedMainCategoryId: null,
-        selectedSubCategoryId: null,
-        selectedChildCategoryId: null
+        categories: formData.categories,
+        selectedCategoryIds: formData.selectedCategoryIds,
+        selectedMainCategoryId: formData.selectedMainCategoryId,
+        selectedSubCategoryId: formData.selectedSubCategoryId,
+        selectedChildCategoryId: formData.selectedChildCategoryId,
+        selectedMainCategory: selectedMainCategory?.label,
+        selectedSubCategory: selectedSubCategory?.label,
+        selectedChildCategories: selectedChildCategories.map(c => c.label),
+        // Category IDs for API
+        category: selectedMainCategory ? selectedMainCategory.id.replace('main', '') : null,
+        subcategory: selectedSubCategory ? selectedSubCategory.id.replace('sub', '') : null,
+        child: selectedChildCategories.length > 0 ? selectedChildCategories[0].id.replace('child', '') : null
       },
       contact_info: {
         contact_person_name: formData.contactPersonName,
@@ -860,25 +936,39 @@ const BusinessListingForm = () => {
           type: file.type,
           size: file.size
         }))
+      },
+      // NEW: AI generated description
+      ai_description: {
+        generated: !!formData.businessDescription,
+        text: formData.businessDescription || ''
       }
     };
-
-    console.log('🚀 === COMPLETE BUSINESS SUBMISSION DATA === 🚀');
-    console.log(JSON.stringify(completeBusinessData, null, 2));
 
     setIsLoading(true);
 
     try {
       const formDataToSend = new FormData();
 
+      // User and basic info
       formDataToSend.append('userId', userId.toString());
       formDataToSend.append('mobile', mobileNumber);
+
+      // BUSINESS DETAILS - Alag format mein (AI description included)
       formDataToSend.append('business_details', JSON.stringify(completeBusinessData.business_details));
+
+      // CATEGORY INFO - Alag format mein
       formDataToSend.append('category_info', JSON.stringify(completeBusinessData.category_info));
+
+      // LOCATION DATA - Alag format mein
       formDataToSend.append('location_data', JSON.stringify(completeBusinessData.location_data));
+
+      // CONTACT INFO - Alag format mein
       formDataToSend.append('contact_info', JSON.stringify(completeBusinessData.contact_info));
+
+      // BUSINESS TIMING - Alag format mein
       formDataToSend.append('business_timing', JSON.stringify(completeBusinessData.business_timing));
 
+      // BUSINESS IMAGES - Alag format mein (files separately)
       if (formData.businessImages.length > 0) {
         formData.businessImages.forEach((file, index) => {
           formDataToSend.append(`business_images_${index}`, file);
@@ -888,8 +978,34 @@ const BusinessListingForm = () => {
         formDataToSend.append('use_default_image', 'true');
       }
 
+      // AI DESCRIPTION - Alag format mein
+      formDataToSend.append('ai_description', JSON.stringify(completeBusinessData.ai_description));
+
+      // Additional fields for backward compatibility
       formDataToSend.append('businessName', formData.businessName);
-      formDataToSend.append('description', formData.description);
+      formDataToSend.append('description', formData.businessDescription || formData.businessName); // NEW: Include description
+
+      // Category selection for backward compatibility
+      if (selectedChildCategories.length > 0) {
+        const categoryId = selectedChildCategories[0].id.replace('child', '');
+        formDataToSend.append('child', categoryId);
+      } else if (selectedSubCategory) {
+        const categoryId = selectedSubCategory.id.replace('sub', '');
+        formDataToSend.append('subcategory', categoryId);
+      } else if (selectedMainCategory) {
+        const categoryId = selectedMainCategory.id.replace('main', '');
+        formDataToSend.append('category', categoryId);
+      }
+
+      // Log FormData contents before sending
+      console.log('📤 === FORM DATA TO SEND TO API ===');
+      for (let [key, value] of formDataToSend.entries()) {
+        if (key.startsWith('business_images_')) {
+          console.log(`${key}:`, (value as File).name, '(File)');
+        } else {
+          console.log(`${key}:`, value);
+        }
+      }
 
       const response = await fetch(API_ENDPOINTS2.AUTH.BUSINESS_SUBMISSION, {
         method: 'POST',
@@ -910,13 +1026,17 @@ const BusinessListingForm = () => {
       }
 
       if (result.success) {
-        alert('Business listing created successfully with AI description!');
+        alert('Business listing created successfully!');
         window.location.href = '/my-businesses';
 
+        // Reset form
         setCurrentStep(1);
         setMobileNumber('');
         setIsMobileVerified(false);
         setLocation(null);
+        setSelectedMainCategory(null);
+        setSelectedSubCategory(null);
+        setSelectedChildCategories([]);
         setSelectedDistrict('');
         setSelectedBlock('');
         setFormData(initialFormData);
@@ -1016,7 +1136,7 @@ const BusinessListingForm = () => {
                 className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${currentStep === 3 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
                   }`}
               >
-                Contact Details
+                Categories
               </button>
               <button
                 onClick={() => {
@@ -1026,7 +1146,7 @@ const BusinessListingForm = () => {
                 className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${currentStep === 4 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
                   }`}
               >
-                Business Timings
+                Contact Details
               </button>
               <button
                 onClick={() => {
@@ -1036,7 +1156,7 @@ const BusinessListingForm = () => {
                 className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${currentStep === 5 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
                   }`}
               >
-                Business Description
+                Business Timings
               </button>
               <button
                 onClick={() => {
@@ -1046,6 +1166,16 @@ const BusinessListingForm = () => {
                 className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${currentStep === 6 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
                   }`}
               >
+                AI Description
+              </button>
+              <button
+                onClick={() => {
+                  goToStep(7);
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${currentStep === 7 ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+                  }`}
+              >
                 Upload Images
               </button>
             </div>
@@ -1053,7 +1183,7 @@ const BusinessListingForm = () => {
         </div>
       )}
 
-      {/* Progress Steps */}
+      {/* Progress Steps - UPDATED with 7 steps */}
       <div className="bg-white shadow-sm border-b fixed top-0 left-0 right-0 z-40 hidden lg:block">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex justify-center py-4 sm:py-6">
@@ -1097,7 +1227,7 @@ const BusinessListingForm = () => {
                   }`}>
                   3
                 </div>
-                <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Contact</span>
+                <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Categories</span>
               </button>
 
               <button
@@ -1111,7 +1241,7 @@ const BusinessListingForm = () => {
                   }`}>
                   4
                 </div>
-                <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Timings</span>
+                <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Contact</span>
               </button>
 
               <button
@@ -1125,7 +1255,7 @@ const BusinessListingForm = () => {
                   }`}>
                   5
                 </div>
-                <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Description</span>
+                <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Timings</span>
               </button>
 
               <button
@@ -1138,6 +1268,20 @@ const BusinessListingForm = () => {
                   : 'border-gray-300 text-gray-400'
                   }`}>
                   6
+                </div>
+                <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">AI Description</span>
+              </button>
+
+              <button
+                onClick={() => goToStep(7)}
+                className={`flex flex-col sm:flex-row items-center space-x-0 sm:space-x-3 text-center min-w-0 flex-1 ${currentStep >= 7 ? 'text-blue-600' : 'text-gray-400'
+                  }`}
+              >
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 flex-shrink-0 ${currentStep >= 7
+                  ? 'bg-blue-600 border-blue-600 text-white'
+                  : 'border-gray-300 text-gray-400'
+                  }`}>
+                  7
                 </div>
                 <span className="font-medium text-xs sm:text-sm mt-1 sm:mt-0 truncate">Images</span>
               </button>
@@ -1188,13 +1332,6 @@ const BusinessListingForm = () => {
                         </svg>
                       </div>
                       <span className="text-gray-700">Showcase Your Product & Service Offerings</span>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center mt-0.5">
-                        <span className="text-white text-xs">AI</span>
-                      </div>
-                      <span className="text-gray-700">AI-Powered Business Description Generation</span>
                     </div>
                   </div>
 
@@ -1722,192 +1859,454 @@ const BusinessListingForm = () => {
                           disabled={!location}
                           className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {location ? 'Continue to Contact Details' : 'Allow Location to Continue'}
+                          {location ? 'Save to Continue' : 'Allow Location to Continue'}
                         </button>
                       </div>
                     </form>
                   </div>
                 )}
 
-                {/* Step 3: Contact Details */}
+                {/* Step 3: Category Selection */}
                 {currentStep === 3 && (
                   <div>
-                    <ContactDetailsForm
-                      mobileNumber={mobileNumber}
-                      onContactSubmit={handleContactDetailsChange}
-                      onBack={() => setCurrentStep(2)}
-                    />
+                    <div className="mb-6">
+                      <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">
+                        Select Business Categories
+                      </h1>
+                      <p className="text-sm text-gray-600">
+                        {!selectedMainCategory
+                          ? 'Choose a main category to get started'
+                          : !selectedSubCategory
+                            ? 'Now select a sub-category'
+                            : 'Select specific child categories for your business'
+                        }
+                      </p>
+                    </div>
+
+                    {isLoadingCategories ? (
+                      <div className="flex flex-col items-center justify-center py-12">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                        <div className="text-lg text-gray-600">Loading categories...</div>
+                      </div>
+                    ) : categories.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12">
+                        <div className="text-red-500 text-lg mb-4">❌ No categories available</div>
+                        <button
+                          onClick={fetchCategories}
+                          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          Retry Loading Categories
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {/* Breadcrumb Navigation */}
+                        {(selectedMainCategory || selectedSubCategory) && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                            <button
+                              onClick={handleBackToMainCategories}
+                              className="text-blue-600 hover:text-blue-800 font-medium"
+                            >
+                              All Categories
+                            </button>
+                            {selectedMainCategory && (
+                              <>
+                                <span>›</span>
+                                {selectedSubCategory ? (
+                                  <button
+                                    onClick={handleBackToSubCategories}
+                                    className="text-blue-600 hover:text-blue-800 font-medium"
+                                  >
+                                    {selectedMainCategory.label}
+                                  </button>
+                                ) : (
+                                  <span className="text-gray-900 font-medium">{selectedMainCategory.label}</span>
+                                )}
+                              </>
+                            )}
+                            {selectedSubCategory && (
+                              <>
+                                <span>›</span>
+                                <span className="text-gray-900 font-medium">{selectedSubCategory.label}</span>
+                              </>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Main Categories View */}
+                        {!selectedMainCategory && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+                            {categories.map((category) => (
+                              <div
+                                key={category.id}
+                                onClick={() => handleMainCategorySelect(category)}
+                                className="p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50 border-gray-200 bg-white text-gray-700"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    {category.emoji && (
+                                      <span className="text-xl">{category.emoji}</span>
+                                    )}
+                                    <span className="font-medium text-sm sm:text-base">{category.label}</span>
+                                  </div>
+                                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                  </svg>
+                                </div>
+                                {category.hasSubcategories && (
+                                  <div className="mt-2 text-xs text-gray-500">
+                                    {category.subcategories.length} sub-categories available
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Sub Categories View */}
+                        {selectedMainCategory && !selectedSubCategory && (
+                          <div className="space-y-3 max-h-96 overflow-y-auto">
+                            {selectedMainCategory.subcategories.map((subCategory) => {
+                              const isSelected = formData.selectedCategoryIds.includes(subCategory.id);
+
+                              return (
+                                <div
+                                  key={subCategory.id}
+                                  onClick={() => handleSubCategorySelect(subCategory)}
+                                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${isSelected
+                                    ? 'border-green-500 bg-green-50 text-green-700'
+                                    : 'hover:border-blue-300 hover:bg-blue-50 border-gray-200 bg-white text-gray-700'
+                                    }`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      {subCategory.emoji && (
+                                        <span className="text-xl">{subCategory.emoji}</span>
+                                      )}
+                                      <span className="font-medium text-sm sm:text-base">{subCategory.label}</span>
+                                      {!subCategory.hasChildren || subCategory.childcategories.length === 0 ? (
+                                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                          Direct Select
+                                        </span>
+                                      ) : (
+                                        <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                                          Has Child Categories
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {isSelected && (
+                                        <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                        </svg>
+                                      )}
+                                      {subCategory.hasChildren && subCategory.childcategories.length > 0 && (
+                                        <span className="text-xs text-gray-500">
+                                          {subCategory.childcategories.length} options
+                                        </span>
+                                      )}
+                                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                      </svg>
+                                    </div>
+                                  </div>
+
+                                  {isSelected && (
+                                    <div className="mt-2 text-xs text-green-600 font-medium">
+                                      ✓ Selected
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Child Categories View */}
+                        {selectedSubCategory && selectedSubCategory.hasChildren && selectedSubCategory.childcategories.length > 0 && (
+                          <div className="space-y-4">
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                              <div className="flex items-center gap-2 mb-2">
+                                <button
+                                  onClick={handleBackToSubCategories}
+                                  className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                  </svg>
+                                  Back
+                                </button>
+                                <span className="text-gray-400">›</span>
+                                <span className="text-blue-900 font-semibold">{selectedMainCategory?.label}</span>
+                              </div>
+                              <h3 className="font-semibold text-blue-900 text-lg">
+                                {selectedSubCategory.label}
+                              </h3>
+                              <p className="text-sm text-blue-700 mt-1">
+                                Select one category that best matches your business
+                              </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+                              {selectedSubCategory.childcategories.map((childCategory) => {
+                                const isSelected = selectedChildCategories.some(child => child.id === childCategory.id);
+
+                                return (
+                                  <div
+                                    key={childCategory.id}
+                                    onClick={() => handleChildCategorySelect(childCategory)}
+                                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${isSelected
+                                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                                      }`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-3">
+                                        {childCategory.emoji && (
+                                          <span className="text-xl">{childCategory.emoji}</span>
+                                        )}
+                                        <span className="font-medium text-sm sm:text-base">{childCategory.label}</span>
+                                      </div>
+                                      {isSelected ? (
+                                        <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                        </svg>
+                                      ) : (
+                                        <div className="w-5 h-5 border-2 border-gray-300 rounded"></div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {selectedChildCategories.length > 0 && (
+                              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <h4 className="font-semibold text-green-800 mb-2">
+                                  Selected Category
+                                </h4>
+                                <div className="flex flex-wrap gap-2">
+                                  {selectedChildCategories.map((child) => (
+                                    <span
+                                      key={child.id}
+                                      className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium"
+                                    >
+                                      {child.emoji && <span className="mr-1">{child.emoji}</span>}
+                                      {child.label}
+                                    </span>
+                                  ))}
+                                </div>
+                                <p className="text-green-700 text-sm mt-2">
+                                  ✓ Category selected successfully! You can now complete your business listing.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {selectedSubCategory && (!selectedSubCategory.hasChildren || selectedSubCategory.childcategories.length === 0) && (
+                          <div className="space-y-4">
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                              <h3 className="font-semibold text-green-800 mb-2">
+                                ✅ Category Selected Successfully!
+                              </h3>
+                              <p className="text-green-700">
+                                You have selected: <strong>{selectedSubCategory.label}</strong>
+                              </p>
+                              <div className="mt-2 bg-white border border-green-300 rounded-lg p-3">
+                                <div className="flex items-center gap-2">
+                                  {selectedSubCategory.emoji && (
+                                    <span className="text-xl">{selectedSubCategory.emoji}</span>
+                                  )}
+                                  <span className="font-medium text-green-800">{selectedSubCategory.label}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-4">
+                              <button
+                                type="button"
+                                onClick={handleBackToSubCategories}
+                                className="flex-1 bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-400 transition-colors"
+                              >
+                                Change Category
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCurrentStep(4)}
+                                className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                              >
+                                Continue to Contact Details
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {formData.selectedCategoryIds.length > 0 && (
+                          <div className="border-t pt-6 mt-6">
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                              <h3 className="font-semibold text-green-800 mb-2">
+                                ✅ Categories Selected Successfully!
+                              </h3>
+                              <p className="text-green-700">
+                                You have selected {formData.categories.length} category for your business.
+                              </p>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {formData.categories.map((category, index) => (
+                                  <span
+                                    key={index}
+                                    className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium"
+                                  >
+                                    {category}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-4">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedMainCategory(null);
+                                  setSelectedSubCategory(null);
+                                  setSelectedChildCategories([]);
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    categories: [],
+                                    selectedCategoryIds: [],
+                                    selectedMainCategoryId: null,
+                                    selectedSubCategoryId: null,
+                                    selectedChildCategoryId: null
+                                  }));
+                                }}
+                                className="flex-1 bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-400 transition-colors"
+                              >
+                                Change Categories
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCurrentStep(4)}
+                                className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                              >
+                                Continue to Contact Details
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Step 4: Business Timings */}
+                {/* Step 4: Contact Details */}
                 {currentStep === 4 && (
                   <div>
-                    <BusinessTimings
-                      onTimingsSubmit={handleBusinessTimingsChange}
+                    <ContactDetails
+                      mobileNumber={mobileNumber}
+                      onContactSubmit={handleContactDetailsChange}
                       onBack={() => setCurrentStep(3)}
                     />
                   </div>
                 )}
 
-                {/* Step 5: Business Description - UPDATED: Language selection and button below textarea */}
+                {/* Step 5: Business Timings */}
                 {currentStep === 5 && (
                   <div>
-                    <div className="mb-6">
-                      <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">
-                        Write About Your Business
-                      </h1>
-                      <p className="text-sm text-gray-600">
-                        Describe your business to help customers understand what you offer
-                      </p>
-                    </div>
-
-                    <div className="space-y-6">
-                      {/* AI Description Section - Simplified */}
-                      <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                        <h3 className="font-semibold text-purple-800 mb-2">AI Business Description</h3>
-                        <p className="text-sm text-purple-600 mb-4">
-                          Generate a professional description using AI in your preferred language
-                        </p>
-
-                        {/* Requirements Status */}
-                        <div className="p-3 bg-white border border-purple-300 rounded-lg">
-                          <p className="text-sm font-medium text-purple-800 mb-2">AI Generation Requirements:</p>
-                          <div className="space-y-1 text-sm">
-                            <div className={`flex items-center gap-2 ${formData.businessName ? 'text-green-600' : 'text-gray-500'}`}>
-                              {formData.businessName ? '✅' : '◯'} Business Name: {formData.businessName || 'Not set'}
-                            </div>
-                            <div className={`flex items-center gap-2 ${formData.city ? 'text-green-600' : 'text-gray-500'}`}>
-                              {formData.city ? '✅' : '◯'} City: {formData.city || 'Not set'}
-                            </div>
-                          </div>
-                          {(!formData.businessName || !formData.city) && (
-                            <p className="text-xs text-red-600 mt-2">
-                              Please fill in business name and city to generate AI description
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Description Textarea */}
-                      <div>
-                        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-                          Business Description *
-                        </label>
-                        <textarea
-                          id="description"
-                          name="description"
-                          value={formData.description}
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          required
-                          aria-invalid={errors.description ? 'true' : 'false'}
-                          placeholder={
-                            descriptionLanguage === 'english' 
-                              ? "Describe your business, services, products, and what makes you unique..."
-                              : "अपने व्यवसाय, सेवाओं, उत्पादों और आपकी विशेषताओं का वर्णन करें..."
-                          }
-                          rows={8}
-                          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-400 resize-none ${errors.description
-                            ? 'border-red-500 bg-red-50'
-                            : 'border-gray-300 hover:border-gray-400'
-                            }`}
-                        />
-                        <div className="mt-2 flex items-start gap-2 text-sm text-blue-600">
-                          <span>💡</span>
-                          <p>
-                            {descriptionLanguage === 'english'
-                              ? 'A good description helps customers understand your business better. Include your services, products, specialties, and what makes you unique.'
-                              : 'एक अच्छा विवरण ग्राहकों को आपके व्यवसाय को बेहतर ढंग से समझने में मदद करता है। अपनी सेवाओं, उत्पादों, विशेषताओं और आपकी खास बातों को शामिल करें।'
-                            }
-                          </p>
-                        </div>
-                        {errors.description && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                            <span>⚠</span>
-                            {errors.description}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Language Selection and Generate Button - NOW BELOW TEXTAREA */}
-                      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between p-4 bg-gray-50 rounded-lg border">
-                        <div className="flex items-center gap-4">
-                          <span className="text-sm font-medium text-gray-700">Language:</span>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setDescriptionLanguage('english')}
-                              className={`px-4 py-2 text-sm rounded-md transition-all ${descriptionLanguage === 'english'
-                                ? 'bg-blue-600 text-white shadow-md'
-                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                                }`}
-                            >
-                              English
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setDescriptionLanguage('hindi')}
-                              className={`px-4 py-2 text-sm rounded-md transition-all ${descriptionLanguage === 'hindi'
-                                ? 'bg-green-600 text-white shadow-md'
-                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                                }`}
-                            >
-                              हिंदी
-                            </button>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={generateAIDescription}
-                          disabled={isGeneratingDescription || !formData.businessName || !formData.city}
-                          className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all shadow-md ${!isGeneratingDescription && formData.businessName && formData.city
-                            ? 'bg-gradient-to-r from-purple-500 to-blue-600 text-white hover:from-purple-600 hover:to-blue-700 transform hover:scale-105'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            }`}
-                        >
-                          {isGeneratingDescription ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <span className="text-ms">✨</span>
-                               AI Description
-                            </>
-                          )}
-                        </button>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                        <button
-                          type="button"
-                          onClick={() => setCurrentStep(4)}
-                          className="flex-1 bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-400 transition-colors"
-                        >
-                          Back
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleDescriptionSubmit}
-                          disabled={!formData.description.trim() || formData.description.trim().length < 50}
-                          className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Continue to Image Upload
-                        </button>
-                      </div>
-                    </div>
+                    <BusinessTimings
+                      onTimingsSubmit={(timingsData) => {
+                        handleBusinessTimingsChange(timingsData);
+                        setCurrentStep(6);
+                      }}
+                      onBack={() => setCurrentStep(4)}
+                    />
                   </div>
                 )}
 
-                {/* Step 6: Image Upload */}
+                {/* Step 6: AI Description Generator */}
+
                 {currentStep === 6 && (
+                  <div>
+                    <div className="mb-6">
+                      <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">
+                        Generate Business Description
+                      </h1>
+                      <p className="text-sm text-gray-600">
+                        AI will create an engaging description using your business details
+                      </p>
+
+                      {/* Debug info - temporarily show current description state */}
+                      <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                        <strong>Debug:</strong> Current description: {formData.businessDescription ? `"${formData.businessDescription.substring(0, 50)}..."` : 'Empty'}
+                      </div>
+                    </div>
+
+                    {/* Business Summary Card */}
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-6">
+                      <h3 className="font-semibold text-blue-900 mb-3">Your Business Summary</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium text-gray-700">Business Name:</span>
+                          <p className="text-gray-900">{formData.businessName}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700">Category:</span>
+                          <p className="text-gray-900">{formData.categories.join(', ')}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700">Location:</span>
+                          <p className="text-gray-900">
+                            {formData.buildingName}, {formData.street}, {formData.city}, {formData.state} - {formData.pincode}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700">District/Block:</span>
+                          <p className="text-gray-900">
+                            {districts.find(d => d.id.toString() === formData.district)?.district_name || formData.district},
+                            {blocks.find(b => b.id.toString() === formData.block)?.block_name || formData.block}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <BilingualTextGenerator
+                      onDescriptionGenerated={handleDescriptionGenerated}
+                      businessName={formData.businessName}
+                      businessCategory={formData.categories[0] || ""}
+                      location={`${formData.city}, ${formData.state}`}
+                      language="en"
+                    />
+
+                    <div className="flex flex-col sm:flex-row gap-4 mt-6 pt-6 border-t">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentStep(5)}
+                        className="flex-1 bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-400 transition-colors"
+                      >
+                        Back to Timings
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setCurrentStep(7)}
+                        disabled={!formData.businessDescription || formData.businessDescription.trim() === ''}
+                        className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {formData.businessDescription
+                          ? "Continue to Image Upload"
+                          : "Generate Description First"}
+                      </button>
+                    </div>
+
+          
+                  </div>
+                )}
+
+                {/* Step 7: Image Upload */}
+                {currentStep === 7 && (
                   <div>
                     <ImageUpload
                       onImageUpload={handleImageUpload}
-                      onBack={() => setCurrentStep(5)}
+                      onBack={() => setCurrentStep(6)}
                       onSubmit={handleFinalSubmit}
                       maxImages={10}
                     />
@@ -1919,14 +2318,14 @@ const BusinessListingForm = () => {
         </div>
       </div>
 
-      {/* 6 Simple Steps Section */}
+      {/* 7 Simple Steps Section - UPDATED */}
       <div id="businessliststepid" className="section bg-white py-12 sm:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-8 sm:mb-12">
-            Get a FREE Business Listing in 6 Simple Steps
+            Get a FREE Business Listing in 7 Simple Steps
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-8 sm:gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-8 sm:gap-12">
             <div className="text-center group">
               <div className="mb-6 flex justify-center">
                 <div className="relative">
@@ -1964,7 +2363,28 @@ const BusinessListingForm = () => {
               <div className="space-y-3">
                 <h3 className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-green-600 transition-colors">Business Details</h3>
                 <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
-                  Add name, address, district, block details
+                  Add name, address, district, block
+                </p>
+              </div>
+            </div>
+
+            <div className="text-center group">
+              <div className="mb-6 flex justify-center">
+                <div className="relative">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center transform group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-xl">
+                    <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                  </div>
+                  <div className="absolute -top-2 -right-2 bg-white border-2 border-purple-500 text-purple-600 rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-bold shadow-lg">
+                    3
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">Select Categories</h3>
+                <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
+                  Choose relevant categories for your business
                 </p>
               </div>
             </div>
@@ -1978,7 +2398,7 @@ const BusinessListingForm = () => {
                     </svg>
                   </div>
                   <div className="absolute -top-2 -right-2 bg-white border-2 border-yellow-500 text-yellow-600 rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-bold shadow-lg">
-                    3
+                    4
                   </div>
                 </div>
               </div>
@@ -1999,7 +2419,7 @@ const BusinessListingForm = () => {
                     </svg>
                   </div>
                   <div className="absolute -top-2 -right-2 bg-white border-2 border-red-500 text-red-600 rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-bold shadow-lg">
-                    4
+                    5
                   </div>
                 </div>
               </div>
@@ -2016,18 +2436,18 @@ const BusinessListingForm = () => {
                 <div className="relative">
                   <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center transform group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-xl">
                     <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                   </div>
                   <div className="absolute -top-2 -right-2 bg-white border-2 border-indigo-500 text-indigo-600 rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-bold shadow-lg">
-                    5
+                    6
                   </div>
                 </div>
               </div>
               <div className="space-y-3">
-                <h3 className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">Business Description</h3>
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">AI Description</h3>
                 <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
-                  AI-powered description in Hindi or English
+                  Generate engaging business description
                 </p>
               </div>
             </div>
@@ -2041,7 +2461,7 @@ const BusinessListingForm = () => {
                     </svg>
                   </div>
                   <div className="absolute -top-2 -right-2 bg-white border-2 border-pink-500 text-pink-600 rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-bold shadow-lg">
-                    6
+                    7
                   </div>
                 </div>
               </div>
