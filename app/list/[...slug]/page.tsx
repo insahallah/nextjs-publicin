@@ -1,4 +1,4 @@
-'use client';
+'sue client';
 
 import { useState, useEffect } from 'react';
 import { notFound, useRouter } from "next/navigation";
@@ -9,6 +9,15 @@ import ReviewModal from "@/components/ReviewModal";
 import AwesomeLogin from "@/components/AwesomeLogin";
 import AwesomeSignup from "@/components/AwesomeSignup";
 import BusinessViewRightSideComponent from "@/components/BusinessViewRightSideComponent";
+
+// Define interface for image objects
+interface BusinessImage {
+  id: string;
+  url: string;
+  title: string;
+  alt: string;
+  thumbnail?: string;
+}
 
 export default function ListPage({ params }: { params: Promise<{ slug: string[] }> }) {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -25,29 +34,61 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   const [selectedRating, setSelectedRating] = useState(0);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
-  const [breadcrumbPath, setBreadcrumbPath] = useState<{path: string, name: string, isClickable: boolean}[]>([]);
+  const [breadcrumbPath, setBreadcrumbPath] = useState<{ path: string, name: string, isClickable: boolean }[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [extractedBusinessId, setExtractedBusinessId] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const [isMobile, setIsMobile] = useState(false);
-  const [businessPhotos, setBusinessPhotos] = useState<any[]>([]);
+  const [businessPhotos, setBusinessPhotos] = useState<BusinessImage[]>([]);
   const [photosLoading, setPhotosLoading] = useState(false);
-  
-  // Photo Modal State
+
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-
-  // Zoom State
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isZoomed, setIsZoomed] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
   const router = useRouter();
 
-  // Zoom Functions
+  useEffect(() => {
+    if (!isMobile || !businessPhotos.length || !isAutoPlaying) return;
+
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prevIndex) =>
+        prevIndex === businessPhotos.length - 1 ? 0 : prevIndex + 1
+      );
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [isMobile, businessPhotos.length, isAutoPlaying]);
+
+  const nextImage = () => {
+    setCurrentImageIndex((prevIndex) =>
+      prevIndex === businessPhotos.length - 1 ? 0 : prevIndex + 1
+    );
+    setIsAutoPlaying(false);
+    setTimeout(() => setIsAutoPlaying(true), 10000);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prevIndex) =>
+      prevIndex === 0 ? businessPhotos.length - 1 : prevIndex - 1
+    );
+    setIsAutoPlaying(false);
+    setTimeout(() => setIsAutoPlaying(true), 10000);
+  };
+
+  const goToImage = (index: number) => {
+    setCurrentImageIndex(index);
+    setIsAutoPlaying(false);
+    setTimeout(() => setIsAutoPlaying(true), 10000);
+  };
+
   const zoomIn = () => {
     setZoomLevel(prev => Math.min(prev + 0.5, 3));
     setIsZoomed(true);
@@ -88,16 +129,16 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging || !isZoomed) return;
-    
+
     const newX = e.clientX - dragStart.x;
     const newY = e.clientY - dragStart.y;
-    
+
     const container = document.querySelector('.zoom-container');
     if (container) {
       const containerRect = container.getBoundingClientRect();
       const maxX = (zoomLevel - 1) * containerRect.width / 2;
       const maxY = (zoomLevel - 1) * containerRect.height / 2;
-      
+
       setPosition({
         x: Math.max(Math.min(newX, maxX), -maxX),
         y: Math.max(Math.min(newY, maxY), -maxY)
@@ -122,16 +163,16 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging || !isZoomed || e.touches.length !== 1) return;
-    
+
     const newX = e.touches[0].clientX - dragStart.x;
     const newY = e.touches[0].clientY - dragStart.y;
-    
+
     const container = document.querySelector('.zoom-container');
     if (container) {
       const containerRect = container.getBoundingClientRect();
       const maxX = (zoomLevel - 1) * containerRect.width / 2;
       const maxY = (zoomLevel - 1) * containerRect.height / 2;
-      
+
       setPosition({
         x: Math.max(Math.min(newX, maxX), -maxX),
         y: Math.max(Math.min(newY, maxY), -maxY)
@@ -151,12 +192,11 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     }
   };
 
-  // Responsive check
   useEffect(() => {
     const checkScreenSize = () => {
       const mobile = window.innerWidth < 1024;
       setIsMobile(mobile);
-      
+
       if (mobile && !['overview', 'review', 'info'].includes(activeTab)) {
         setActiveTab('overview');
       }
@@ -170,15 +210,14 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     return () => window.removeEventListener('resize', checkScreenSize);
   }, [activeTab]);
 
-  // Extract business ID from URL
   useEffect(() => {
     const extractBusinessIdFromParams = async () => {
       try {
         const { slug } = await params;
-        
+
         if (slug && Array.isArray(slug) && slug.length >= 2) {
           const lastSegment = slug[slug.length - 1];
-          
+
           if (/^\d+$/.test(lastSegment)) {
             const businessId = lastSegment;
             setExtractedBusinessId(businessId);
@@ -192,36 +231,35 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     extractBusinessIdFromParams();
   }, [params]);
 
-  // Generate breadcrumb from slug array
   useEffect(() => {
     const generateBreadcrumb = async () => {
       try {
         const { slug } = await params;
         if (slug && Array.isArray(slug)) {
           const breadcrumbs = [];
-          
-          breadcrumbs.push({ 
-            path: '', 
-            name: 'Home', 
-            isClickable: true 
+
+          breadcrumbs.push({
+            path: '',
+            name: 'Home',
+            isClickable: true
           });
 
           for (let i = 0; i < slug.length; i++) {
             const pathSegment = slug.slice(0, i + 1).join('/');
-            const displayName = slug[i].split('-').map(word => 
+            const displayName = slug[i].split('-').map(word =>
               word.charAt(0).toUpperCase() + word.slice(1)
             ).join(' ');
-            
+
             const isBusinessPage = i === slug.length - 1 && /^\d+$/.test(slug[i]);
             const isClickable = !isBusinessPage && i < slug.length - 1;
-            
-            breadcrumbs.push({ 
-              path: pathSegment, 
-              name: displayName, 
+
+            breadcrumbs.push({
+              path: pathSegment,
+              name: displayName,
               isClickable: isClickable
             });
           }
-          
+
           setBreadcrumbPath(breadcrumbs);
         }
       } catch (error) {
@@ -232,7 +270,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     generateBreadcrumb();
   }, [params]);
 
-  // Fetch business photos
   const fetchBusinessPhotos = async (businessId: string) => {
     try {
       setPhotosLoading(true);
@@ -251,11 +288,11 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
       if (res.ok) {
         const data = await res.json();
-        
+
         if (data && data.status === "success" && data.data && data.data.length > 0) {
           const photos = data.data.map((photo: any, index: number) => {
             const imageUrl = `https://allupipay.in/publicsewa/images/${photo.path}`;
-            
+
             return {
               id: `photo-${photo.id}-${index}-${Date.now()}`,
               url: imageUrl,
@@ -264,7 +301,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
               thumbnail: imageUrl
             };
           });
-          
+
           setBusinessPhotos(photos);
         } else {
           setBusinessPhotos([]);
@@ -280,7 +317,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     }
   };
 
-  // Photo Modal Functions
   const openPhotoModal = (index: number) => {
     setCurrentPhotoIndex(index);
     setIsPhotoModalOpen(true);
@@ -296,14 +332,14 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
   const goToNextPhoto = () => {
     resetZoom();
-    setCurrentPhotoIndex((prevIndex) => 
+    setCurrentPhotoIndex((prevIndex) =>
       prevIndex === businessPhotos.length - 1 ? 0 : prevIndex + 1
     );
   };
 
   const goToPrevPhoto = () => {
     resetZoom();
-    setCurrentPhotoIndex((prevIndex) => 
+    setCurrentPhotoIndex((prevIndex) =>
       prevIndex === 0 ? businessPhotos.length - 1 : prevIndex - 1
     );
   };
@@ -313,11 +349,10 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     setCurrentPhotoIndex(index);
   };
 
-  // Handle keyboard navigation with zoom controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isPhotoModalOpen) return;
-      
+
       switch (e.key) {
         case 'Escape':
           closePhotoModal();
@@ -348,7 +383,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isPhotoModalOpen, zoomLevel]);
 
-  // Listen for login events
   useEffect(() => {
     const handleOpenLoginModal = () => {
       setIsLoginModalOpen(true);
@@ -357,7 +391,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     const handleUserLoggedIn = (event: any) => {
       setTimeout(() => {
         const userId = getCurrentUserId();
-        
+
         if (userId) {
           setIsLoginModalOpen(false);
           if (shouldReopenReviewAfterLogin && !isReviewModalOpen) {
@@ -372,37 +406,34 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
     window.addEventListener('openLoginModal', handleOpenLoginModal);
     window.addEventListener('userLoggedIn', handleUserLoggedIn);
-    
+
     return () => {
       window.removeEventListener('openLoginModal', handleOpenLoginModal);
       window.removeEventListener('userLoggedIn', handleUserLoggedIn);
     };
   }, [shouldReopenReviewAfterLogin, isReviewModalOpen]);
 
-  // Handle signup
   const handleAwesomeSignup = async (signupData: any) => {
     alert('Signup functionality will be available soon! For now, please use login.');
     setShowRegisterModal(false);
     setIsLoginModalOpen(true);
   };
 
-  // Handle login request from review modal
   const handleLoginRequest = () => {
     setShouldReopenReviewAfterLogin(true);
     setIsLoginModalOpen(true);
   };
 
-  // Get current user id from localStorage
   const getCurrentUserId = (): string | null => {
     if (typeof window === 'undefined') return null;
-    
+
     try {
       const userDataStr = localStorage.getItem('userData');
-      
+
       if (userDataStr) {
         try {
           const userData = JSON.parse(userDataStr);
-          
+
           if (userData?.id) {
             return String(userData.id);
           }
@@ -410,24 +441,23 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           console.error('Error parsing userData:', error);
         }
       }
-      
+
       const authToken = localStorage.getItem('authToken');
       if (authToken && /^\d+$/.test(authToken)) {
         return authToken;
       }
-      
+
       return null;
-      
+
     } catch (error) {
       console.error('Error getting user ID:', error);
       return null;
     }
   };
 
-  // Handle star rating click
   const handleStarClick = (rating: number, business: any = null) => {
     const userId = getCurrentUserId();
-    
+
     if (userId) {
       setSelectedRating(rating);
       if (business) {
@@ -445,7 +475,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     }
   };
 
-  // Review submit handler
   const handleSubmitReview = async (data: any) => {
     const userId = getCurrentUserId();
     if (!userId) {
@@ -495,7 +524,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
       alert("✅ Review submitted successfully!");
       closeReviewModal();
-      
+
       if (businessData?.id) {
         fetchReviews(businessData.id);
       }
@@ -505,11 +534,10 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     }
   };
 
-  // Fetch reviews function
   const fetchReviews = async (businessId: string) => {
     try {
       setReviewsLoading(true);
-      
+
       const params = new URLSearchParams();
       params.append('business_id', businessId);
 
@@ -523,7 +551,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
       if (res.ok) {
         const data = await res.json();
-        
+
         if (data && (data.status === "success" || data.reviews)) {
           const reviewsData = data.data || data.reviews || [];
           setReviews(reviewsData);
@@ -558,7 +586,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     setShouldReopenReviewAfterLogin(false);
   };
 
-  // Handle successful login from AwesomeLogin
   const handleLoginSuccess = async (loginData: any) => {
     try {
       const formData = new FormData();
@@ -585,18 +612,18 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           village: data.village,
           ...data
         }));
-        
+
         closeLoginModal();
-        
+
         setTimeout(() => {
           const userId = getCurrentUserId();
-          
+
           if (userId && shouldReopenReviewAfterLogin) {
             setIsReviewModalOpen(true);
             setShouldReopenReviewAfterLogin(false);
           }
         }, 500);
-        
+
       } else {
         alert(data.message || 'Login failed. Please try again.');
       }
@@ -622,7 +649,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     setFilteredListings(filtered);
   };
 
-  // Navigation handlers
   const handleBack = () => {
     router.back();
   };
@@ -633,7 +659,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
   const handleBreadcrumbClick = (path: string, isClickable: boolean) => {
     if (!isClickable) return;
-    
+
     if (path === '') {
       router.push('/');
     } else {
@@ -641,7 +667,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     }
   };
 
-  // Simple Breadcrumb Component
   const SimpleBreadcrumb = () => {
     return (
       <div className="flex items-center gap-2 text-sm text-gray-600 flex-wrap">
@@ -657,7 +682,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     );
   };
 
-  // Desktop Tabs Component
   const DesktopTabs = () => {
     const tabs = [
       { id: 'overview', label: 'Overview', icon: '📋' },
@@ -675,11 +699,10 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-4 px-2 text-center font-medium text-sm border-b-2 transition-colors flex items-center justify-center gap-2 ${
-                activeTab === tab.id
+              className={`flex-1 py-4 px-2 text-center font-medium text-sm border-b-2 transition-colors flex items-center justify-center gap-2 ${activeTab === tab.id
                   ? 'border-blue-600 text-blue-600 bg-blue-50'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
+                }`}
             >
               <span className="text-base">{tab.icon}</span>
               <span className="font16 fw500 color111">{tab.label}</span>
@@ -690,7 +713,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     );
   };
 
-  // Mobile Tabs Component
   const MobileTabs = () => {
     const tabs = [
       { id: 'overview', label: 'Overview', icon: '📋' },
@@ -705,11 +727,10 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-4 px-2 text-center font-medium text-sm border-b-2 transition-colors ${
-                activeTab === tab.id
+              className={`flex-1 py-4 px-2 text-center font-medium text-sm border-b-2 transition-colors ${activeTab === tab.id
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
+                }`}
             >
               <span className="block text-lg mb-1">{tab.icon}</span>
               {tab.label}
@@ -720,162 +741,283 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     );
   };
 
-  // Overview Tab Content
-  const OverviewTab = () => (
-    <div className="space-y-6">
-      {/* Business Header */}
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <div className="flex flex-col md:flex-row gap-6">
-          {/* Business Image */}
-          <div className="md:w-1/3">
-            <img
-              src={businessData.images && businessData.images[0] ?
-                (typeof businessData.images[0] === 'string' ?
-                  businessData.images[0] :
-                  businessData.images[0].path ?
-                    `https://allupipay.in/publicsewa/images/${businessData.images[0].path}` :
-                    "/default-listing.jpg"
-                ) : "/default-listing.jpg"
-              }
-              alt={businessData.displayName}
-              className="w-full h-64 object-cover rounded-lg mb-4"
-            />
+  const OverviewTab = () => {
+    const sliderImages = businessPhotos.length > 0
+      ? businessPhotos
+      : (businessData?.images && Array.isArray(businessData.images) && businessData.images.length > 0
+        ? businessData.images.map((img: any, index: number) => ({
+          id: `img-${index}`,
+          url: typeof img === 'string' ? img : img.path ? `https://allupipay.in/publicsewa/images/${img.path}` : "/default-listing.jpg",
+          title: `Business Image ${index + 1}`,
+          alt: businessData.displayName
+        }))
+        : [{ id: 'default', url: "/default-listing.jpg", title: "Business Image", alt: businessData?.displayName }]
+      );
 
-            {/* Action Buttons */}
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <h3 className="font-semibold text-lg mb-3 text-gray-800">Quick Actions</h3>
-              <div className="flex flex-col gap-3">
-                {businessData.phone ? (
-                  <>
-                    <button
-                      onClick={() => window.open(`tel:${businessData.phone}`)}
-                      className="w-full bg-green-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <i className="fas fa-phone"></i>
-                      Call Now
-                    </button>
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="flex flex-col md:flex-row gap-6">
+            <div className="md:w-1/3 hidden md:block">
+              <img
+                src={businessData.images && businessData.images[0] ?
+                  (typeof businessData.images[0] === 'string' ?
+                    businessData.images[0] :
+                    businessData.images[0].path ?
+                      `https://allupipay.in/publicsewa/images/${businessData.images[0].path}` :
+                      "/default-listing.jpg"
+                  ) : "/default-listing.jpg"
+                }
+                alt={businessData.displayName}
+                className="w-full h-64 object-cover rounded-lg mb-4"
+              />
 
-                    <button
-                      onClick={() => {
-                        const cleanPhone = businessData.phone.replace(/\D/g, '');
-                        const message = `Hello ${businessData.displayName}!\n\nI found your business listing and I'm interested in your services. Could you please provide me with more information?\n\nThank you!`;
-                        const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-                        window.open(whatsappUrl, '_blank');
-                      }}
-                      className="w-full bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h3 className="font-semibold text-lg mb-3 text-gray-800">Quick Actions</h3>
+                <div className="flex flex-col gap-3">
+                  {businessData.phone ? (
+                    <>
+                      <button
+                        onClick={() => window.open(`tel:${businessData.phone}`)}
+                        className="w-full bg-green-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <i className="fas fa-phone"></i>
+                        Call Now
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const cleanPhone = businessData.phone.replace(/\D/g, '');
+                          const message = `Hello ${businessData.displayName}!\n\nI found your business listing and I'm interested in your services. Could you please provide me with more information?\n\nThank you!`;
+                          const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+                          window.open(whatsappUrl, '_blank');
+                        }}
+                        className="w-full bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
+                      >
+                        WhatsApp
+                      </button>
+                    </>
+                  ) : (
+                    <div className="text-center text-gray-500 py-3">
+                      Phone number not available for contact
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      if (businessData.latitude && businessData.longitude) {
+                        const mapsUrl = `https://www.google.com/maps?q=${businessData.latitude},${businessData.longitude}`;
+                        window.open(mapsUrl, '_blank');
+                      } else if (businessData.location) {
+                        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(businessData.location)}`;
+                        window.open(mapsUrl, '_blank');
+                      } else {
+                        alert('Location information not available');
+                      }
+                    }}
+                    className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <i className="fas fa-map-marker-alt"></i>
+                    Get Directions
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="md:w-1/3 md:hidden">
+              <div className="relative bg-gray-100 rounded-lg overflow-hidden">
+                <div className="relative h-64 w-full">
+                  {sliderImages.map((image: BusinessImage, index: number) => (
+                    <div
+                      key={image.id}
+                      className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+                        }`}
                     >
-                      WhatsApp
-                    </button>
-                  </>
-                ) : (
-                  <div className="text-center text-gray-500 py-3">
-                    Phone number not available for contact
+                      <img
+                        src={image.url}
+                        alt={image.alt}
+                        className="w-full h-full object-cover"
+                        onClick={() => openPhotoModal(index)}
+                        onError={(e) => {
+                          e.currentTarget.src = "/default-listing.jpg";
+                        }}
+                      />
+                    </div>
+                  ))}
+
+                  {sliderImages.length > 1 && (
+                    <>
+                      <button
+                        onClick={prevImage}
+                        className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-8 h-8 flex items-center justify-center z-10 hover:bg-opacity-70 transition-all"
+                      >
+                        ‹
+                      </button>
+                      <button
+                        onClick={nextImage}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-8 h-8 flex items-center justify-center z-10 hover:bg-opacity-70 transition-all"
+                      >
+                        ›
+                      </button>
+                    </>
+                  )}
+
+                  {sliderImages.length > 1 && (
+                    <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white text-sm px-3 py-1 rounded-full z-10">
+                      {currentImageIndex + 1} / {sliderImages.length}
+                    </div>
+                  )}
+
+                  <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded z-10">
+                    Tap to view
+                  </div>
+                </div>
+
+                {sliderImages.length > 1 && (
+                  <div className="flex justify-center space-x-2 p-4">
+                    {sliderImages.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => goToImage(index)}
+                        className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentImageIndex
+                            ? 'bg-blue-600 w-4'
+                            : 'bg-gray-300 hover:bg-gray-400'
+                          }`}
+                      />
+                    ))}
                   </div>
                 )}
+              </div>
 
-                <button
-                  onClick={() => {
-                    if (businessData.latitude && businessData.longitude) {
-                      const mapsUrl = `https://www.google.com/maps?q=${businessData.latitude},${businessData.longitude}`;
-                      window.open(mapsUrl, '_blank');
-                    } else if (businessData.location) {
-                      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(businessData.location)}`;
-                      window.open(mapsUrl, '_blank');
-                    } else {
-                      alert('Location information not available');
-                    }
-                  }}
-                  className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                >
-                  <i className="fas fa-map-marker-alt"></i>
-                  Get Directions
-                </button>
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mt-4">
+                <h3 className="font-semibold text-lg mb-3 text-gray-800">Quick Actions</h3>
+                <div className="flex flex-col gap-3">
+                  {businessData.phone ? (
+                    <>
+                      <button
+                        onClick={() => window.open(`tel:${businessData.phone}`)}
+                        className="w-full bg-green-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <i className="fas fa-phone"></i>
+                        Call Now
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const cleanPhone = businessData.phone.replace(/\D/g, '');
+                          const message = `Hello ${businessData.displayName}!\n\nI found your business listing and I'm interested in your services. Could you please provide me with more information?\n\nThank you!`;
+                          const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+                          window.open(whatsappUrl, '_blank');
+                        }}
+                        className="w-full bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
+                      >
+                        WhatsApp
+                      </button>
+                    </>
+                  ) : (
+                    <div className="text-center text-gray-500 py-3">
+                      Phone number not available for contact
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      if (businessData.latitude && businessData.longitude) {
+                        const mapsUrl = `https://www.google.com/maps?q=${businessData.latitude},${businessData.longitude}`;
+                        window.open(mapsUrl, '_blank');
+                      } else if (businessData.location) {
+                        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(businessData.location)}`;
+                        window.open(mapsUrl, '_blank');
+                      } else {
+                        alert('Location information not available');
+                      }
+                    }}
+                    className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <i className="fas fa-map-marker-alt"></i>
+                    Get Directions
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Business Info */}
-          <div className="md:w-2/3">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {businessData.displayName}
-            </h1>
+            <div className="md:w-2/3">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                {businessData.displayName}
+              </h1>
 
-            <div className="flex items-center gap-4 mb-4">
-              <div className="flex items-center gap-1">
-                {Array.from({ length: 5 }, (_, i) => (
-                  <span key={i} className={`text-lg ${i < Math.floor(businessData.rating || 0) ? "text-yellow-500" : "text-gray-300"}`}>
-                    ★
+              <div className="flex items-center gap-4 mb-4">
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <span key={i} className={`text-lg ${i < Math.floor(businessData.rating || 0) ? "text-yellow-500" : "text-gray-300"}`}>
+                      ★
+                    </span>
+                  ))}
+                  <span className="text-lg font-bold ml-2">{businessData.rating || 0}</span>
+                  <span className="text-gray-600">({businessData.reviewCount || 0} reviews)</span>
+                </div>
+
+                {businessData.isOpen ? (
+                  <span className="text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm font-medium">
+                    🟢 Open Now
                   </span>
-                ))}
-                <span className="text-lg font-bold ml-2">{businessData.rating || 0}</span>
-                <span className="text-gray-600">({businessData.reviewCount || 0} reviews)</span>
+                ) : (
+                  <span className="text-red-600 bg-red-50 px-3 py-1 rounded-full text-sm font-medium">
+                    🔴 Closed
+                  </span>
+                )}
               </div>
 
-              {businessData.isOpen ? (
-                <span className="text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm font-medium">
-                  🟢 Open Now
-                </span>
+              {businessData.location && (
+                <div className="flex items-center gap-2 text-gray-600 mb-4">
+                  <span>📍</span>
+                  <span>{businessData.location}</span>
+                </div>
+              )}
+
+              {businessData.phone ? (
+                <div className="flex items-center gap-2 text-gray-600 mb-4">
+                  <span>📞</span>
+                  <span>{businessData.phone}</span>
+                </div>
               ) : (
-                <span className="text-red-600 bg-red-50 px-3 py-1 rounded-full text-sm font-medium">
-                  🔴 Closed
-                </span>
+                <div className="flex items-center gap-2 text-gray-500 mb-4">
+                  <span>📞</span>
+                  <span>Phone number not available</span>
+                </div>
+              )}
+
+              {businessData.description && (
+                <div className="mb-4">
+                  <h3 className="font-semibold text-lg mb-2">About</h3>
+                  <p className="text-gray-700 leading-relaxed">{businessData.description}</p>
+                </div>
               )}
             </div>
-
-            {/* Location */}
-            {businessData.location && (
-              <div className="flex items-center gap-2 text-gray-600 mb-4">
-                <span>📍</span>
-                <span>{businessData.location}</span>
-              </div>
-            )}
-
-            {/* Phone */}
-            {businessData.phone ? (
-              <div className="flex items-center gap-2 text-gray-600 mb-4">
-                <span>📞</span>
-                <span>{businessData.phone}</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-gray-500 mb-4">
-                <span>📞</span>
-                <span>Phone number not available</span>
-              </div>
-            )}
-
-            {/* Description */}
-            {businessData.description && (
-              <div className="mb-4">
-                <h3 className="font-semibold text-lg mb-2">About</h3>
-                <p className="text-gray-700 leading-relaxed">{businessData.description}</p>
-              </div>
-            )}
           </div>
         </div>
+
+        {businessData.services && businessData.services.length > 0 && (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h3 className="font-semibold text-xl mb-4">Services Offered</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {businessData.services.map((service: string, index: number) => (
+                <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <span className="text-blue-800 font-medium">{service}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+    );
+  };
 
-      {/* Services Section */}
-      {businessData.services && businessData.services.length > 0 && (
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h3 className="font-semibold text-xl mb-4">Services Offered</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {businessData.services.map((service: string, index: number) => (
-              <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <span className="text-blue-800 font-medium">{service}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  // Photos Tab Content
   const PhotosTab = () => {
     return (
       <div className="bg-white rounded-lg shadow-lg p-6">
         <h3 className="font-semibold text-xl mb-6">Business Photos</h3>
-        
+
         {photosLoading ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -883,7 +1025,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           </div>
         ) : businessPhotos.length > 0 ? (
           <div className="space-y-6">
-            {/* Photo Count */}
             <div className="flex items-center justify-between">
               <p className="text-gray-600">
                 Showing {businessPhotos.length} photo{businessPhotos.length !== 1 ? 's' : ''}
@@ -894,15 +1035,13 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
               </div>
             </div>
 
-            {/* Photos Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {businessPhotos.map((photo, index) => (
-                <div 
+              {businessPhotos.map((photo: BusinessImage, index: number) => (
+                <div
                   key={photo.id}
                   className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                   onClick={() => openPhotoModal(index)}
                 >
-                  {/* Image Container */}
                   <div className="w-full h-48 bg-gray-100 flex items-center justify-center overflow-hidden">
                     <img
                       src={photo.url}
@@ -913,8 +1052,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
                       }}
                     />
                   </div>
-                  
-                  {/* Photo Info */}
+
                   <div className="p-3 border-t border-gray-100">
                     <p className="text-sm font-medium text-gray-800 truncate">
                       {photo.title}
@@ -927,7 +1065,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
               ))}
             </div>
 
-            {/* Quick Actions */}
             <div className="flex justify-center mt-6">
               <button
                 onClick={() => openPhotoModal(0)}
@@ -951,7 +1088,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     );
   };
 
-  // Photo Modal Component with Zoom
   const PhotoModal = () => {
     if (!isPhotoModalOpen || businessPhotos.length === 0) return null;
 
@@ -960,7 +1096,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
         <div className="relative w-full max-w-6xl max-h-full">
-          {/* Close Button */}
           <button
             onClick={closePhotoModal}
             className="absolute top-4 right-4 z-20 text-white text-2xl bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-70 transition-all duration-200"
@@ -968,7 +1103,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             ✕
           </button>
 
-          {/* Zoom Controls */}
           <div className="absolute top-4 left-4 z-20 flex items-center gap-2 bg-black bg-opacity-50 rounded-lg p-2">
             <button
               onClick={zoomIn}
@@ -999,7 +1133,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             </span>
           </div>
 
-          {/* Navigation Arrows */}
           {businessPhotos.length > 1 && (
             <>
               <button
@@ -1017,12 +1150,11 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             </>
           )}
 
-          {/* Main Image Container with Zoom */}
-          <div 
+          <div
             className="flex items-center justify-center h-full zoom-container"
             onWheel={handleWheel}
           >
-            <div 
+            <div
               className={`relative overflow-hidden ${isZoomed ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
@@ -1050,7 +1182,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             </div>
           </div>
 
-          {/* Photo Info */}
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-center bg-black bg-opacity-50 rounded-lg px-4 py-2 z-20">
             <div className="text-sm">
               {currentPhoto.title} • {currentPhotoIndex + 1} of {businessPhotos.length}
@@ -1058,20 +1189,18 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             </div>
           </div>
 
-          {/* Thumbnail Strip */}
           {businessPhotos.length > 1 && (
             <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 flex gap-2 max-w-full overflow-x-auto py-2 z-20">
-              {businessPhotos.map((photo, index) => (
+              {businessPhotos.map((photo: BusinessImage, index: number) => (
                 <button
                   key={photo.id}
                   onClick={() => {
                     goToPhoto(index);
                   }}
-                  className={`flex-shrink-0 w-16 h-16 rounded border-2 transition-all duration-200 ${
-                    index === currentPhotoIndex 
-                      ? 'border-blue-500 scale-110' 
+                  className={`flex-shrink-0 w-16 h-16 rounded border-2 transition-all duration-200 ${index === currentPhotoIndex
+                      ? 'border-blue-500 scale-110'
                       : 'border-transparent hover:border-white'
-                  }`}
+                    }`}
                 >
                   <img
                     src={photo.thumbnail || photo.url}
@@ -1086,12 +1215,10 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             </div>
           )}
 
-          {/* Keyboard Shortcuts Info */}
           <div className="absolute top-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 rounded-lg px-3 py-1 hidden md:block z-20">
             Use ← → to navigate • +/- to zoom • ESC to close • Double-click to toggle zoom
           </div>
 
-          {/* Zoom Instructions */}
           {zoomLevel === 1 && (
             <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 rounded-lg px-3 py-1 text-center z-20">
               Double-click or use mouse wheel to zoom
@@ -1102,18 +1229,17 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     );
   };
 
-  // Price List Tab Content
   const PriceListTab = () => (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <h3 className="font-semibold text-xl mb-6">Price List</h3>
-      
+
       <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
         <div className="text-gray-400 text-6xl mb-4">💰</div>
         <h4 className="text-lg font-medium text-gray-600 mb-2">Price List Coming Soon</h4>
         <p className="text-gray-500 max-w-md mx-auto">
           The business is working on updating their price list. Please contact them directly for current pricing information.
         </p>
-        
+
         {businessData.phone && (
           <button
             onClick={() => window.open(`tel:${businessData.phone}`)}
@@ -1126,36 +1252,34 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     </div>
   );
 
-  // Quick Info Tab Content
   const QuickInfoTab = () => (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <h3 className="font-semibold text-xl mb-6">Quick Information</h3>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Basic Information */}
         <div className="space-y-4">
           <h4 className="font-semibold text-lg text-gray-800 border-b pb-2">Basic Info</h4>
-          
+
           <div className="space-y-3">
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
               <span className="text-gray-600">Business Name</span>
               <span className="font-medium text-gray-800">{businessData.displayName}</span>
             </div>
-            
+
             {businessData.contact_info?.contact_person_name && (
               <div className="flex justify-between items-center py-2 border-b border-gray-100">
                 <span className="text-gray-600">Contact Person</span>
                 <span className="font-medium text-gray-800">{businessData.contact_info.contact_person_name}</span>
-              </div>
+            </div>
             )}
-            
+
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
               <span className="text-gray-600">Status</span>
               <span className={`font-medium ${businessData.isOpen ? 'text-green-600' : 'text-red-600'}`}>
                 {businessData.isOpen ? 'Open' : 'Closed'}
               </span>
             </div>
-            
+
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
               <span className="text-gray-600">Rating</span>
               <span className="font-medium text-gray-800 flex items-center gap-1">
@@ -1170,10 +1294,9 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           </div>
         </div>
 
-        {/* Contact Information */}
         <div className="space-y-4">
           <h4 className="font-semibold text-lg text-gray-800 border-b pb-2">Contact Info</h4>
-          
+
           <div className="space-y-3">
             {businessData.phone ? (
               <div className="flex justify-between items-center py-2 border-b border-gray-100">
@@ -1181,14 +1304,14 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
                 <span className="font-medium text-gray-800">{businessData.phone}</span>
               </div>
             ) : null}
-            
+
             {businessData.contact_info?.email && (
               <div className="flex justify-between items-center py-2 border-b border-gray-100">
                 <span className="text-gray-600">Email</span>
                 <span className="font-medium text-gray-800">{businessData.contact_info.email}</span>
               </div>
             )}
-            
+
             {businessData.location && (
               <div className="flex justify-between items-start py-2 border-b border-gray-100">
                 <span className="text-gray-600">Location</span>
@@ -1199,7 +1322,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         </div>
       </div>
 
-      {/* Services Summary */}
       {businessData.services && businessData.services.length > 0 && (
         <div className="mt-6">
           <h4 className="font-semibold text-lg text-gray-800 border-b pb-2 mb-4">Services Summary</h4>
@@ -1220,14 +1342,12 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     </div>
   );
 
-  // Services Tab Content
   const ServicesTab = () => (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <h3 className="font-semibold text-xl mb-6">Services & Offerings</h3>
-      
+
       {businessData.services && businessData.services.length > 0 ? (
         <div className="space-y-6">
-          {/* All Services Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {businessData.services.map((service: string, index: number) => (
               <div key={index} className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5 hover:shadow-lg transition-all duration-300 hover:scale-105">
@@ -1247,7 +1367,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             ))}
           </div>
 
-          {/* Service Features */}
           <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
             <h4 className="font-semibold text-lg text-gray-800 mb-4">Why Choose Our Services?</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1285,7 +1404,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           <p className="text-gray-500 max-w-md mx-auto">
             The business is working on updating their service offerings. Please contact them directly to learn more about available services.
           </p>
-          
+
           {businessData.phone && (
             <button
               onClick={() => window.open(`tel:${businessData.phone}`)}
@@ -1299,39 +1418,34 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     </div>
   );
 
-  // Review Tab Content - Desktop version
   const ReviewTab = () => (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <h3 className="font-semibold text-xl mb-6">Rate & Review</h3>
 
-      {/* Big Star Rating */}
       <div className="flex flex-col items-center justify-center mb-6">
         <div className="flex items-center gap-2 mb-4">
           {Array.from({ length: 5 }, (_, i) => (
             <span
               key={i}
               onClick={() => handleStarClick(i + 1, businessData)}
-              className={`cursor-pointer text-5xl transition-all duration-200 transform hover:scale-110 ${
-                i < selectedRating
+              className={`cursor-pointer text-5xl transition-all duration-200 transform hover:scale-110 ${i < selectedRating
                   ? "text-yellow-500 drop-shadow-lg"
                   : "text-gray-300 hover:text-yellow-300"
-              }`}
+                }`}
             >
               ★
             </span>
           ))}
         </div>
         <span className="text-gray-600 text-lg font-medium">
-          {selectedRating > 0 
-            ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}` 
+          {selectedRating > 0
+            ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}`
             : 'Click stars to rate'
           }
         </span>
       </div>
 
-      {/* Current Rating Display and Reviews Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Rating Summary */}
         <div className="lg:col-span-1">
           <div className="bg-gray-50 rounded-lg p-6 text-center">
             <div className="text-4xl font-bold text-gray-900 mb-2">
@@ -1341,11 +1455,10 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
               {Array.from({ length: 5 }, (_, i) => (
                 <span
                   key={i}
-                  className={`text-xl ${
-                    i < Math.floor(businessData.rating || 0) 
-                      ? "text-yellow-500" 
+                  className={`text-xl ${i < Math.floor(businessData.rating || 0)
+                      ? "text-yellow-500"
                       : "text-gray-300"
-                  }`}
+                    }`}
                 >
                   ★
                 </span>
@@ -1357,10 +1470,9 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           </div>
         </div>
 
-        {/* Review Messages */}
         <div className="lg:col-span-2">
           <h4 className="font-semibold text-lg mb-4 text-gray-800">Customer Reviews</h4>
-          
+
           {reviewsLoading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -1383,11 +1495,10 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
                           {Array.from({ length: 5 }, (_, i) => (
                             <span
                               key={i}
-                              className={`text-sm ${
-                                i < Math.floor(review.rating || 0) 
-                                  ? "text-yellow-500" 
+                              className={`text-sm ${i < Math.floor(review.rating || 0)
+                                  ? "text-yellow-500"
                                   : "text-gray-300"
-                              }`}
+                                }`}
                             >
                               ★
                             </span>
@@ -1399,17 +1510,17 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
                       </div>
                     </div>
                     <div className="text-sm text-gray-500">
-                      {review.created_at 
+                      {review.created_at
                         ? new Date(review.created_at).toLocaleDateString('en-IN', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                          })
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })
                         : 'Recently'
                       }
                     </div>
                   </div>
-                  
+
                   {review.review && review.review.trim() !== '' ? (
                     <p className="text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-3 border-l-4 border-blue-500">
                       "{review.review}"
@@ -1436,7 +1547,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     </div>
   );
 
-  // Info Tab Content
   const InfoTab = () => (
     <div className="lg:hidden">
       {extractedBusinessId && (
@@ -1447,37 +1557,33 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     </div>
   );
 
-  // Mobile Review Tab Content
   const MobileReviewTab = () => (
     <div className="bg-white rounded-lg shadow-lg p-6 lg:hidden">
       <h3 className="font-semibold text-xl mb-6">Rate & Review</h3>
 
-      {/* Big Star Rating */}
       <div className="flex flex-col items-center justify-center mb-6">
         <div className="flex items-center gap-2 mb-4">
           {Array.from({ length: 5 }, (_, i) => (
             <span
               key={i}
               onClick={() => handleStarClick(i + 1, businessData)}
-              className={`cursor-pointer text-5xl transition-all duration-200 transform hover:scale-110 ${
-                i < selectedRating
+              className={`cursor-pointer text-5xl transition-all duration-200 transform hover:scale-110 ${i < selectedRating
                   ? "text-yellow-500 drop-shadow-lg"
                   : "text-gray-300 hover:text-yellow-300"
-              }`}
+                }`}
             >
               ★
             </span>
           ))}
         </div>
         <span className="text-gray-600 text-lg font-medium">
-          {selectedRating > 0 
-            ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}` 
+          {selectedRating > 0
+            ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}`
             : 'Click stars to rate'
           }
         </span>
       </div>
 
-      {/* Current Rating Display */}
       <div className="bg-gray-50 rounded-lg p-6 text-center mb-6">
         <div className="text-4xl font-bold text-gray-900 mb-2">
           {businessData.rating || 0}
@@ -1486,11 +1592,10 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           {Array.from({ length: 5 }, (_, i) => (
             <span
               key={i}
-              className={`text-xl ${
-                i < Math.floor(businessData.rating || 0) 
-                  ? "text-yellow-500" 
+              className={`text-xl ${i < Math.floor(businessData.rating || 0)
+                  ? "text-yellow-500"
                   : "text-gray-300"
-              }`}
+                }`}
             >
               ★
             </span>
@@ -1501,9 +1606,8 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         </div>
       </div>
 
-      {/* Review Messages */}
       <h4 className="font-semibold text-lg mb-4 text-gray-800">Customer Reviews</h4>
-      
+
       {reviewsLoading ? (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -1526,11 +1630,10 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
                       {Array.from({ length: 5 }, (_, i) => (
                         <span
                           key={i}
-                          className={`text-sm ${
-                            i < Math.floor(review.rating || 0) 
-                              ? "text-yellow-500" 
+                          className={`text-sm ${i < Math.floor(review.rating || 0)
+                              ? "text-yellow-500"
                               : "text-gray-300"
-                          }`}
+                            }`}
                         >
                           ★
                         </span>
@@ -1542,17 +1645,17 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
                   </div>
                 </div>
                 <div className="text-sm text-gray-500">
-                  {review.created_at 
+                  {review.created_at
                     ? new Date(review.created_at).toLocaleDateString('en-IN', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                      })
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })
                     : 'Recently'
                   }
                 </div>
               </div>
-              
+
               {review.review && review.review.trim() !== '' ? (
                 <p className="text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-3 border-l-4 border-blue-500">
                   "{review.review}"
@@ -1577,7 +1680,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     </div>
   );
 
-  // Determine if this is a category page or business details page
   useEffect(() => {
     const determinePageType = async () => {
       try {
@@ -1589,7 +1691,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           return;
         }
 
-        // Check if this is a business details page
         if (slug.length >= 2) {
           const lastSegment = slug[slug.length - 1];
           const secondLastSegment = slug[slug.length - 2];
@@ -1619,7 +1720,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     determinePageType();
   }, [params]);
 
-  // Fetch business details
   const fetchBusinessDetails = async (businessId: string, categorySlug: string[]) => {
     try {
       const directBusinessData = await fetchBusinessDirectly(businessId);
@@ -1661,7 +1761,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     }
   };
 
-  // METHOD 1: Fetch business directly by ID
   const fetchBusinessDirectly = async (businessId: string): Promise<any> => {
     try {
       const formData = new FormData();
@@ -1702,7 +1801,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     }
   };
 
-  // METHOD 3: Search through all categories for the business
   const searchAllCategoriesForBusiness = async (businessId: string): Promise<any> => {
     try {
       const categories = await fetchAndFormatCategories();
@@ -1737,7 +1835,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     }
   };
 
-  // Format and set business data
   const formatAndSetBusinessData = (business: any, categorySlug: string[]) => {
     if (!business) {
       notFound();
@@ -1789,7 +1886,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     }
   };
 
-  // Fetch category data
   const fetchCategoryData = async (slugArray: string[]) => {
     try {
       const { id, name, path } = await getCategoryInfo(slugArray);
@@ -1834,16 +1930,13 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     );
   }
 
-  // Render business details page
   if (pageType === 'business' && businessData) {
     return (
       <div className="bg-gray-50 min-h-screen">
         <SubHeader />
 
         <main className="container mx-auto px-4 py-8">
-          {/* Navigation Section */}
           <div className="mb-6">
-            {/* Back and Home Buttons */}
             <div className="flex items-center gap-4 mb-4">
               <button
                 onClick={handleBack}
@@ -1851,7 +1944,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
               >
                 ← Back
               </button>
-              
+
               <button
                 onClick={handleHome}
                 className="text-gray-600 hover:text-gray-800 font-medium flex items-center gap-2"
@@ -1860,28 +1953,21 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
               </button>
             </div>
 
-            {/* Simple Breadcrumb Navigation */}
             <SimpleBreadcrumb />
           </div>
 
-          {/* Desktop Tabs */}
           <DesktopTabs />
 
-          {/* Mobile Tabs */}
           <MobileTabs />
 
-          {/* Main Business Content - Responsive Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6">
-            {/* Left Column - Main Business Content (3/4 width on desktop) */}
             <div className="lg:col-span-3 space-y-6">
-              {/* Mobile View: Tab Content - OVERVIEW BY DEFAULT */}
               <div className="lg:hidden">
                 {activeTab === 'overview' && <OverviewTab />}
                 {activeTab === 'review' && <MobileReviewTab />}
                 {activeTab === 'info' && <InfoTab />}
               </div>
 
-              {/* Desktop View: All tabs content */}
               <div className="hidden lg:block space-y-6">
                 {activeTab === 'overview' && <OverviewTab />}
                 {activeTab === 'photos' && <PhotosTab />}
@@ -1892,7 +1978,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
               </div>
             </div>
 
-            {/* Right Column - BusinessViewRightSideComponent (1/4 width on desktop) - Mobile me hidden */}
             <div className="hidden lg:block lg:col-span-1">
               {extractedBusinessId && (
                 <BusinessViewRightSideComponent businessId={extractedBusinessId} />
@@ -1903,10 +1988,8 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
         <Footer />
 
-        {/* Photo Modal with Zoom */}
         <PhotoModal />
 
-        {/* Review Modal */}
         <ReviewModal
           isOpen={isReviewModalOpen}
           onClose={closeReviewModal}
@@ -1917,7 +2000,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           initialRating={selectedRating}
         />
 
-        {/* Awesome Login Modal */}
         {isLoginModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg w-full max-w-md">
@@ -1947,7 +2029,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           </div>
         )}
 
-        {/* Awesome Signup Modal */}
         {showRegisterModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg w-full max-w-md">
@@ -1977,7 +2058,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     );
   }
 
-  // Render category listings page
   if (!pageData) return notFound();
 
   const { name, location, area, categoryIcon, categoryDescription, pageTitle } = pageData;
@@ -1988,9 +2068,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       <SubHeader />
       <main className="theia-exception">
         <div className="container mx-auto px-3 sm:px-4 py-6 md:py-8">
-          {/* Navigation Section */}
           <div className="mb-6 px-4">
-            {/* Back and Home Buttons */}
             <div className="flex items-center gap-4 mb-4">
               <button
                 onClick={handleBack}
@@ -1998,7 +2076,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
               >
                 ← Back
               </button>
-              
+
               <button
                 onClick={handleHome}
                 className="text-gray-600 hover:text-gray-800 font-medium flex items-center gap-2"
@@ -2007,7 +2085,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
               </button>
             </div>
 
-            {/* Simple Breadcrumb Navigation */}
             <SimpleBreadcrumb />
           </div>
 
@@ -2030,7 +2107,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         onLoginRequest={handleLoginRequest}
       />
 
-      {/* Awesome Login Modal for category page */}
       {isLoginModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-md">
@@ -2060,7 +2136,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         </div>
       )}
 
-      {/* Awesome Signup Modal for category page */}
       {showRegisterModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-md">
@@ -2091,8 +2166,6 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     </div>
   );
 }
-
-/* -------------------- HELPER FUNCTIONS -------------------- */
 
 function getListingImagesFromAPI(listing: any): string[] {
   if (listing.images && Array.isArray(listing.images) && listing.images.length > 0) {
@@ -2169,7 +2242,6 @@ async function getCategoryInfo(slugArray: string[]) {
   return { id, name, path };
 }
 
-// Synchronous version for business details
 function getCategoryInfoSync(slugArray: string[]) {
   const id = slugArray.at(-1) || "";
   const nameSlug = slugArray.at(-2) || slugArray[0];
