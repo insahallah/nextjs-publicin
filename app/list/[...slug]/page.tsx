@@ -1547,15 +1547,18 @@ const OverviewTab = () => {
     </div>
   );
 
-  const InfoTab = () => (
-    <div className="lg:hidden">
-      {extractedBusinessId && (
-        <div className="bg-white rounded-lg shadow-lg">
-          <BusinessViewRightSideComponent businessId={extractedBusinessId} />
-        </div>
-      )}
-    </div>
-  );
+const InfoTab = () => (
+  <div className="lg:hidden">
+    {extractedBusinessId && (
+      <div className="bg-white rounded-lg shadow-lg">
+        <BusinessViewRightSideComponent 
+          businessId={extractedBusinessId} 
+          key={extractedBusinessId} // Important for re-renders
+        />
+      </div>
+    )}
+  </div>
+);
 
   const MobileReviewTab = () => (
     <div className="bg-white rounded-lg shadow-lg p-6 lg:hidden">
