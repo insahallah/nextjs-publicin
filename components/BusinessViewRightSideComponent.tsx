@@ -36,7 +36,7 @@ interface BusinessData {
 }
 
 interface BusinessViewRightSideComponentProps {
-  businessId: string; // Changed from businessData to businessId
+  businessId: string;
 }
 
 export default function BusinessViewRightSideComponent({ 
@@ -48,6 +48,10 @@ export default function BusinessViewRightSideComponent({
   const [showAllTimings, setShowAllTimings] = useState(false)
   const [copied, setCopied] = useState(false)
   const [activeTab, setActiveTab] = useState('contact')
+
+  // Automatic animation states
+  const [autoCallAnimation, setAutoCallAnimation] = useState(false)
+  const [autoWhatsAppAnimation, setAutoWhatsAppAnimation] = useState(false)
 
   // Fetch business data
   useEffect(() => {
@@ -109,6 +113,34 @@ export default function BusinessViewRightSideComponent({
       fetchBusinessData()
     }
   }, [businessId])
+
+  // Automatic animation effects
+  useEffect(() => {
+    // Start automatic animations after component loads
+    const animationTimer = setTimeout(() => {
+      // Call icon animation sequence
+      const callAnimationInterval = setInterval(() => {
+        setAutoCallAnimation(true)
+        setTimeout(() => setAutoCallAnimation(false), 2000)
+      }, 8000) // Repeat every 8 seconds
+
+      // WhatsApp icon animation sequence (staggered)
+      const whatsAppAnimationInterval = setInterval(() => {
+        setTimeout(() => {
+          setAutoWhatsAppAnimation(true)
+          setTimeout(() => setAutoWhatsAppAnimation(false), 2000)
+        }, 2000)
+      }, 10000) // Repeat every 10 seconds
+
+      // Cleanup intervals
+      return () => {
+        clearInterval(callAnimationInterval)
+        clearInterval(whatsAppAnimationInterval)
+      }
+    }, 3000) // Start animations after 3 seconds
+
+    return () => clearTimeout(animationTimer)
+  }, [])
 
   // Format business timings
   const formatBusinessTimings = () => {
@@ -393,7 +425,7 @@ export default function BusinessViewRightSideComponent({
             {/* Quick Actions */}
             <div className="quick-actions">
               <button 
-                className="action-btn primary" 
+                className={`action-btn primary ${autoCallAnimation ? 'auto-shake-animation' : ''}`} 
                 onClick={handleCall}
                 disabled={!businessData?.mobile}
               >
@@ -401,7 +433,7 @@ export default function BusinessViewRightSideComponent({
                 Call Now
               </button>
               <button 
-                className="action-btn secondary" 
+                className={`action-btn secondary ${autoWhatsAppAnimation ? 'auto-shake-animation' : ''}`} 
                 onClick={handleWhatsApp}
                 disabled={!businessData?.mobile && !businessData?.contact_info?.whatsapp_number}
               >
@@ -601,14 +633,14 @@ export default function BusinessViewRightSideComponent({
       {/* Floating Action Button */}
       <div className="floating-actions">
         <button 
-          className="fab primary" 
+          className={`fab primary ${autoCallAnimation ? 'auto-shake-animation' : ''}`} 
           onClick={handleCall}
           disabled={!businessData?.mobile}
         >
           📞
         </button>
         <button 
-          className="fab secondary" 
+          className={`fab secondary ${autoWhatsAppAnimation ? 'auto-shake-animation' : ''}`} 
           onClick={handleWhatsApp}
           disabled={!businessData?.mobile && !businessData?.contact_info?.whatsapp_number}
         >
@@ -697,6 +729,82 @@ export default function BusinessViewRightSideComponent({
           50% { opacity: 0.5; }
         }
 
+        /* Automatic Shake Animation */
+        .auto-shake-animation {
+          animation: autoShake 2s ease-in-out;
+        }
+
+        @keyframes autoShake {
+          0%, 100% { 
+            transform: translateX(0) rotate(0) scale(1);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+          }
+          2%, 18% { 
+            transform: translateX(-3px) rotate(-3deg) scale(1.05);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+          }
+          4%, 16% { 
+            transform: translateX(3px) rotate(3deg) scale(1.05);
+          }
+          6%, 14% { 
+            transform: translateX(-2px) rotate(-2deg) scale(1.03);
+          }
+          8%, 12% { 
+            transform: translateX(2px) rotate(2deg) scale(1.03);
+          }
+          10% { 
+            transform: translateX(0) rotate(0) scale(1.05);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.6);
+          }
+        }
+
+        /* Enhanced Icon Animation for Auto-shake */
+        .action-btn.auto-shake-animation .action-icon,
+        .fab.auto-shake-animation {
+          animation: autoIconPulse 2s ease-in-out;
+        }
+
+        @keyframes autoIconPulse {
+          0%, 100% { 
+            transform: scale(1);
+          }
+          10%, 30%, 50%, 70%, 90% { 
+            transform: scale(1.2) rotate(5deg);
+          }
+          20%, 40%, 60%, 80% { 
+            transform: scale(1.2) rotate(-5deg);
+          }
+        }
+
+        /* Continuous subtle animation when not shaking */
+        .action-btn:not(:disabled) .action-icon,
+        .fab:not(:disabled) {
+          animation: subtleGlow 4s ease-in-out infinite;
+        }
+
+        @keyframes subtleGlow {
+          0%, 100% {
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+          }
+          50% {
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.5);
+          }
+        }
+
+        .action-btn.secondary:not(:disabled) .action-icon,
+        .fab.secondary:not(:disabled) {
+          animation: subtleGlowGreen 4s ease-in-out infinite;
+        }
+
+        @keyframes subtleGlowGreen {
+          0%, 100% {
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+          }
+          50% {
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5);
+          }
+        }
+
         /* Tab Navigation */
         .tab-navigation {
           display: flex;
@@ -776,6 +884,8 @@ export default function BusinessViewRightSideComponent({
           font-weight: 600;
           cursor: pointer;
           transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
         }
 
         .action-btn.primary {
@@ -804,10 +914,16 @@ export default function BusinessViewRightSideComponent({
           opacity: 0.5;
           cursor: not-allowed;
           transform: none;
+          animation: none;
+        }
+
+        .action-btn:disabled .action-icon {
+          animation: none;
         }
 
         .action-icon {
           font-size: 16px;
+          transition: transform 0.3s ease;
         }
 
         /* Contact Section */
@@ -1169,6 +1285,8 @@ export default function BusinessViewRightSideComponent({
           cursor: pointer;
           transition: all 0.3s ease;
           box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+          position: relative;
+          overflow: hidden;
         }
 
         .fab.primary {
@@ -1190,6 +1308,7 @@ export default function BusinessViewRightSideComponent({
           opacity: 0.5;
           cursor: not-allowed;
           transform: none;
+          animation: none;
         }
 
         /* Responsive Design */

@@ -10,11 +10,6 @@ import AwesomeLogin from "@/components/AwesomeLogin";
 import AwesomeSignup from "@/components/AwesomeSignup";
 import BusinessViewRightSideComponent from "@/components/BusinessViewRightSideComponent";
 
-/**
- * ListPage Component
- * - Handles both category listings and business details pages
- * - All data is dynamic from API
- */
 export default function ListPage({ params }: { params: Promise<{ slug: string[] }> }) {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -36,21 +31,146 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   const [extractedBusinessId, setExtractedBusinessId] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const [isMobile, setIsMobile] = useState(false);
+  const [businessPhotos, setBusinessPhotos] = useState<any[]>([]);
+  const [photosLoading, setPhotosLoading] = useState(false);
+  
+  // Photo Modal State
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+
+  // Zoom State
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   const router = useRouter();
+
+  // Zoom Functions
+  const zoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 0.5, 3));
+    setIsZoomed(true);
+  };
+
+  const zoomOut = () => {
+    const newZoom = Math.max(zoomLevel - 0.5, 1);
+    setZoomLevel(newZoom);
+    if (newZoom === 1) {
+      setIsZoomed(false);
+      setPosition({ x: 0, y: 0 });
+    }
+  };
+
+  const resetZoom = () => {
+    setZoomLevel(1);
+    setIsZoomed(false);
+    setPosition({ x: 0, y: 0 });
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    if (e.deltaY < 0) {
+      zoomIn();
+    } else {
+      zoomOut();
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!isZoomed) return;
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !isZoomed) return;
+    
+    const newX = e.clientX - dragStart.x;
+    const newY = e.clientY - dragStart.y;
+    
+    const container = document.querySelector('.zoom-container');
+    if (container) {
+      const containerRect = container.getBoundingClientRect();
+      const maxX = (zoomLevel - 1) * containerRect.width / 2;
+      const maxY = (zoomLevel - 1) * containerRect.height / 2;
+      
+      setPosition({
+        x: Math.max(Math.min(newX, maxX), -maxX),
+        y: Math.max(Math.min(newY, maxY), -maxY)
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!isZoomed) return;
+    if (e.touches.length === 1) {
+      setIsDragging(true);
+      setDragStart({
+        x: e.touches[0].clientX - position.x,
+        y: e.touches[0].clientY - position.y
+      });
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || !isZoomed || e.touches.length !== 1) return;
+    
+    const newX = e.touches[0].clientX - dragStart.x;
+    const newY = e.touches[0].clientY - dragStart.y;
+    
+    const container = document.querySelector('.zoom-container');
+    if (container) {
+      const containerRect = container.getBoundingClientRect();
+      const maxX = (zoomLevel - 1) * containerRect.width / 2;
+      const maxY = (zoomLevel - 1) * containerRect.height / 2;
+      
+      setPosition({
+        x: Math.max(Math.min(newX, maxX), -maxX),
+        y: Math.max(Math.min(newY, maxY), -maxY)
+      });
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  const handleDoubleClick = () => {
+    if (zoomLevel === 1) {
+      zoomIn();
+    } else {
+      resetZoom();
+    }
+  };
 
   // Responsive check
   useEffect(() => {
     const checkScreenSize = () => {
-      setIsMobile(window.innerWidth < 1024);
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      
+      if (mobile && !['overview', 'review', 'info'].includes(activeTab)) {
+        setActiveTab('overview');
+      }
+      else if (!mobile && !['overview', 'photos', 'price-list', 'quick-info', 'services', 'reviews'].includes(activeTab)) {
+        setActiveTab('overview');
+      }
     };
 
     checkScreenSize();
     window.addEventListener('resize', checkScreenSize);
     return () => window.removeEventListener('resize', checkScreenSize);
-  }, []);
+  }, [activeTab]);
 
-  // Add this useEffect to extract business ID from URL
+  // Extract business ID from URL
   useEffect(() => {
     const extractBusinessIdFromParams = async () => {
       try {
@@ -60,7 +180,8 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           const lastSegment = slug[slug.length - 1];
           
           if (/^\d+$/.test(lastSegment)) {
-            setExtractedBusinessId(lastSegment);
+            const businessId = lastSegment;
+            setExtractedBusinessId(businessId);
           }
         }
       } catch (error) {
@@ -111,6 +232,122 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     generateBreadcrumb();
   }, [params]);
 
+  // Fetch business photos
+  const fetchBusinessPhotos = async (businessId: string) => {
+    try {
+      setPhotosLoading(true);
+
+      const formData = new FormData();
+      formData.append('business_id', businessId);
+
+      const res = await fetch(
+        "https://allupipay.in/publicsewa/api/users/get-multi-business-photos_by_id.php",
+        {
+          method: "POST",
+          body: formData,
+          cache: "no-store"
+        }
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        
+        if (data && data.status === "success" && data.data && data.data.length > 0) {
+          const photos = data.data.map((photo: any, index: number) => {
+            const imageUrl = `https://allupipay.in/publicsewa/images/${photo.path}`;
+            
+            return {
+              id: `photo-${photo.id}-${index}-${Date.now()}`,
+              url: imageUrl,
+              title: photo.title || `Business Photo ${index + 1}`,
+              alt: photo.alt_text || businessData?.displayName || 'Business Photo',
+              thumbnail: imageUrl
+            };
+          });
+          
+          setBusinessPhotos(photos);
+        } else {
+          setBusinessPhotos([]);
+        }
+      } else {
+        setBusinessPhotos([]);
+      }
+    } catch (error) {
+      console.error('Error in fetchBusinessPhotos:', error);
+      setBusinessPhotos([]);
+    } finally {
+      setPhotosLoading(false);
+    }
+  };
+
+  // Photo Modal Functions
+  const openPhotoModal = (index: number) => {
+    setCurrentPhotoIndex(index);
+    setIsPhotoModalOpen(true);
+    resetZoom();
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closePhotoModal = () => {
+    setIsPhotoModalOpen(false);
+    resetZoom();
+    document.body.style.overflow = 'auto';
+  };
+
+  const goToNextPhoto = () => {
+    resetZoom();
+    setCurrentPhotoIndex((prevIndex) => 
+      prevIndex === businessPhotos.length - 1 ? 0 : prevIndex + 1
+    );
+  };
+
+  const goToPrevPhoto = () => {
+    resetZoom();
+    setCurrentPhotoIndex((prevIndex) => 
+      prevIndex === 0 ? businessPhotos.length - 1 : prevIndex - 1
+    );
+  };
+
+  const goToPhoto = (index: number) => {
+    resetZoom();
+    setCurrentPhotoIndex(index);
+  };
+
+  // Handle keyboard navigation with zoom controls
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isPhotoModalOpen) return;
+      
+      switch (e.key) {
+        case 'Escape':
+          closePhotoModal();
+          break;
+        case 'ArrowLeft':
+          goToPrevPhoto();
+          break;
+        case 'ArrowRight':
+          goToNextPhoto();
+          break;
+        case '+':
+        case '=':
+          e.preventDefault();
+          zoomIn();
+          break;
+        case '-':
+          e.preventDefault();
+          zoomOut();
+          break;
+        case '0':
+          e.preventDefault();
+          resetZoom();
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPhotoModalOpen, zoomLevel]);
+
   // Listen for login events
   useEffect(() => {
     const handleOpenLoginModal = () => {
@@ -155,7 +392,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     setIsLoginModalOpen(true);
   };
 
-  // Robust method to get current user id from localStorage
+  // Get current user id from localStorage
   const getCurrentUserId = (): string | null => {
     if (typeof window === 'undefined') return null;
     
@@ -277,7 +514,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       params.append('business_id', businessId);
 
       const res = await fetch(
-        `https://allupipay.in/publicsewa/api/users/get_reviews_for_one_bussiness.php?${params}`,
+        `https://allupipay.in/publicsewa/api/users/get-reviews-for-one-business.php?${params}`,
         {
           method: "GET",
           cache: "no-store"
@@ -324,7 +561,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   // Handle successful login from AwesomeLogin
   const handleLoginSuccess = async (loginData: any) => {
     try {
-      const formData = new URLSearchParams();
+      const formData = new FormData();
       formData.append('mobile', loginData.mobile);
       formData.append('password', loginData.password);
 
@@ -420,8 +657,41 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     );
   };
 
-  // Business Tabs Component
-  const BusinessTabs = () => {
+  // Desktop Tabs Component
+  const DesktopTabs = () => {
+    const tabs = [
+      { id: 'overview', label: 'Overview', icon: '📋' },
+      { id: 'photos', label: 'Photos', icon: '📷' },
+      { id: 'price-list', label: 'Price List', icon: '💰' },
+      { id: 'quick-info', label: 'Quick Info', icon: 'ℹ️' },
+      { id: 'services', label: 'Services', icon: '🛠️' },
+      { id: 'reviews', label: 'Reviews', icon: '⭐' }
+    ];
+
+    return (
+      <div className="bg-white border-b border-gray-200 hidden lg:block">
+        <div style={{ height: '63px' }} className="flex">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 py-4 px-2 text-center font-medium text-sm border-b-2 transition-colors flex items-center justify-center gap-2 ${
+                activeTab === tab.id
+                  ? 'border-blue-600 text-blue-600 bg-blue-50'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <span className="text-base">{tab.icon}</span>
+              <span className="font16 fw500 color111">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Mobile Tabs Component
+  const MobileTabs = () => {
     const tabs = [
       { id: 'overview', label: 'Overview', icon: '📋' },
       { id: 'review', label: 'Review', icon: '⭐' },
@@ -600,7 +870,436 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     </div>
   );
 
-  // Review Tab Content
+  // Photos Tab Content
+  const PhotosTab = () => {
+    return (
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <h3 className="font-semibold text-xl mb-6">Business Photos</h3>
+        
+        {photosLoading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading photos...</p>
+          </div>
+        ) : businessPhotos.length > 0 ? (
+          <div className="space-y-6">
+            {/* Photo Count */}
+            <div className="flex items-center justify-between">
+              <p className="text-gray-600">
+                Showing {businessPhotos.length} photo{businessPhotos.length !== 1 ? 's' : ''}
+              </p>
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <span>📷</span>
+                <span>Click on any photo to view in full size</span>
+              </div>
+            </div>
+
+            {/* Photos Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {businessPhotos.map((photo, index) => (
+                <div 
+                  key={photo.id}
+                  className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => openPhotoModal(index)}
+                >
+                  {/* Image Container */}
+                  <div className="w-full h-48 bg-gray-100 flex items-center justify-center overflow-hidden">
+                    <img
+                      src={photo.url}
+                      alt={photo.alt}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/default-listing.jpg";
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Photo Info */}
+                  <div className="p-3 border-t border-gray-100">
+                    <p className="text-sm font-medium text-gray-800 truncate">
+                      {photo.title}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Photo {index + 1}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={() => openPhotoModal(0)}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <span>👀</span>
+                View All Photos in Gallery
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+            <div className="text-gray-400 text-6xl mb-4">📷</div>
+            <h4 className="text-lg font-medium text-gray-600 mb-2">No Photos Available</h4>
+            <p className="text-gray-500 max-w-md mx-auto">
+              This business hasn't uploaded any photos yet. Check back later for updates.
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Photo Modal Component with Zoom
+  const PhotoModal = () => {
+    if (!isPhotoModalOpen || businessPhotos.length === 0) return null;
+
+    const currentPhoto = businessPhotos[currentPhotoIndex];
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+        <div className="relative w-full max-w-6xl max-h-full">
+          {/* Close Button */}
+          <button
+            onClick={closePhotoModal}
+            className="absolute top-4 right-4 z-20 text-white text-2xl bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-70 transition-all duration-200"
+          >
+            ✕
+          </button>
+
+          {/* Zoom Controls */}
+          <div className="absolute top-4 left-4 z-20 flex items-center gap-2 bg-black bg-opacity-50 rounded-lg p-2">
+            <button
+              onClick={zoomIn}
+              disabled={zoomLevel >= 3}
+              className="text-white text-xl bg-transparent p-2 rounded hover:bg-white hover:bg-opacity-20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Zoom In"
+            >
+              🔍+
+            </button>
+            <button
+              onClick={zoomOut}
+              disabled={zoomLevel <= 1}
+              className="text-white text-xl bg-transparent p-2 rounded hover:bg-white hover:bg-opacity-20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Zoom Out"
+            >
+              🔍-
+            </button>
+            <button
+              onClick={resetZoom}
+              disabled={zoomLevel === 1}
+              className="text-white text-lg bg-transparent p-2 rounded hover:bg-white hover:bg-opacity-20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Reset Zoom"
+            >
+              ⟳
+            </button>
+            <span className="text-white text-sm px-2">
+              {Math.round(zoomLevel * 100)}%
+            </span>
+          </div>
+
+          {/* Navigation Arrows */}
+          {businessPhotos.length > 1 && (
+            <>
+              <button
+                onClick={goToPrevPhoto}
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 text-white text-2xl bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-70 transition-all duration-200"
+              >
+                ‹
+              </button>
+              <button
+                onClick={goToNextPhoto}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 text-white text-2xl bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-70 transition-all duration-200"
+              >
+                ›
+              </button>
+            </>
+          )}
+
+          {/* Main Image Container with Zoom */}
+          <div 
+            className="flex items-center justify-center h-full zoom-container"
+            onWheel={handleWheel}
+          >
+            <div 
+              className={`relative overflow-hidden ${isZoomed ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onDoubleClick={handleDoubleClick}
+              style={{
+                transform: `scale(${zoomLevel}) translate(${position.x}px, ${position.y}px)`,
+                transition: isDragging ? 'none' : 'transform 0.2s ease',
+                transformOrigin: 'center center'
+              }}
+            >
+              <img
+                src={currentPhoto.url}
+                alt={currentPhoto.alt}
+                className="max-w-full max-h-[80vh] object-contain rounded-lg select-none"
+                draggable={false}
+                onError={(e) => {
+                  e.currentTarget.src = "/default-listing.jpg";
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Photo Info */}
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-center bg-black bg-opacity-50 rounded-lg px-4 py-2 z-20">
+            <div className="text-sm">
+              {currentPhoto.title} • {currentPhotoIndex + 1} of {businessPhotos.length}
+              {isZoomed && ` • Zoom: ${Math.round(zoomLevel * 100)}%`}
+            </div>
+          </div>
+
+          {/* Thumbnail Strip */}
+          {businessPhotos.length > 1 && (
+            <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 flex gap-2 max-w-full overflow-x-auto py-2 z-20">
+              {businessPhotos.map((photo, index) => (
+                <button
+                  key={photo.id}
+                  onClick={() => {
+                    goToPhoto(index);
+                  }}
+                  className={`flex-shrink-0 w-16 h-16 rounded border-2 transition-all duration-200 ${
+                    index === currentPhotoIndex 
+                      ? 'border-blue-500 scale-110' 
+                      : 'border-transparent hover:border-white'
+                  }`}
+                >
+                  <img
+                    src={photo.thumbnail || photo.url}
+                    alt={photo.alt}
+                    className="w-full h-full object-cover rounded"
+                    onError={(e) => {
+                      e.currentTarget.src = "/default-listing.jpg";
+                    }}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Keyboard Shortcuts Info */}
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 rounded-lg px-3 py-1 hidden md:block z-20">
+            Use ← → to navigate • +/- to zoom • ESC to close • Double-click to toggle zoom
+          </div>
+
+          {/* Zoom Instructions */}
+          {zoomLevel === 1 && (
+            <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 rounded-lg px-3 py-1 text-center z-20">
+              Double-click or use mouse wheel to zoom
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Price List Tab Content
+  const PriceListTab = () => (
+    <div className="bg-white rounded-lg shadow-lg p-6">
+      <h3 className="font-semibold text-xl mb-6">Price List</h3>
+      
+      <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+        <div className="text-gray-400 text-6xl mb-4">💰</div>
+        <h4 className="text-lg font-medium text-gray-600 mb-2">Price List Coming Soon</h4>
+        <p className="text-gray-500 max-w-md mx-auto">
+          The business is working on updating their price list. Please contact them directly for current pricing information.
+        </p>
+        
+        {businessData.phone && (
+          <button
+            onClick={() => window.open(`tel:${businessData.phone}`)}
+            className="mt-4 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+          >
+            Call for Pricing
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  // Quick Info Tab Content
+  const QuickInfoTab = () => (
+    <div className="bg-white rounded-lg shadow-lg p-6">
+      <h3 className="font-semibold text-xl mb-6">Quick Information</h3>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Basic Information */}
+        <div className="space-y-4">
+          <h4 className="font-semibold text-lg text-gray-800 border-b pb-2">Basic Info</h4>
+          
+          <div className="space-y-3">
+            <div className="flex justify-between items-center py-2 border-b border-gray-100">
+              <span className="text-gray-600">Business Name</span>
+              <span className="font-medium text-gray-800">{businessData.displayName}</span>
+            </div>
+            
+            {businessData.contact_info?.contact_person_name && (
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-gray-600">Contact Person</span>
+                <span className="font-medium text-gray-800">{businessData.contact_info.contact_person_name}</span>
+              </div>
+            )}
+            
+            <div className="flex justify-between items-center py-2 border-b border-gray-100">
+              <span className="text-gray-600">Status</span>
+              <span className={`font-medium ${businessData.isOpen ? 'text-green-600' : 'text-red-600'}`}>
+                {businessData.isOpen ? 'Open' : 'Closed'}
+              </span>
+            </div>
+            
+            <div className="flex justify-between items-center py-2 border-b border-gray-100">
+              <span className="text-gray-600">Rating</span>
+              <span className="font-medium text-gray-800 flex items-center gap-1">
+                {Array.from({ length: 5 }, (_, i) => (
+                  <span key={i} className={`text-sm ${i < Math.floor(businessData.rating || 0) ? "text-yellow-500" : "text-gray-300"}`}>
+                    ★
+                  </span>
+                ))}
+                <span>({businessData.reviewCount || 0})</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Contact Information */}
+        <div className="space-y-4">
+          <h4 className="font-semibold text-lg text-gray-800 border-b pb-2">Contact Info</h4>
+          
+          <div className="space-y-3">
+            {businessData.phone ? (
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-gray-600">Phone</span>
+                <span className="font-medium text-gray-800">{businessData.phone}</span>
+              </div>
+            ) : null}
+            
+            {businessData.contact_info?.email && (
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-gray-600">Email</span>
+                <span className="font-medium text-gray-800">{businessData.contact_info.email}</span>
+              </div>
+            )}
+            
+            {businessData.location && (
+              <div className="flex justify-between items-start py-2 border-b border-gray-100">
+                <span className="text-gray-600">Location</span>
+                <span className="font-medium text-gray-800 text-right max-w-[200px]">{businessData.location}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Services Summary */}
+      {businessData.services && businessData.services.length > 0 && (
+        <div className="mt-6">
+          <h4 className="font-semibold text-lg text-gray-800 border-b pb-2 mb-4">Services Summary</h4>
+          <div className="flex flex-wrap gap-2">
+            {businessData.services.slice(0, 8).map((service: string, index: number) => (
+              <span key={index} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                {service}
+              </span>
+            ))}
+            {businessData.services.length > 8 && (
+              <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm">
+                +{businessData.services.length - 8} more
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // Services Tab Content
+  const ServicesTab = () => (
+    <div className="bg-white rounded-lg shadow-lg p-6">
+      <h3 className="font-semibold text-xl mb-6">Services & Offerings</h3>
+      
+      {businessData.services && businessData.services.length > 0 ? (
+        <div className="space-y-6">
+          {/* All Services Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {businessData.services.map((service: string, index: number) => (
+              <div key={index} className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5 hover:shadow-lg transition-all duration-300 hover:scale-105">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white text-lg">
+                    🛠️
+                  </div>
+                  <h4 className="font-semibold text-gray-800 text-lg">{service}</h4>
+                </div>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Professional {service.toLowerCase()} services with quality workmanship and timely completion.
+                </p>
+                <button className="mt-4 w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm">
+                  Inquire About Service
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Service Features */}
+          <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+            <h4 className="font-semibold text-lg text-gray-800 mb-4">Why Choose Our Services?</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-xl mx-auto mb-2">
+                  ⭐
+                </div>
+                <p className="text-sm text-gray-600">Quality Work</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-xl mx-auto mb-2">
+                  ⏱️
+                </div>
+                <p className="text-sm text-gray-600">Timely Service</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 text-xl mx-auto mb-2">
+                  💰
+                </div>
+                <p className="text-sm text-gray-600">Fair Pricing</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-xl mx-auto mb-2">
+                  🛡️
+                </div>
+                <p className="text-sm text-gray-600">Reliable Service</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+          <div className="text-gray-400 text-6xl mb-4">🛠️</div>
+          <h4 className="text-lg font-medium text-gray-600 mb-2">Services Information Coming Soon</h4>
+          <p className="text-gray-500 max-w-md mx-auto">
+            The business is working on updating their service offerings. Please contact them directly to learn more about available services.
+          </p>
+          
+          {businessData.phone && (
+            <button
+              onClick={() => window.open(`tel:${businessData.phone}`)}
+              className="mt-4 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+            >
+              Call for Services Info
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  // Review Tab Content - Desktop version
   const ReviewTab = () => (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <h3 className="font-semibold text-xl mb-6">Rate & Review</h3>
@@ -737,12 +1436,142 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     </div>
   );
 
-  // Info Tab Content - BusinessViewRightSideComponent show karein mobile me
+  // Info Tab Content
   const InfoTab = () => (
     <div className="lg:hidden">
       {extractedBusinessId && (
         <div className="bg-white rounded-lg shadow-lg">
           <BusinessViewRightSideComponent businessId={extractedBusinessId} />
+        </div>
+      )}
+    </div>
+  );
+
+  // Mobile Review Tab Content
+  const MobileReviewTab = () => (
+    <div className="bg-white rounded-lg shadow-lg p-6 lg:hidden">
+      <h3 className="font-semibold text-xl mb-6">Rate & Review</h3>
+
+      {/* Big Star Rating */}
+      <div className="flex flex-col items-center justify-center mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          {Array.from({ length: 5 }, (_, i) => (
+            <span
+              key={i}
+              onClick={() => handleStarClick(i + 1, businessData)}
+              className={`cursor-pointer text-5xl transition-all duration-200 transform hover:scale-110 ${
+                i < selectedRating
+                  ? "text-yellow-500 drop-shadow-lg"
+                  : "text-gray-300 hover:text-yellow-300"
+              }`}
+            >
+              ★
+            </span>
+          ))}
+        </div>
+        <span className="text-gray-600 text-lg font-medium">
+          {selectedRating > 0 
+            ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}` 
+            : 'Click stars to rate'
+          }
+        </span>
+      </div>
+
+      {/* Current Rating Display */}
+      <div className="bg-gray-50 rounded-lg p-6 text-center mb-6">
+        <div className="text-4xl font-bold text-gray-900 mb-2">
+          {businessData.rating || 0}
+        </div>
+        <div className="flex items-center justify-center gap-1 mb-2">
+          {Array.from({ length: 5 }, (_, i) => (
+            <span
+              key={i}
+              className={`text-xl ${
+                i < Math.floor(businessData.rating || 0) 
+                  ? "text-yellow-500" 
+                  : "text-gray-300"
+              }`}
+            >
+              ★
+            </span>
+          ))}
+        </div>
+        <div className="text-gray-600 text-sm">
+          ({businessData.reviewCount || 0} reviews)
+        </div>
+      </div>
+
+      {/* Review Messages */}
+      <h4 className="font-semibold text-lg mb-4 text-gray-800">Customer Reviews</h4>
+      
+      {reviewsLoading ? (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading reviews...</p>
+        </div>
+      ) : reviews.length > 0 ? (
+        <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+          {reviews.map((review, index) => (
+            <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-md">
+                    {review.username ? review.username.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-900">
+                      {review.username || 'Anonymous User'}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <span
+                          key={i}
+                          className={`text-sm ${
+                            i < Math.floor(review.rating || 0) 
+                              ? "text-yellow-500" 
+                              : "text-gray-300"
+                          }`}
+                        >
+                          ★
+                        </span>
+                      ))}
+                      <span className="text-sm text-gray-500 ml-1">
+                        {review.rating || 0}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-500">
+                  {review.created_at 
+                    ? new Date(review.created_at).toLocaleDateString('en-IN', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })
+                    : 'Recently'
+                  }
+                </div>
+              </div>
+              
+              {review.review && review.review.trim() !== '' ? (
+                <p className="text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-3 border-l-4 border-blue-500">
+                  "{review.review}"
+                </p>
+              ) : (
+                <p className="text-gray-500 italic bg-gray-50 rounded-lg p-3">
+                  No comment provided
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+          <div className="text-gray-400 text-6xl mb-4">💬</div>
+          <h4 className="text-lg font-medium text-gray-600 mb-2">No Reviews Yet</h4>
+          <p className="text-gray-500 max-w-md mx-auto">
+            Be the first to share your experience with this business! Click the stars above to leave a review.
+          </p>
         </div>
       )}
     </div>
@@ -956,6 +1785,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
     if (businessDetails.id) {
       fetchReviews(businessDetails.id);
+      fetchBusinessPhotos(businessDetails.id);
     }
   };
 
@@ -1034,25 +1864,31 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             <SimpleBreadcrumb />
           </div>
 
+          {/* Desktop Tabs */}
+          <DesktopTabs />
+
           {/* Mobile Tabs */}
-          <BusinessTabs />
+          <MobileTabs />
 
           {/* Main Business Content - Responsive Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6">
             {/* Left Column - Main Business Content (3/4 width on desktop) */}
             <div className="lg:col-span-3 space-y-6">
-              {/* Mobile View: Tab Content */}
+              {/* Mobile View: Tab Content - OVERVIEW BY DEFAULT */}
               <div className="lg:hidden">
                 {activeTab === 'overview' && <OverviewTab />}
-                {activeTab === 'review' && <ReviewTab />}
+                {activeTab === 'review' && <MobileReviewTab />}
                 {activeTab === 'info' && <InfoTab />}
               </div>
 
-              {/* Desktop View: Overview aur Review hi dikhega */}
+              {/* Desktop View: All tabs content */}
               <div className="hidden lg:block space-y-6">
-                <OverviewTab />
-                <ReviewTab />
-                {/* Desktop me InfoTab nahi dikhega kyunki sidebar me hai */}
+                {activeTab === 'overview' && <OverviewTab />}
+                {activeTab === 'photos' && <PhotosTab />}
+                {activeTab === 'price-list' && <PriceListTab />}
+                {activeTab === 'quick-info' && <QuickInfoTab />}
+                {activeTab === 'services' && <ServicesTab />}
+                {activeTab === 'reviews' && <ReviewTab />}
               </div>
             </div>
 
@@ -1066,6 +1902,9 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         </main>
 
         <Footer />
+
+        {/* Photo Modal with Zoom */}
+        <PhotoModal />
 
         {/* Review Modal */}
         <ReviewModal
