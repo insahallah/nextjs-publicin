@@ -827,7 +827,11 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             <div className="md:w-1/3 md:hidden">
               <div className="relative bg-gray-100 rounded-lg overflow-hidden">
                 <div className="relative h-64 w-full">
+<<<<<<< HEAD
                   {sliderImages.map((image: BusinessImage, index: number) => (
+=======
+                  {sliderImages.map((image, index) => (
+>>>>>>> d3b5ca8398f710e6a54c46beda16ba46a6dd001e
                     <div
                       key={image.id}
                       className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${index === currentImageIndex ? 'opacity-100' : 'opacity-0'
@@ -1036,7 +1040,11 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+<<<<<<< HEAD
               {businessPhotos.map((photo: BusinessImage, index: number) => (
+=======
+              {businessPhotos.map((photo, index) => (
+>>>>>>> d3b5ca8398f710e6a54c46beda16ba46a6dd001e
                 <div
                   key={photo.id}
                   className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
