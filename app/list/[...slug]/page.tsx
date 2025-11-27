@@ -741,277 +741,277 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     );
   };
 
-  const OverviewTab = () => {
-    const sliderImages = businessPhotos.length > 0
-      ? businessPhotos
-      : (businessData?.images && Array.isArray(businessData.images) && businessData.images.length > 0
-        ? businessData.images.map((img: any, index: number) => ({
-          id: `img-${index}`,
-          url: typeof img === 'string' ? img : img.path ? `https://allupipay.in/publicsewa/images/${img.path}` : "/default-listing.jpg",
-          title: `Business Image ${index + 1}`,
-          alt: businessData.displayName
-        }))
-        : [{ id: 'default', url: "/default-listing.jpg", title: "Business Image", alt: businessData?.displayName }]
-      );
+const OverviewTab = () => {
+  const sliderImages = businessPhotos.length > 0
+    ? businessPhotos
+    : (businessData?.images && Array.isArray(businessData.images) && businessData.images.length > 0
+      ? businessData.images.map((img: any, index: number) => ({
+        id: `img-${index}`,
+        url: typeof img === 'string' ? img : img.path ? `https://allupipay.in/publicsewa/images/${img.path}` : "/default-listing.jpg",
+        title: `Business Image ${index + 1}`,
+        alt: businessData.displayName
+      }))
+      : [{ id: 'default', url: "/default-listing.jpg", title: "Business Image", alt: businessData?.displayName }]
+    );
 
-    return (
-      <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="flex flex-col md:flex-row gap-6">
-            <div className="md:w-1/3 hidden md:block">
-              <img
-                src={businessData.images && businessData.images[0] ?
-                  (typeof businessData.images[0] === 'string' ?
-                    businessData.images[0] :
-                    businessData.images[0].path ?
-                      `https://allupipay.in/publicsewa/images/${businessData.images[0].path}` :
-                      "/default-listing.jpg"
-                  ) : "/default-listing.jpg"
-                }
-                alt={businessData.displayName}
-                className="w-full h-64 object-cover rounded-lg mb-4"
-              />
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="flex flex-col md:flex-row gap-6">
+          <div className="md:w-1/3 hidden md:block">
+            <img
+              src={businessData.images && businessData.images[0] ?
+                (typeof businessData.images[0] === 'string' ?
+                  businessData.images[0] :
+                  businessData.images[0].path ?
+                    `https://allupipay.in/publicsewa/images/${businessData.images[0].path}` :
+                    "/default-listing.jpg"
+                ) : "/default-listing.jpg"
+              }
+              alt={businessData.displayName}
+              className="w-full h-64 object-cover rounded-lg mb-4"
+            />
 
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <h3 className="font-semibold text-lg mb-3 text-gray-800">Quick Actions</h3>
-                <div className="flex flex-col gap-3">
-                  {businessData.phone ? (
-                    <>
-                      <button
-                        onClick={() => window.open(`tel:${businessData.phone}`)}
-                        className="w-full bg-green-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-                      >
-                        <i className="fas fa-phone"></i>
-                        Call Now
-                      </button>
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <h3 className="font-semibold text-lg mb-3 text-gray-800">Quick Actions</h3>
+              <div className="flex flex-col gap-3">
+                {businessData.phone ? (
+                  <>
+                    <button
+                      onClick={() => window.open(`tel:${businessData.phone}`)}
+                      className="w-full bg-green-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <i className="fas fa-phone"></i>
+                      Call Now
+                    </button>
 
-                      <button
-                        onClick={() => {
-                          const cleanPhone = businessData.phone.replace(/\D/g, '');
-                          const message = `Hello ${businessData.displayName}!\n\nI found your business listing and I'm interested in your services. Could you please provide me with more information?\n\nThank you!`;
-                          const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-                          window.open(whatsappUrl, '_blank');
-                        }}
-                        className="w-full bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
-                      >
-                        WhatsApp
-                      </button>
-                    </>
-                  ) : (
-                    <div className="text-center text-gray-500 py-3">
-                      Phone number not available for contact
-                    </div>
-                  )}
+                    <button
+                      onClick={() => {
+                        const cleanPhone = businessData.phone.replace(/\D/g, '');
+                        const message = `Hello ${businessData.displayName}!\n\nI found your business listing and I'm interested in your services. Could you please provide me with more information?\n\nThank you!`;
+                        const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+                        window.open(whatsappUrl, '_blank');
+                      }}
+                      className="w-full bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
+                    >
+                      WhatsApp
+                    </button>
+                  </>
+                ) : (
+                  <div className="text-center text-gray-500 py-3">
+                    Phone number not available for contact
+                  </div>
+                )}
 
-                  <button
-                    onClick={() => {
-                      if (businessData.latitude && businessData.longitude) {
-                        const mapsUrl = `https://www.google.com/maps?q=${businessData.latitude},${businessData.longitude}`;
-                        window.open(mapsUrl, '_blank');
-                      } else if (businessData.location) {
-                        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(businessData.location)}`;
-                        window.open(mapsUrl, '_blank');
-                      } else {
-                        alert('Location information not available');
-                      }
-                    }}
-                    className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <i className="fas fa-map-marker-alt"></i>
-                    Get Directions
-                  </button>
-                </div>
+                <button
+                  onClick={() => {
+                    if (businessData.latitude && businessData.longitude) {
+                      const mapsUrl = `https://www.google.com/maps?q=${businessData.latitude},${businessData.longitude}`;
+                      window.open(mapsUrl, '_blank');
+                    } else if (businessData.location) {
+                      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(businessData.location)}`;
+                      window.open(mapsUrl, '_blank');
+                    } else {
+                      alert('Location information not available');
+                    }
+                  }}
+                  className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <i className="fas fa-map-marker-alt"></i>
+                  Get Directions
+                </button>
               </div>
             </div>
+          </div>
 
-            <div className="md:w-1/3 md:hidden">
-              <div className="relative bg-gray-100 rounded-lg overflow-hidden">
-                <div className="relative h-64 w-full">
-                  {sliderImages.map((image: BusinessImage, index: number) => (
-                    <div
-                      key={image.id}
-                      className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${index === currentImageIndex ? 'opacity-100' : 'opacity-0'
-                        }`}
-                    >
-                      <img
-                        src={image.url}
-                        alt={image.alt}
-                        className="w-full h-full object-cover"
-                        onClick={() => openPhotoModal(index)}
-                        onError={(e) => {
-                          e.currentTarget.src = "/default-listing.jpg";
-                        }}
-                      />
-                    </div>
-                  ))}
-
-                  {sliderImages.length > 1 && (
-                    <>
-                      <button
-                        onClick={prevImage}
-                        className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-8 h-8 flex items-center justify-center z-10 hover:bg-opacity-70 transition-all"
-                      >
-                        ‹
-                      </button>
-                      <button
-                        onClick={nextImage}
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-8 h-8 flex items-center justify-center z-10 hover:bg-opacity-70 transition-all"
-                      >
-                        ›
-                      </button>
-                    </>
-                  )}
-
-                  {sliderImages.length > 1 && (
-                    <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white text-sm px-3 py-1 rounded-full z-10">
-                      {currentImageIndex + 1} / {sliderImages.length}
-                    </div>
-                  )}
-
-                  <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded z-10">
-                    Tap to view
+          <div className="md:w-1/3 md:hidden">
+            <div className="relative bg-gray-100 rounded-lg overflow-hidden">
+              <div className="relative h-64 w-full">
+                {sliderImages.map((image: BusinessImage, index: number) => (
+                  <div
+                    key={image.id}
+                    className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+                      }`}
+                  >
+                    <img
+                      src={image.url}
+                      alt={image.alt}
+                      className="w-full h-full object-cover"
+                      onClick={() => openPhotoModal(index)}
+                      onError={(e) => {
+                        e.currentTarget.src = "/default-listing.jpg";
+                      }}
+                    />
                   </div>
-                </div>
+                ))}
 
                 {sliderImages.length > 1 && (
-                  <div className="flex justify-center space-x-2 p-4">
-                    {sliderImages.map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => goToImage(index)}
-                        className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentImageIndex
-                            ? 'bg-blue-600 w-4'
-                            : 'bg-gray-300 hover:bg-gray-400'
-                          }`}
-                      />
-                    ))}
+                  <>
+                    <button
+                      onClick={prevImage}
+                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-8 h-8 flex items-center justify-center z-10 hover:bg-opacity-70 transition-all"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      onClick={nextImage}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-8 h-8 flex items-center justify-center z-10 hover:bg-opacity-70 transition-all"
+                    >
+                      ›
+                    </button>
+                  </>
+                )}
+
+                {sliderImages.length > 1 && (
+                  <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white text-sm px-3 py-1 rounded-full z-10">
+                    {currentImageIndex + 1} / {sliderImages.length}
                   </div>
                 )}
-              </div>
 
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mt-4">
-                <h3 className="font-semibold text-lg mb-3 text-gray-800">Quick Actions</h3>
-                <div className="flex flex-col gap-3">
-                  {businessData.phone ? (
-                    <>
-                      <button
-                        onClick={() => window.open(`tel:${businessData.phone}`)}
-                        className="w-full bg-green-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-                      >
-                        <i className="fas fa-phone"></i>
-                        Call Now
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          const cleanPhone = businessData.phone.replace(/\D/g, '');
-                          const message = `Hello ${businessData.displayName}!\n\nI found your business listing and I'm interested in your services. Could you please provide me with more information?\n\nThank you!`;
-                          const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-                          window.open(whatsappUrl, '_blank');
-                        }}
-                        className="w-full bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
-                      >
-                        WhatsApp
-                      </button>
-                    </>
-                  ) : (
-                    <div className="text-center text-gray-500 py-3">
-                      Phone number not available for contact
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => {
-                      if (businessData.latitude && businessData.longitude) {
-                        const mapsUrl = `https://www.google.com/maps?q=${businessData.latitude},${businessData.longitude}`;
-                        window.open(mapsUrl, '_blank');
-                      } else if (businessData.location) {
-                        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(businessData.location)}`;
-                        window.open(mapsUrl, '_blank');
-                      } else {
-                        alert('Location information not available');
-                      }
-                    }}
-                    className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <i className="fas fa-map-marker-alt"></i>
-                    Get Directions
-                  </button>
+                <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded z-10">
+                  Tap to view
                 </div>
               </div>
-            </div>
 
-            <div className="md:w-2/3">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                {businessData.displayName}
-              </h1>
-
-              <div className="flex items-center gap-4 mb-4">
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <span key={i} className={`text-lg ${i < Math.floor(businessData.rating || 0) ? "text-yellow-500" : "text-gray-300"}`}>
-                      ★
-                    </span>
+              {sliderImages.length > 1 && (
+                <div className="flex justify-center space-x-2 p-4">
+                  {sliderImages.map((_: BusinessImage, index: number) => (
+                    <button
+                      key={index}
+                      onClick={() => goToImage(index)}
+                      className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentImageIndex
+                          ? 'bg-blue-600 w-4'
+                          : 'bg-gray-300 hover:bg-gray-400'
+                        }`}
+                    />
                   ))}
-                  <span className="text-lg font-bold ml-2">{businessData.rating || 0}</span>
-                  <span className="text-gray-600">({businessData.reviewCount || 0} reviews)</span>
-                </div>
-
-                {businessData.isOpen ? (
-                  <span className="text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm font-medium">
-                    🟢 Open Now
-                  </span>
-                ) : (
-                  <span className="text-red-600 bg-red-50 px-3 py-1 rounded-full text-sm font-medium">
-                    🔴 Closed
-                  </span>
-                )}
-              </div>
-
-              {businessData.location && (
-                <div className="flex items-center gap-2 text-gray-600 mb-4">
-                  <span>📍</span>
-                  <span>{businessData.location}</span>
-                </div>
-              )}
-
-              {businessData.phone ? (
-                <div className="flex items-center gap-2 text-gray-600 mb-4">
-                  <span>📞</span>
-                  <span>{businessData.phone}</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-gray-500 mb-4">
-                  <span>📞</span>
-                  <span>Phone number not available</span>
-                </div>
-              )}
-
-              {businessData.description && (
-                <div className="mb-4">
-                  <h3 className="font-semibold text-lg mb-2">About</h3>
-                  <p className="text-gray-700 leading-relaxed">{businessData.description}</p>
                 </div>
               )}
             </div>
+
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mt-4">
+              <h3 className="font-semibold text-lg mb-3 text-gray-800">Quick Actions</h3>
+              <div className="flex flex-col gap-3">
+                {businessData.phone ? (
+                  <>
+                    <button
+                      onClick={() => window.open(`tel:${businessData.phone}`)}
+                      className="w-full bg-green-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <i className="fas fa-phone"></i>
+                      Call Now
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        const cleanPhone = businessData.phone.replace(/\D/g, '');
+                        const message = `Hello ${businessData.displayName}!\n\nI found your business listing and I'm interested in your services. Could you please provide me with more information?\n\nThank you!`;
+                        const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+                        window.open(whatsappUrl, '_blank');
+                      }}
+                      className="w-full bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
+                    >
+                      WhatsApp
+                    </button>
+                  </>
+                ) : (
+                  <div className="text-center text-gray-500 py-3">
+                    Phone number not available for contact
+                  </div>
+                )}
+
+                <button
+                  onClick={() => {
+                    if (businessData.latitude && businessData.longitude) {
+                      const mapsUrl = `https://www.google.com/maps?q=${businessData.latitude},${businessData.longitude}`;
+                      window.open(mapsUrl, '_blank');
+                    } else if (businessData.location) {
+                      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(businessData.location)}`;
+                      window.open(mapsUrl, '_blank');
+                    } else {
+                      alert('Location information not available');
+                    }
+                  }}
+                  className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <i className="fas fa-map-marker-alt"></i>
+                  Get Directions
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="md:w-2/3">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {businessData.displayName}
+            </h1>
+
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center gap-1">
+                {Array.from({ length: 5 }, (_, i) => (
+                  <span key={i} className={`text-lg ${i < Math.floor(businessData.rating || 0) ? "text-yellow-500" : "text-gray-300"}`}>
+                    ★
+                  </span>
+                ))}
+                <span className="text-lg font-bold ml-2">{businessData.rating || 0}</span>
+                <span className="text-gray-600">({businessData.reviewCount || 0} reviews)</span>
+              </div>
+
+              {businessData.isOpen ? (
+                <span className="text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm font-medium">
+                  🟢 Open Now
+                </span>
+              ) : (
+                <span className="text-red-600 bg-red-50 px-3 py-1 rounded-full text-sm font-medium">
+                  🔴 Closed
+                </span>
+              )}
+            </div>
+
+            {businessData.location && (
+              <div className="flex items-center gap-2 text-gray-600 mb-4">
+                <span>📍</span>
+                <span>{businessData.location}</span>
+              </div>
+            )}
+
+            {businessData.phone ? (
+              <div className="flex items-center gap-2 text-gray-600 mb-4">
+                <span>📞</span>
+                <span>{businessData.phone}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-gray-500 mb-4">
+                <span>📞</span>
+                <span>Phone number not available</span>
+              </div>
+            )}
+
+            {businessData.description && (
+              <div className="mb-4">
+                <h3 className="font-semibold text-lg mb-2">About</h3>
+                <p className="text-gray-700 leading-relaxed">{businessData.description}</p>
+              </div>
+            )}
           </div>
         </div>
-
-        {businessData.services && businessData.services.length > 0 && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h3 className="font-semibold text-xl mb-4">Services Offered</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {businessData.services.map((service: string, index: number) => (
-                <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <span className="text-blue-800 font-medium">{service}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
-    );
-  };
+
+      {businessData.services && businessData.services.length > 0 && (
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <h3 className="font-semibold text-xl mb-4">Services Offered</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {businessData.services.map((service: string, index: number) => (
+              <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <span className="text-blue-800 font-medium">{service}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
   const PhotosTab = () => {
     return (
