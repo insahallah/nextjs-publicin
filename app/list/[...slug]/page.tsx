@@ -2333,7 +2333,7 @@ async function fetchListings(slugArray: string[]) {
     console.error('Error fetching listings:', e);
     return [];
   }
-}
+} 
 
 function getBadgeType(index: number): string {
   const badges = ["Q Top Search", "Popular", "Trending", "Verified", "Best Rated"];
