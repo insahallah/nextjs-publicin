@@ -46,6 +46,12 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   // Photo Modal State
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  
+  // Zoom State for Photo Modal
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState({ x: 0, y: 0 });
 
   const router = useRouter();
 
@@ -251,11 +257,15 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   const openPhotoModal = useCallback((index: number) => {
     setCurrentPhotoIndex(index);
     setIsPhotoModalOpen(true);
+    setZoomLevel(1); // Reset zoom when opening modal
+    setPosition({ x: 0, y: 0 }); // Reset position
     document.body.style.overflow = 'hidden';
   }, []);
 
   const closePhotoModal = useCallback(() => {
     setIsPhotoModalOpen(false);
+    setZoomLevel(1); // Reset zoom when closing
+    setPosition({ x: 0, y: 0 }); // Reset position
     document.body.style.overflow = 'auto';
   }, []);
 
@@ -263,17 +273,132 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     setCurrentPhotoIndex((prevIndex) => 
       prevIndex === businessPhotos.length - 1 ? 0 : prevIndex + 1
     );
+    setZoomLevel(1); // Reset zoom when changing photos
+    setPosition({ x: 0, y: 0 }); // Reset position
   }, [businessPhotos.length]);
 
   const goToPrevPhoto = useCallback(() => {
     setCurrentPhotoIndex((prevIndex) => 
       prevIndex === 0 ? businessPhotos.length - 1 : prevIndex - 1
     );
+    setZoomLevel(1); // Reset zoom when changing photos
+    setPosition({ x: 0, y: 0 }); // Reset position
   }, [businessPhotos.length]);
 
   const goToPhoto = useCallback((index: number) => {
     setCurrentPhotoIndex(index);
+    setZoomLevel(1); // Reset zoom when changing photos
+    setPosition({ x: 0, y: 0 }); // Reset position
   }, []);
+
+  // Zoom Functions
+  const handleZoomIn = useCallback(() => {
+    setZoomLevel(prev => Math.min(prev + 0.5, 3)); // Max zoom 3x
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoomLevel(prev => Math.max(prev - 0.5, 1)); // Min zoom 1x
+  }, []);
+
+  const handleZoomReset = useCallback(() => {
+    setZoomLevel(1);
+    setPosition({ x: 0, y: 0 });
+  }, []);
+
+  // Double click to toggle zoom
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    if (zoomLevel === 1) {
+      setZoomLevel(2);
+      // Center the zoom on click position
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = (rect.width / 2 - e.clientX + rect.left) * 0.5;
+      const y = (rect.height / 2 - e.clientY + rect.top) * 0.5;
+      setPosition({ x, y });
+    } else {
+      handleZoomReset();
+    }
+  }, [zoomLevel, handleZoomReset]);
+
+  // Drag to pan when zoomed
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (zoomLevel > 1) {
+      setIsDragging(true);
+      setDragStart({
+        x: e.clientX - position.x,
+        y: e.clientY - position.y
+      });
+    }
+  }, [zoomLevel, position]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (isDragging && zoomLevel > 1) {
+      setPosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    }
+  }, [isDragging, zoomLevel, dragStart]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Touch events for mobile
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (zoomLevel > 1) {
+      setIsDragging(true);
+      setDragStart({
+        x: e.touches[0].clientX - position.x,
+        y: e.touches[0].clientY - position.y
+      });
+    }
+  }, [zoomLevel, position]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (isDragging && zoomLevel > 1) {
+      setPosition({
+        x: e.touches[0].clientX - dragStart.x,
+        y: e.touches[0].clientY - dragStart.y
+      });
+    }
+  }, [isDragging, zoomLevel, dragStart]);
+
+  const handleTouchEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Pinch to zoom for touch devices
+  const [lastTouchDistance, setLastTouchDistance] = useState(0);
+
+  const handleTouchStartPinch = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const distance = Math.hypot(
+        touch1.clientX - touch2.clientX,
+        touch1.clientY - touch2.clientY
+      );
+      setLastTouchDistance(distance);
+    }
+  }, []);
+
+  const handleTouchMovePinch = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const distance = Math.hypot(
+        touch1.clientX - touch2.clientX,
+        touch1.clientY - touch2.clientY
+      );
+
+      if (lastTouchDistance > 0) {
+        const zoomChange = (distance - lastTouchDistance) * 0.01;
+        setZoomLevel(prev => Math.max(1, Math.min(prev + zoomChange, 3)));
+      }
+      setLastTouchDistance(distance);
+    }
+  }, [lastTouchDistance]);
 
   // Handle keyboard navigation - FIXED: Added proper dependencies
   useEffect(() => {
@@ -290,12 +415,22 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         case 'ArrowRight':
           goToNextPhoto();
           break;
+        case '+':
+        case '=':
+          handleZoomIn();
+          break;
+        case '-':
+          handleZoomOut();
+          break;
+        case '0':
+          handleZoomReset();
+          break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPhotoModalOpen, closePhotoModal, goToPrevPhoto, goToNextPhoto]);
+  }, [isPhotoModalOpen, closePhotoModal, goToPrevPhoto, goToNextPhoto, handleZoomIn, handleZoomOut, handleZoomReset]);
 
   // Listen for login events - FIXED: Added proper dependencies
   useEffect(() => {
@@ -706,13 +841,19 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         {businessPhotos.length > 1 && (
           <>
             <button
-              onClick={goToPrevImage}
+              onClick={(e) => {
+                e.stopPropagation();
+                goToPrevImage();
+              }}
               className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-opacity-70 transition-all duration-200 z-10"
             >
               ‹
             </button>
             <button
-              onClick={goToNextImage}
+              onClick={(e) => {
+                e.stopPropagation();
+                goToNextImage();
+              }}
               className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-opacity-70 transition-all duration-200 z-10"
             >
               ›
@@ -733,7 +874,10 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             {businessPhotos.map((_, index) => (
               <button
                 key={index}
-                onClick={() => goToImage(index)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToImage(index);
+                }}
                 className={`w-2 h-2 rounded-full transition-all duration-300 ${
                   index === currentImageIndex 
                     ? 'bg-white scale-125' 
@@ -755,33 +899,43 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     );
   }, [businessPhotos, currentImageIndex, isAutoPlaying, goToPrevImage, goToNextImage, goToImage, businessData?.displayName]);
 
-  // Overview Tab Content - FIXED: useCallback added with null safety
+  // Overview Tab Content - FIXED: useCallback added with null safety - NOW CLICKABLE IMAGES
   const OverviewTab = useCallback(() => (
     <div className="space-y-6">
       {/* Business Header */}
       <div className="bg-white rounded-lg shadow-lg p-6">
         <div className="flex flex-col md:flex-row gap-6">
-          {/* Business Image - Mobile Slider / Desktop Single Image */}
+          {/* Business Image - Mobile Slider / Desktop Single Image - NOW CLICKABLE */}
           <div className="md:w-1/3">
-            {/* Mobile Image Slider */}
+            {/* Mobile Image Slider - CLICKABLE */}
             <div className="lg:hidden">
-              <MobileImageSlider />
+              <div 
+                className="cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => openPhotoModal(currentImageIndex)}
+              >
+                <MobileImageSlider />
+              </div>
             </div>
 
-            {/* Desktop Single Image */}
+            {/* Desktop Single Image - CLICKABLE */}
             <div className="hidden lg:block">
-              <img
-                src={businessData?.images && businessData.images[0] ?
-                  (typeof businessData.images[0] === 'string' ?
-                    businessData.images[0] :
-                    businessData.images[0].path ?
-                      `https://allupipay.in/publicsewa/images/${businessData.images[0].path}` :
-                      "/default-listing.jpg"
-                  ) : "/default-listing.jpg"
-                }
-                alt={businessData?.displayName || 'Business'}
-                className="w-full h-64 object-cover rounded-lg mb-4"
-              />
+              <div 
+                className="cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => openPhotoModal(0)}
+              >
+                <img
+                  src={businessData?.images && businessData.images[0] ?
+                    (typeof businessData.images[0] === 'string' ?
+                      businessData.images[0] :
+                      businessData.images[0].path ?
+                        `https://allupipay.in/publicsewa/images/${businessData.images[0].path}` :
+                        "/default-listing.jpg"
+                    ) : "/default-listing.jpg"
+                  }
+                  alt={businessData?.displayName || 'Business'}
+                  className="w-full h-64 object-cover rounded-lg mb-4"
+                />
+              </div>
             </div>
 
             {/* Action Buttons */}
@@ -911,7 +1065,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         </div>
       )}
     </div>
-  ), [MobileImageSlider, businessData]);
+  ), [MobileImageSlider, businessData, openPhotoModal, currentImageIndex]);
 
   // ✅ CORRECTED: Photos Tab Content - STABLE VERSION - FIXED: useCallback added
   const PhotosTab = useCallback(() => {
@@ -995,7 +1149,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     );
   }, [businessPhotos, photosLoading, openPhotoModal]);
 
-  // Photo Modal Component - FIXED: useCallback added
+  // Photo Modal Component - ZOOM FUNCTIONALITY KE SAATH
   const PhotoModal = useCallback(() => {
     if (!isPhotoModalOpen || businessPhotos.length === 0) return null;
 
@@ -1011,6 +1165,40 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           >
             ✕
           </button>
+
+          {/* Zoom Controls */}
+          <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
+            <button
+              onClick={handleZoomIn}
+              className="bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-70 transition-all duration-200"
+              title="Zoom In"
+            >
+              +
+            </button>
+            <button
+              onClick={handleZoomOut}
+              className="bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-70 transition-all duration-200"
+              title="Zoom Out"
+            >
+              −
+            </button>
+            {zoomLevel > 1 && (
+              <button
+                onClick={handleZoomReset}
+                className="bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-70 transition-all duration-200 text-sm"
+                title="Reset Zoom"
+              >
+                ⟲
+              </button>
+            )}
+          </div>
+
+          {/* Zoom Level Indicator */}
+          {zoomLevel > 1 && (
+            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
+              {Math.round(zoomLevel * 100)}%
+            </div>
+          )}
 
           {/* Navigation Arrows */}
           {businessPhotos.length > 1 && (
@@ -1030,16 +1218,40 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             </>
           )}
 
-          {/* Main Image */}
-          <div className="flex items-center justify-center h-full">
-            <img
-              src={currentPhoto.url}
-              alt={currentPhoto.alt}
-              className="max-w-full max-h-[80vh] object-contain rounded-lg"
-              onError={(e) => {
-                e.currentTarget.src = "/default-listing.jpg";
+          {/* Main Image Container */}
+          <div className="flex items-center justify-center h-full overflow-hidden">
+            <div 
+              className="relative"
+              style={{
+                transform: `scale(${zoomLevel}) translate(${position.x}px, ${position.y}px)`,
+                transition: isDragging ? 'none' : 'transform 0.2s ease',
+                cursor: zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default'
               }}
-            />
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onTouchStart={(e) => {
+                handleTouchStart(e);
+                handleTouchStartPinch(e);
+              }}
+              onTouchMove={(e) => {
+                handleTouchMove(e);
+                handleTouchMovePinch(e);
+              }}
+              onTouchEnd={handleTouchEnd}
+              onDoubleClick={handleDoubleClick}
+            >
+              <img
+                src={currentPhoto.url}
+                alt={currentPhoto.alt}
+                className="max-w-full max-h-[80vh] object-contain rounded-lg select-none"
+                draggable={false}
+                onError={(e) => {
+                  e.currentTarget.src = "/default-listing.jpg";
+                }}
+              />
+            </div>
           </div>
 
           {/* Photo Info */}
@@ -1076,13 +1288,36 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           )}
 
           {/* Keyboard Shortcuts Info */}
-          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 rounded-lg px-3 py-1 hidden md:block">
-            Use ← → keys to navigate • ESC to close
+          <div className="absolute top-16 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 rounded-lg px-3 py-1 hidden md:block">
+            Use ← → to navigate • + - to zoom • Double-click to zoom • ESC to close
           </div>
         </div>
       </div>
     );
-  }, [isPhotoModalOpen, businessPhotos, currentPhotoIndex, closePhotoModal, goToPrevPhoto, goToNextPhoto, goToPhoto]);
+  }, [
+    isPhotoModalOpen, 
+    businessPhotos, 
+    currentPhotoIndex, 
+    closePhotoModal, 
+    goToPrevPhoto, 
+    goToNextPhoto, 
+    goToPhoto,
+    zoomLevel,
+    position,
+    isDragging,
+    handleZoomIn,
+    handleZoomOut,
+    handleZoomReset,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
+    handleTouchStartPinch,
+    handleTouchMovePinch,
+    handleDoubleClick
+  ]);
 
   // Price List Tab Content - FIXED: useCallback added with null safety
   const PriceListTab = useCallback(() => (
@@ -1886,7 +2121,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
         <Footer />
 
-        {/* Photo Modal */}
+        {/* Photo Modal with Zoom */}
         <PhotoModal />
 
         {/* Review Modal */}
