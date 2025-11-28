@@ -1,6 +1,6 @@
 'use client'
 import { API_ENDPOINTS2 } from '@/configs/api';
-import { useState, useEffect, useCallback, memo } from 'react'
+import { useState, useEffect } from 'react'
 
 interface BusinessTiming {
   open: string
@@ -39,13 +39,13 @@ interface BusinessViewRightSideComponentProps {
   businessId: string;
 }
 
-// Create a memoized version of the component to prevent unnecessary re-renders
-const BusinessViewRightSideComponent = memo(function BusinessViewRightSideComponent({ 
+export default function BusinessViewRightSideComponent({ 
   businessId 
 }: BusinessViewRightSideComponentProps) {
   const [businessData, setBusinessData] = useState<BusinessData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showAllTimings, setShowAllTimings] = useState(false)
   const [copied, setCopied] = useState(false)
   const [activeTab, setActiveTab] = useState('contact')
 
@@ -53,7 +53,7 @@ const BusinessViewRightSideComponent = memo(function BusinessViewRightSideCompon
   const [autoCallAnimation, setAutoCallAnimation] = useState(false)
   const [autoWhatsAppAnimation, setAutoWhatsAppAnimation] = useState(false)
 
-  // Fetch business data - memoized to prevent unnecessary re-fetches
+  // Fetch business data
   useEffect(() => {
     const fetchBusinessData = async () => {
       try {
@@ -114,41 +114,36 @@ const BusinessViewRightSideComponent = memo(function BusinessViewRightSideCompon
     }
   }, [businessId])
 
-  // FIXED: Optimized automatic animation effects
+  // Automatic animation effects
   useEffect(() => {
-    if (loading) return; // Don't start animations while loading
-    
-    let callAnimationInterval: NodeJS.Timeout;
-    let whatsAppAnimationInterval: NodeJS.Timeout;
-
     // Start automatic animations after component loads
     const animationTimer = setTimeout(() => {
-      // Call icon animation sequence - run less frequently
-      callAnimationInterval = setInterval(() => {
+      // Call icon animation sequence
+      const callAnimationInterval = setInterval(() => {
         setAutoCallAnimation(true)
         setTimeout(() => setAutoCallAnimation(false), 2000)
-      }, 15000) // Increased from 8s to 15s
+      }, 8000) // Repeat every 8 seconds
 
-      // WhatsApp icon animation sequence (staggered) - run less frequently
-      whatsAppAnimationInterval = setInterval(() => {
+      // WhatsApp icon animation sequence (staggered)
+      const whatsAppAnimationInterval = setInterval(() => {
         setTimeout(() => {
           setAutoWhatsAppAnimation(true)
           setTimeout(() => setAutoWhatsAppAnimation(false), 2000)
-        }, 4000)
-      }, 20000) // Increased from 10s to 20s
+        }, 2000)
+      }, 10000) // Repeat every 10 seconds
 
-    }, 5000) // Increased from 3s to 5s
+      // Cleanup intervals
+      return () => {
+        clearInterval(callAnimationInterval)
+        clearInterval(whatsAppAnimationInterval)
+      }
+    }, 3000) // Start animations after 3 seconds
 
-    // Cleanup intervals
-    return () => {
-      clearTimeout(animationTimer)
-      clearInterval(callAnimationInterval)
-      clearInterval(whatsAppAnimationInterval)
-    }
-  }, [loading]) // Only re-run when loading state changes
+    return () => clearTimeout(animationTimer)
+  }, [])
 
-  // Memoized handlers to prevent unnecessary re-renders
-  const formatBusinessTimings = useCallback(() => {
+  // Format business timings
+  const formatBusinessTimings = () => {
     const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
     const dayLabels = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
     
@@ -164,13 +159,13 @@ const BusinessViewRightSideComponent = memo(function BusinessViewRightSideCompon
         closed: false 
       }
     }))
-  }, [businessData?.business_timing])
+  }
 
   const timings = formatBusinessTimings()
   const todayTiming = timings.find(t => t.isToday)?.timing
   const isOpenToday = todayTiming && !todayTiming.closed
 
-  const handleCopyAddress = useCallback(async () => {
+  const handleCopyAddress = async () => {
     if (businessData?.address) {
       try {
         await navigator.clipboard.writeText(businessData.address)
@@ -180,9 +175,9 @@ const BusinessViewRightSideComponent = memo(function BusinessViewRightSideCompon
         console.error('Failed to copy address:', err)
       }
     }
-  }, [businessData?.address])
+  }
 
-  const handleGetDirections = useCallback(() => {
+  const handleGetDirections = () => {
     if (businessData?.address) {
       const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(businessData.address)}`
       window.open(mapsUrl, '_blank')
@@ -190,24 +185,24 @@ const BusinessViewRightSideComponent = memo(function BusinessViewRightSideCompon
       const mapsUrl = `https://www.google.com/maps?q=${businessData.latitude},${businessData.longitude}`
       window.open(mapsUrl, '_blank')
     }
-  }, [businessData?.address, businessData?.latitude, businessData?.longitude])
+  }
 
-  const handleCall = useCallback(() => {
+  const handleCall = () => {
     if (businessData?.mobile) {
       window.open(`tel:${businessData.mobile}`, '_self')
     }
-  }, [businessData?.mobile])
+  }
 
-  const handleWhatsApp = useCallback(() => {
+  const handleWhatsApp = () => {
     const phone = businessData?.mobile || businessData?.contact_info?.whatsapp_number
     if (phone) {
       const message = `Hello! I'm interested in your services. Could you please provide more information?`
       const whatsappUrl = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
       window.open(whatsappUrl, '_blank')
     }
-  }, [businessData?.mobile, businessData?.contact_info?.whatsapp_number])
+  }
 
-  const handleShare = useCallback(async () => {
+  const handleShare = async () => {
     const businessName = businessData?.business_name || businessData?.contact_info?.contact_person_name || 'Business'
     
     if (navigator.share) {
@@ -225,22 +220,22 @@ const BusinessViewRightSideComponent = memo(function BusinessViewRightSideCompon
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }
-  }, [businessData?.business_name, businessData?.contact_info?.contact_person_name, businessData?.address])
+  }
 
-  const handleEmail = useCallback(() => {
+  const handleEmail = () => {
     if (businessData?.contact_info?.email) {
       window.open(`mailto:${businessData.contact_info.email}`, '_blank')
     }
-  }, [businessData?.contact_info?.email])
+  }
 
-  const handleWebsite = useCallback(() => {
+  const handleWebsite = () => {
     if (businessData?.website) {
       const websiteUrl = businessData.website.startsWith('http') 
         ? businessData.website 
         : `https://${businessData.website}`
       window.open(websiteUrl, '_blank')
     }
-  }, [businessData?.website])
+  }
 
   // Loading state
   if (loading) {
@@ -1368,6 +1363,4 @@ const BusinessViewRightSideComponent = memo(function BusinessViewRightSideCompon
       `}</style>
     </div>
   )
-})
-
-export default BusinessViewRightSideComponent
+}

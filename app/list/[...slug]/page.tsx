@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { notFound, useRouter } from "next/navigation";
 import SubHeader from "@/components/SubHeader";
 import Footer from "@/components/Footer";
@@ -10,15 +10,11 @@ import AwesomeLogin from "@/components/AwesomeLogin";
 import AwesomeSignup from "@/components/AwesomeSignup";
 import BusinessViewRightSideComponent from "@/components/BusinessViewRightSideComponent";
 
-// Define interface for image objects
-interface BusinessImage {
-  id: string;
-  url: string;
-  title: string;
-  alt: string;
-  thumbnail?: string;
-}
-
+/**
+ * ListPage Component
+ * - Handles both category listings and business details pages
+ * - All data is dynamic from API
+ */
 export default function ListPage({ params }: { params: Promise<{ slug: string[] }> }) {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -34,169 +30,71 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
   const [selectedRating, setSelectedRating] = useState(0);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
-  const [breadcrumbPath, setBreadcrumbPath] = useState<{ path: string, name: string, isClickable: boolean }[]>([]);
+  const [breadcrumbPath, setBreadcrumbPath] = useState<{path: string, name: string, isClickable: boolean}[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [extractedBusinessId, setExtractedBusinessId] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const [isMobile, setIsMobile] = useState(false);
-  const [businessPhotos, setBusinessPhotos] = useState<BusinessImage[]>([]);
+  const [businessPhotos, setBusinessPhotos] = useState<any[]>([]);
   const [photosLoading, setPhotosLoading] = useState(false);
-
-  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [isZoomed, setIsZoomed] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  
+  // Image Slider State
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  
+  // Photo Modal State
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
   const router = useRouter();
 
+  // Image Slider Auto-play Effect - FIXED: Only run when relevant dependencies change
   useEffect(() => {
-    if (!isMobile || !businessPhotos.length || !isAutoPlaying) return;
+    if (!isAutoPlaying || !businessPhotos.length || !isMobile) return;
 
     const interval = setInterval(() => {
-      setCurrentImageIndex((prevIndex) =>
+      setCurrentImageIndex((prevIndex) => 
         prevIndex === businessPhotos.length - 1 ? 0 : prevIndex + 1
       );
-    }, 4000);
+    }, 4000); // Change image every 4 seconds
 
     return () => clearInterval(interval);
-  }, [isMobile, businessPhotos.length, isAutoPlaying]);
+  }, [isAutoPlaying, businessPhotos.length, isMobile]);
 
-  const nextImage = () => {
-    setCurrentImageIndex((prevIndex) =>
+  // Pause auto-play when user interacts with slider
+  const handleSliderInteraction = useCallback(() => {
+    setIsAutoPlaying(false);
+    // Resume auto-play after 10 seconds of inactivity
+    setTimeout(() => setIsAutoPlaying(true), 10000);
+  }, []);
+
+  // Image Slider Navigation Functions - FIXED: useCallback se wrap kiya
+  const goToNextImage = useCallback(() => {
+    handleSliderInteraction();
+    setCurrentImageIndex((prevIndex) => 
       prevIndex === businessPhotos.length - 1 ? 0 : prevIndex + 1
     );
-    setIsAutoPlaying(false);
-    setTimeout(() => setIsAutoPlaying(true), 10000);
-  };
+  }, [businessPhotos.length, handleSliderInteraction]);
 
-  const prevImage = () => {
-    setCurrentImageIndex((prevIndex) =>
+  const goToPrevImage = useCallback(() => {
+    handleSliderInteraction();
+    setCurrentImageIndex((prevIndex) => 
       prevIndex === 0 ? businessPhotos.length - 1 : prevIndex - 1
     );
-    setIsAutoPlaying(false);
-    setTimeout(() => setIsAutoPlaying(true), 10000);
-  };
+  }, [businessPhotos.length, handleSliderInteraction]);
 
-  const goToImage = (index: number) => {
+  const goToImage = useCallback((index: number) => {
+    handleSliderInteraction();
     setCurrentImageIndex(index);
-    setIsAutoPlaying(false);
-    setTimeout(() => setIsAutoPlaying(true), 10000);
-  };
+  }, [handleSliderInteraction]);
 
-  const zoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 0.5, 3));
-    setIsZoomed(true);
-  };
-
-  const zoomOut = () => {
-    const newZoom = Math.max(zoomLevel - 0.5, 1);
-    setZoomLevel(newZoom);
-    if (newZoom === 1) {
-      setIsZoomed(false);
-      setPosition({ x: 0, y: 0 });
-    }
-  };
-
-  const resetZoom = () => {
-    setZoomLevel(1);
-    setIsZoomed(false);
-    setPosition({ x: 0, y: 0 });
-  };
-
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    if (e.deltaY < 0) {
-      zoomIn();
-    } else {
-      zoomOut();
-    }
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!isZoomed) return;
-    setIsDragging(true);
-    setDragStart({
-      x: e.clientX - position.x,
-      y: e.clientY - position.y
-    });
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !isZoomed) return;
-
-    const newX = e.clientX - dragStart.x;
-    const newY = e.clientY - dragStart.y;
-
-    const container = document.querySelector('.zoom-container');
-    if (container) {
-      const containerRect = container.getBoundingClientRect();
-      const maxX = (zoomLevel - 1) * containerRect.width / 2;
-      const maxY = (zoomLevel - 1) * containerRect.height / 2;
-
-      setPosition({
-        x: Math.max(Math.min(newX, maxX), -maxX),
-        y: Math.max(Math.min(newY, maxY), -maxY)
-      });
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (!isZoomed) return;
-    if (e.touches.length === 1) {
-      setIsDragging(true);
-      setDragStart({
-        x: e.touches[0].clientX - position.x,
-        y: e.touches[0].clientY - position.y
-      });
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging || !isZoomed || e.touches.length !== 1) return;
-
-    const newX = e.touches[0].clientX - dragStart.x;
-    const newY = e.touches[0].clientY - dragStart.y;
-
-    const container = document.querySelector('.zoom-container');
-    if (container) {
-      const containerRect = container.getBoundingClientRect();
-      const maxX = (zoomLevel - 1) * containerRect.width / 2;
-      const maxY = (zoomLevel - 1) * containerRect.height / 2;
-
-      setPosition({
-        x: Math.max(Math.min(newX, maxX), -maxX),
-        y: Math.max(Math.min(newY, maxY), -maxY)
-      });
-    }
-  };
-
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-  };
-
-  const handleDoubleClick = () => {
-    if (zoomLevel === 1) {
-      zoomIn();
-    } else {
-      resetZoom();
-    }
-  };
-
+  // Responsive check - Set default tab based on screen size - FIXED: useCallback added
   useEffect(() => {
     const checkScreenSize = () => {
       const mobile = window.innerWidth < 1024;
       setIsMobile(mobile);
-
+      
       if (mobile && !['overview', 'review', 'info'].includes(activeTab)) {
         setActiveTab('overview');
       }
@@ -210,17 +108,19 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     return () => window.removeEventListener('resize', checkScreenSize);
   }, [activeTab]);
 
+  // Add this useEffect to extract business ID from URL
   useEffect(() => {
     const extractBusinessIdFromParams = async () => {
       try {
         const { slug } = await params;
-
+        
         if (slug && Array.isArray(slug) && slug.length >= 2) {
           const lastSegment = slug[slug.length - 1];
-
+          
           if (/^\d+$/.test(lastSegment)) {
             const businessId = lastSegment;
             setExtractedBusinessId(businessId);
+            console.log('🎯 Extracted Business ID:', businessId);
           }
         }
       } catch (error) {
@@ -231,35 +131,36 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     extractBusinessIdFromParams();
   }, [params]);
 
+  // Generate breadcrumb from slug array
   useEffect(() => {
     const generateBreadcrumb = async () => {
       try {
         const { slug } = await params;
         if (slug && Array.isArray(slug)) {
           const breadcrumbs = [];
-
-          breadcrumbs.push({
-            path: '',
-            name: 'Home',
-            isClickable: true
+          
+          breadcrumbs.push({ 
+            path: '', 
+            name: 'Home', 
+            isClickable: true 
           });
 
           for (let i = 0; i < slug.length; i++) {
             const pathSegment = slug.slice(0, i + 1).join('/');
-            const displayName = slug[i].split('-').map(word =>
+            const displayName = slug[i].split('-').map(word => 
               word.charAt(0).toUpperCase() + word.slice(1)
             ).join(' ');
-
+            
             const isBusinessPage = i === slug.length - 1 && /^\d+$/.test(slug[i]);
             const isClickable = !isBusinessPage && i < slug.length - 1;
-
-            breadcrumbs.push({
-              path: pathSegment,
-              name: displayName,
+            
+            breadcrumbs.push({ 
+              path: pathSegment, 
+              name: displayName, 
               isClickable: isClickable
             });
           }
-
+          
           setBreadcrumbPath(breadcrumbs);
         }
       } catch (error) {
@@ -270,8 +171,10 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     generateBreadcrumb();
   }, [params]);
 
-  const fetchBusinessPhotos = async (businessId: string) => {
+  // ✅ CORRECTED: Fetch business photos - FIXED VERSION with useCallback
+  const fetchBusinessPhotos = useCallback(async (businessId: string) => {
     try {
+      console.log('🚀 START fetchBusinessPhotos for:', businessId);
       setPhotosLoading(true);
 
       const formData = new FormData();
@@ -286,73 +189,97 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         }
       );
 
+      console.log('📥 API Response status:', res.status);
+
       if (res.ok) {
         const data = await res.json();
-
+        console.log('📄 Full API response:', data);
+        
         if (data && data.status === "success" && data.data && data.data.length > 0) {
+          console.log('✅ API success, photos found:', data.data.length);
+          
+          // ✅ CORRECTED: Proper mapping with unique IDs
           const photos = data.data.map((photo: any, index: number) => {
             const imageUrl = `https://allupipay.in/publicsewa/images/${photo.path}`;
-
+            
             return {
-              id: `photo-${photo.id}-${index}-${Date.now()}`,
+              id: `photo-${photo.id}-${index}-${Date.now()}`, // ✅ Unique ID
               url: imageUrl,
               title: photo.title || `Business Photo ${index + 1}`,
               alt: photo.alt_text || businessData?.displayName || 'Business Photo',
               thumbnail: imageUrl
             };
           });
-
+          
+          console.log('📸 Setting business photos:', photos.length);
           setBusinessPhotos(photos);
         } else {
+          console.log('❌ No photos in API response');
           setBusinessPhotos([]);
         }
       } else {
+        console.log('❌ API request failed');
         setBusinessPhotos([]);
       }
     } catch (error) {
-      console.error('Error in fetchBusinessPhotos:', error);
+      console.error('💥 Error in fetchBusinessPhotos:', error);
       setBusinessPhotos([]);
     } finally {
+      console.log('🏁 fetchBusinessPhotos completed');
       setPhotosLoading(false);
     }
-  };
+  }, [businessData?.displayName]);
 
-  const openPhotoModal = (index: number) => {
+  // Helper function for default photo
+  const getDefaultPhoto = useCallback((businessData: any) => ({
+    id: 1,
+    url: "/default-listing.jpg",
+    title: "Business Photo",
+    alt: businessData?.displayName || 'Business',
+    thumbnail: "/default-listing.jpg"
+  }), []);
+
+  // ✅ CORRECTED: Photos persistence - Load photos when business data is set - FIXED: Added proper dependencies
+  useEffect(() => {
+    if (businessData?.id) {
+      console.log('🎯 Business data loaded, fetching photos for:', businessData.id);
+      fetchBusinessPhotos(businessData.id);
+    }
+  }, [businessData?.id, fetchBusinessPhotos]);
+
+  // Photo Modal Functions - FIXED: useCallback added
+  const openPhotoModal = useCallback((index: number) => {
     setCurrentPhotoIndex(index);
     setIsPhotoModalOpen(true);
-    resetZoom();
     document.body.style.overflow = 'hidden';
-  };
+  }, []);
 
-  const closePhotoModal = () => {
+  const closePhotoModal = useCallback(() => {
     setIsPhotoModalOpen(false);
-    resetZoom();
     document.body.style.overflow = 'auto';
-  };
+  }, []);
 
-  const goToNextPhoto = () => {
-    resetZoom();
-    setCurrentPhotoIndex((prevIndex) =>
+  const goToNextPhoto = useCallback(() => {
+    setCurrentPhotoIndex((prevIndex) => 
       prevIndex === businessPhotos.length - 1 ? 0 : prevIndex + 1
     );
-  };
+  }, [businessPhotos.length]);
 
-  const goToPrevPhoto = () => {
-    resetZoom();
-    setCurrentPhotoIndex((prevIndex) =>
+  const goToPrevPhoto = useCallback(() => {
+    setCurrentPhotoIndex((prevIndex) => 
       prevIndex === 0 ? businessPhotos.length - 1 : prevIndex - 1
     );
-  };
+  }, [businessPhotos.length]);
 
-  const goToPhoto = (index: number) => {
-    resetZoom();
+  const goToPhoto = useCallback((index: number) => {
     setCurrentPhotoIndex(index);
-  };
+  }, []);
 
+  // Handle keyboard navigation - FIXED: Added proper dependencies
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isPhotoModalOpen) return;
-
+      
       switch (e.key) {
         case 'Escape':
           closePhotoModal();
@@ -363,26 +290,14 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         case 'ArrowRight':
           goToNextPhoto();
           break;
-        case '+':
-        case '=':
-          e.preventDefault();
-          zoomIn();
-          break;
-        case '-':
-          e.preventDefault();
-          zoomOut();
-          break;
-        case '0':
-          e.preventDefault();
-          resetZoom();
-          break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPhotoModalOpen, zoomLevel]);
+  }, [isPhotoModalOpen, closePhotoModal, goToPrevPhoto, goToNextPhoto]);
 
+  // Listen for login events - FIXED: Added proper dependencies
   useEffect(() => {
     const handleOpenLoginModal = () => {
       setIsLoginModalOpen(true);
@@ -391,7 +306,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     const handleUserLoggedIn = (event: any) => {
       setTimeout(() => {
         const userId = getCurrentUserId();
-
+        
         if (userId) {
           setIsLoginModalOpen(false);
           if (shouldReopenReviewAfterLogin && !isReviewModalOpen) {
@@ -406,34 +321,37 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
     window.addEventListener('openLoginModal', handleOpenLoginModal);
     window.addEventListener('userLoggedIn', handleUserLoggedIn);
-
+    
     return () => {
       window.removeEventListener('openLoginModal', handleOpenLoginModal);
       window.removeEventListener('userLoggedIn', handleUserLoggedIn);
     };
   }, [shouldReopenReviewAfterLogin, isReviewModalOpen]);
 
-  const handleAwesomeSignup = async (signupData: any) => {
+  // Handle signup
+  const handleAwesomeSignup = useCallback(async (signupData: any) => {
     alert('Signup functionality will be available soon! For now, please use login.');
     setShowRegisterModal(false);
     setIsLoginModalOpen(true);
-  };
+  }, []);
 
-  const handleLoginRequest = () => {
+  // Handle login request from review modal
+  const handleLoginRequest = useCallback(() => {
     setShouldReopenReviewAfterLogin(true);
     setIsLoginModalOpen(true);
-  };
+  }, []);
 
-  const getCurrentUserId = (): string | null => {
+  // Robust method to get current user id from localStorage
+  const getCurrentUserId = useCallback((): string | null => {
     if (typeof window === 'undefined') return null;
-
+    
     try {
       const userDataStr = localStorage.getItem('userData');
-
+      
       if (userDataStr) {
         try {
           const userData = JSON.parse(userDataStr);
-
+          
           if (userData?.id) {
             return String(userData.id);
           }
@@ -441,23 +359,24 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           console.error('Error parsing userData:', error);
         }
       }
-
+      
       const authToken = localStorage.getItem('authToken');
       if (authToken && /^\d+$/.test(authToken)) {
         return authToken;
       }
-
+      
       return null;
-
+      
     } catch (error) {
       console.error('Error getting user ID:', error);
       return null;
     }
-  };
+  }, []);
 
-  const handleStarClick = (rating: number, business: any = null) => {
+  // Handle star rating click
+  const handleStarClick = useCallback((rating: number, business: any = null) => {
     const userId = getCurrentUserId();
-
+    
     if (userId) {
       setSelectedRating(rating);
       if (business) {
@@ -473,9 +392,10 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       setShouldReopenReviewAfterLogin(true);
       setIsLoginModalOpen(true);
     }
-  };
+  }, [getCurrentUserId]);
 
-  const handleSubmitReview = async (data: any) => {
+  // Review submit handler
+  const handleSubmitReview = useCallback(async (data: any) => {
     const userId = getCurrentUserId();
     if (!userId) {
       alert("Please log in to submit a review!");
@@ -524,7 +444,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
       alert("✅ Review submitted successfully!");
       closeReviewModal();
-
+      
       if (businessData?.id) {
         fetchReviews(businessData.id);
       }
@@ -532,12 +452,13 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       console.error("Error submitting review:", err);
       alert("Failed to submit review: " + err.message);
     }
-  };
+  }, [getCurrentUserId, selectedBusiness, businessData?.id]);
 
-  const fetchReviews = async (businessId: string) => {
+  // Fetch reviews function - FIXED: useCallback added
+  const fetchReviews = useCallback(async (businessId: string) => {
     try {
       setReviewsLoading(true);
-
+      
       const params = new URLSearchParams();
       params.append('business_id', businessId);
 
@@ -551,7 +472,7 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
 
       if (res.ok) {
         const data = await res.json();
-
+        
         if (data && (data.status === "success" || data.reviews)) {
           const reviewsData = data.data || data.reviews || [];
           setReviews(reviewsData);
@@ -567,26 +488,27 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     } finally {
       setReviewsLoading(false);
     }
-  };
+  }, []);
 
-  const openReviewModal = (business: any) => {
+  const openReviewModal = useCallback((business: any) => {
     setSelectedBusiness(business);
     setIsReviewModalOpen(true);
     setShouldReopenReviewAfterLogin(false);
-  };
+  }, []);
 
-  const closeReviewModal = () => {
+  const closeReviewModal = useCallback(() => {
     setIsReviewModalOpen(false);
     setSelectedRating(0);
     setShouldReopenReviewAfterLogin(false);
-  };
+  }, []);
 
-  const closeLoginModal = () => {
+  const closeLoginModal = useCallback(() => {
     setIsLoginModalOpen(false);
     setShouldReopenReviewAfterLogin(false);
-  };
+  }, []);
 
-  const handleLoginSuccess = async (loginData: any) => {
+  // Handle successful login from AwesomeLogin
+  const handleLoginSuccess = useCallback(async (loginData: any) => {
     try {
       const formData = new FormData();
       formData.append('mobile', loginData.mobile);
@@ -612,18 +534,18 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           village: data.village,
           ...data
         }));
-
+        
         closeLoginModal();
-
+        
         setTimeout(() => {
           const userId = getCurrentUserId();
-
+          
           if (userId && shouldReopenReviewAfterLogin) {
             setIsReviewModalOpen(true);
             setShouldReopenReviewAfterLogin(false);
           }
         }, 500);
-
+        
       } else {
         alert(data.message || 'Login failed. Please try again.');
       }
@@ -631,9 +553,9 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       console.error('Login error in ListPage:', error);
       alert('Login failed. Please check your connection and try again.');
     }
-  };
+  }, [closeLoginModal, getCurrentUserId, shouldReopenReviewAfterLogin]);
 
-  const handleSearch = (query: string) => {
+  const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
     if (!query.trim()) {
       setFilteredListings(listings);
@@ -647,27 +569,29 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       (Array.isArray(listing.services) && listing.services.some((s: string) => s.toLowerCase().includes(q)))
     );
     setFilteredListings(filtered);
-  };
+  }, [listings]);
 
-  const handleBack = () => {
+  // Navigation handlers
+  const handleBack = useCallback(() => {
     router.back();
-  };
+  }, [router]);
 
-  const handleHome = () => {
+  const handleHome = useCallback(() => {
     router.push('/');
-  };
+  }, [router]);
 
-  const handleBreadcrumbClick = (path: string, isClickable: boolean) => {
+  const handleBreadcrumbClick = useCallback((path: string, isClickable: boolean) => {
     if (!isClickable) return;
-
+    
     if (path === '') {
       router.push('/');
     } else {
       router.push(`/${path}`);
     }
-  };
+  }, [router]);
 
-  const SimpleBreadcrumb = () => {
+  // Simple Breadcrumb Component - FIXED: useCallback se wrap kiya
+  const SimpleBreadcrumb = useCallback(() => {
     return (
       <div className="flex items-center gap-2 text-sm text-gray-600 flex-wrap">
         {breadcrumbPath.map((crumb, index) => (
@@ -680,9 +604,10 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         ))}
       </div>
     );
-  };
+  }, [breadcrumbPath]);
 
-  const DesktopTabs = () => {
+  // Desktop Tabs Component - Main content ke under - FIXED: useCallback added
+  const DesktopTabs = useCallback(() => {
     const tabs = [
       { id: 'overview', label: 'Overview', icon: '📋' },
       { id: 'photos', label: 'Photos', icon: '📷' },
@@ -699,10 +624,11 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-4 px-2 text-center font-medium text-sm border-b-2 transition-colors flex items-center justify-center gap-2 ${activeTab === tab.id
+              className={`flex-1 py-4 px-2 text-center font-medium text-sm border-b-2 transition-colors flex items-center justify-center gap-2 ${
+                activeTab === tab.id
                   ? 'border-blue-600 text-blue-600 bg-blue-50'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                }`}
+              }`}
             >
               <span className="text-base">{tab.icon}</span>
               <span className="font16 fw500 color111">{tab.label}</span>
@@ -711,9 +637,10 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         </div>
       </div>
     );
-  };
+  }, [activeTab]);
 
-  const MobileTabs = () => {
+  // Mobile Tabs Component - FIXED: useCallback added
+  const MobileTabs = useCallback(() => {
     const tabs = [
       { id: 'overview', label: 'Overview', icon: '📋' },
       { id: 'review', label: 'Review', icon: '⭐' },
@@ -727,10 +654,11 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-4 px-2 text-center font-medium text-sm border-b-2 transition-colors ${activeTab === tab.id
+              className={`flex-1 py-4 px-2 text-center font-medium text-sm border-b-2 transition-colors ${
+                activeTab === tab.id
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
+              }`}
             >
               <span className="block text-lg mb-1">{tab.icon}</span>
               {tab.label}
@@ -739,43 +667,128 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         </div>
       </div>
     );
-  };
+  }, [activeTab]);
 
-const OverviewTab = () => {
-  const sliderImages = businessPhotos.length > 0
-    ? businessPhotos
-    : (businessData?.images && Array.isArray(businessData.images) && businessData.images.length > 0
-      ? businessData.images.map((img: any, index: number) => ({
-        id: `img-${index}`,
-        url: typeof img === 'string' ? img : img.path ? `https://allupipay.in/publicsewa/images/${img.path}` : "/default-listing.jpg",
-        title: `Business Image ${index + 1}`,
-        alt: businessData.displayName
-      }))
-      : [{ id: 'default', url: "/default-listing.jpg", title: "Business Image", alt: businessData?.displayName }]
+  // Image Slider Component for Mobile Overview - FIXED: useCallback se wrap kiya
+  const MobileImageSlider = useCallback(() => {
+    if (!businessPhotos.length) {
+      return (
+        <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
+          <img
+            src="/default-listing.jpg"
+            alt={businessData?.displayName || 'Business'}
+            className="w-full h-full object-cover rounded-lg"
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="relative w-full h-64 bg-gray-100 rounded-lg overflow-hidden mb-4">
+        {/* Main Image */}
+        <div className="relative w-full h-full">
+          {businessPhotos.map((photo, index) => (
+            <img
+              key={photo.id}
+              src={photo.url}
+              alt={photo.alt}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out ${
+                index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+              }`}
+              onError={(e) => {
+                e.currentTarget.src = "/default-listing.jpg";
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Navigation Arrows */}
+        {businessPhotos.length > 1 && (
+          <>
+            <button
+              onClick={goToPrevImage}
+              className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-opacity-70 transition-all duration-200 z-10"
+            >
+              ‹
+            </button>
+            <button
+              onClick={goToNextImage}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-opacity-70 transition-all duration-200 z-10"
+            >
+              ›
+            </button>
+          </>
+        )}
+
+        {/* Image Counter */}
+        {businessPhotos.length > 1 && (
+          <div className="absolute top-3 right-3 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded-full z-10">
+            {currentImageIndex + 1} / {businessPhotos.length}
+          </div>
+        )}
+
+        {/* Dots Indicator */}
+        {businessPhotos.length > 1 && (
+          <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex space-x-2 z-10">
+            {businessPhotos.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => goToImage(index)}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  index === currentImageIndex 
+                    ? 'bg-white scale-125' 
+                    : 'bg-white bg-opacity-50'
+                }`}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Auto-play Indicator */}
+        {isAutoPlaying && businessPhotos.length > 1 && (
+          <div className="absolute top-3 left-3 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded-full z-10 flex items-center gap-1">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            Auto
+          </div>
+        )}
+      </div>
     );
+  }, [businessPhotos, currentImageIndex, isAutoPlaying, goToPrevImage, goToNextImage, goToImage, businessData?.displayName]);
 
-  return (
+  // Overview Tab Content - FIXED: useCallback added with null safety
+  const OverviewTab = useCallback(() => (
     <div className="space-y-6">
+      {/* Business Header */}
       <div className="bg-white rounded-lg shadow-lg p-6">
         <div className="flex flex-col md:flex-row gap-6">
-          <div className="md:w-1/3 hidden md:block">
-            <img
-              src={businessData.images && businessData.images[0] ?
-                (typeof businessData.images[0] === 'string' ?
-                  businessData.images[0] :
-                  businessData.images[0].path ?
-                    `https://allupipay.in/publicsewa/images/${businessData.images[0].path}` :
-                    "/default-listing.jpg"
-                ) : "/default-listing.jpg"
-              }
-              alt={businessData.displayName}
-              className="w-full h-64 object-cover rounded-lg mb-4"
-            />
+          {/* Business Image - Mobile Slider / Desktop Single Image */}
+          <div className="md:w-1/3">
+            {/* Mobile Image Slider */}
+            <div className="lg:hidden">
+              <MobileImageSlider />
+            </div>
 
+            {/* Desktop Single Image */}
+            <div className="hidden lg:block">
+              <img
+                src={businessData?.images && businessData.images[0] ?
+                  (typeof businessData.images[0] === 'string' ?
+                    businessData.images[0] :
+                    businessData.images[0].path ?
+                      `https://allupipay.in/publicsewa/images/${businessData.images[0].path}` :
+                      "/default-listing.jpg"
+                  ) : "/default-listing.jpg"
+                }
+                alt={businessData?.displayName || 'Business'}
+                className="w-full h-64 object-cover rounded-lg mb-4"
+              />
+            </div>
+
+            {/* Action Buttons */}
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
               <h3 className="font-semibold text-lg mb-3 text-gray-800">Quick Actions</h3>
               <div className="flex flex-col gap-3">
-                {businessData.phone ? (
+                {businessData?.phone ? (
                   <>
                     <button
                       onClick={() => window.open(`tel:${businessData.phone}`)}
@@ -805,10 +818,10 @@ const OverviewTab = () => {
 
                 <button
                   onClick={() => {
-                    if (businessData.latitude && businessData.longitude) {
+                    if (businessData?.latitude && businessData.longitude) {
                       const mapsUrl = `https://www.google.com/maps?q=${businessData.latitude},${businessData.longitude}`;
                       window.open(mapsUrl, '_blank');
-                    } else if (businessData.location) {
+                    } else if (businessData?.location) {
                       const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(businessData.location)}`;
                       window.open(mapsUrl, '_blank');
                     } else {
@@ -824,140 +837,24 @@ const OverviewTab = () => {
             </div>
           </div>
 
-          <div className="md:w-1/3 md:hidden">
-            <div className="relative bg-gray-100 rounded-lg overflow-hidden">
-              <div className="relative h-64 w-full">
-                {sliderImages.map((image: BusinessImage, index: number) => (
-                  <div
-                    key={image.id}
-                    className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${index === currentImageIndex ? 'opacity-100' : 'opacity-0'
-                      }`}
-                  >
-                    <img
-                      src={image.url}
-                      alt={image.alt}
-                      className="w-full h-full object-cover"
-                      onClick={() => openPhotoModal(index)}
-                      onError={(e) => {
-                        e.currentTarget.src = "/default-listing.jpg";
-                      }}
-                    />
-                  </div>
-                ))}
-
-                {sliderImages.length > 1 && (
-                  <>
-                    <button
-                      onClick={prevImage}
-                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-8 h-8 flex items-center justify-center z-10 hover:bg-opacity-70 transition-all"
-                    >
-                      ‹
-                    </button>
-                    <button
-                      onClick={nextImage}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-8 h-8 flex items-center justify-center z-10 hover:bg-opacity-70 transition-all"
-                    >
-                      ›
-                    </button>
-                  </>
-                )}
-
-                {sliderImages.length > 1 && (
-                  <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white text-sm px-3 py-1 rounded-full z-10">
-                    {currentImageIndex + 1} / {sliderImages.length}
-                  </div>
-                )}
-
-                <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded z-10">
-                  Tap to view
-                </div>
-              </div>
-
-              {sliderImages.length > 1 && (
-                <div className="flex justify-center space-x-2 p-4">
-                  {sliderImages.map((_: BusinessImage, index: number) => (
-                    <button
-                      key={index}
-                      onClick={() => goToImage(index)}
-                      className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentImageIndex
-                          ? 'bg-blue-600 w-4'
-                          : 'bg-gray-300 hover:bg-gray-400'
-                        }`}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mt-4">
-              <h3 className="font-semibold text-lg mb-3 text-gray-800">Quick Actions</h3>
-              <div className="flex flex-col gap-3">
-                {businessData.phone ? (
-                  <>
-                    <button
-                      onClick={() => window.open(`tel:${businessData.phone}`)}
-                      className="w-full bg-green-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <i className="fas fa-phone"></i>
-                      Call Now
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        const cleanPhone = businessData.phone.replace(/\D/g, '');
-                        const message = `Hello ${businessData.displayName}!\n\nI found your business listing and I'm interested in your services. Could you please provide me with more information?\n\nThank you!`;
-                        const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-                        window.open(whatsappUrl, '_blank');
-                      }}
-                      className="w-full bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
-                    >
-                      WhatsApp
-                    </button>
-                  </>
-                ) : (
-                  <div className="text-center text-gray-500 py-3">
-                    Phone number not available for contact
-                  </div>
-                )}
-
-                <button
-                  onClick={() => {
-                    if (businessData.latitude && businessData.longitude) {
-                      const mapsUrl = `https://www.google.com/maps?q=${businessData.latitude},${businessData.longitude}`;
-                      window.open(mapsUrl, '_blank');
-                    } else if (businessData.location) {
-                      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(businessData.location)}`;
-                      window.open(mapsUrl, '_blank');
-                    } else {
-                      alert('Location information not available');
-                    }
-                  }}
-                  className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                >
-                  <i className="fas fa-map-marker-alt"></i>
-                  Get Directions
-                </button>
-              </div>
-            </div>
-          </div>
-
+          {/* Business Info */}
           <div className="md:w-2/3">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {businessData.displayName}
+              {businessData?.displayName || 'Business Name'}
             </h1>
 
             <div className="flex items-center gap-4 mb-4">
               <div className="flex items-center gap-1">
                 {Array.from({ length: 5 }, (_, i) => (
-                  <span key={i} className={`text-lg ${i < Math.floor(businessData.rating || 0) ? "text-yellow-500" : "text-gray-300"}`}>
+                  <span key={i} className={`text-lg ${i < Math.floor(businessData?.rating || 0) ? "text-yellow-500" : "text-gray-300"}`}>
                     ★
                   </span>
                 ))}
-                <span className="text-lg font-bold ml-2">{businessData.rating || 0}</span>
-                <span className="text-gray-600">({businessData.reviewCount || 0} reviews)</span>
+                <span className="text-lg font-bold ml-2">{businessData?.rating || 0}</span>
+                <span className="text-gray-600">({businessData?.reviewCount || 0} reviews)</span>
               </div>
 
-              {businessData.isOpen ? (
+              {businessData?.isOpen ? (
                 <span className="text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm font-medium">
                   🟢 Open Now
                 </span>
@@ -968,14 +865,16 @@ const OverviewTab = () => {
               )}
             </div>
 
-            {businessData.location && (
+            {/* Location */}
+            {businessData?.location && (
               <div className="flex items-center gap-2 text-gray-600 mb-4">
                 <span>📍</span>
                 <span>{businessData.location}</span>
               </div>
             )}
 
-            {businessData.phone ? (
+            {/* Phone */}
+            {businessData?.phone ? (
               <div className="flex items-center gap-2 text-gray-600 mb-4">
                 <span>📞</span>
                 <span>{businessData.phone}</span>
@@ -987,7 +886,8 @@ const OverviewTab = () => {
               </div>
             )}
 
-            {businessData.description && (
+            {/* Description */}
+            {businessData?.description && (
               <div className="mb-4">
                 <h3 className="font-semibold text-lg mb-2">About</h3>
                 <p className="text-gray-700 leading-relaxed">{businessData.description}</p>
@@ -997,7 +897,8 @@ const OverviewTab = () => {
         </div>
       </div>
 
-      {businessData.services && businessData.services.length > 0 && (
+      {/* Services Section */}
+      {businessData?.services && businessData.services.length > 0 && (
         <div className="bg-white rounded-lg shadow-lg p-6">
           <h3 className="font-semibold text-xl mb-4">Services Offered</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1010,14 +911,14 @@ const OverviewTab = () => {
         </div>
       )}
     </div>
-  );
-};
+  ), [MobileImageSlider, businessData]);
 
-  const PhotosTab = () => {
+  // ✅ CORRECTED: Photos Tab Content - STABLE VERSION - FIXED: useCallback added
+  const PhotosTab = useCallback(() => {
     return (
       <div className="bg-white rounded-lg shadow-lg p-6">
         <h3 className="font-semibold text-xl mb-6">Business Photos</h3>
-
+        
         {photosLoading ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -1025,6 +926,7 @@ const OverviewTab = () => {
           </div>
         ) : businessPhotos.length > 0 ? (
           <div className="space-y-6">
+            {/* Photo Count */}
             <div className="flex items-center justify-between">
               <p className="text-gray-600">
                 Showing {businessPhotos.length} photo{businessPhotos.length !== 1 ? 's' : ''}
@@ -1035,24 +937,28 @@ const OverviewTab = () => {
               </div>
             </div>
 
+            {/* Photos Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {businessPhotos.map((photo: BusinessImage, index: number) => (
-                <div
+              {businessPhotos.map((photo, index) => (
+                <div 
                   key={photo.id}
                   className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                   onClick={() => openPhotoModal(index)}
                 >
+                  {/* Image Container */}
                   <div className="w-full h-48 bg-gray-100 flex items-center justify-center overflow-hidden">
                     <img
                       src={photo.url}
                       alt={photo.alt}
                       className="w-full h-full object-cover"
                       onError={(e) => {
+                        console.log('❌ Image load failed:', photo.url);
                         e.currentTarget.src = "/default-listing.jpg";
                       }}
                     />
                   </div>
-
+                  
+                  {/* Photo Info */}
                   <div className="p-3 border-t border-gray-100">
                     <p className="text-sm font-medium text-gray-800 truncate">
                       {photo.title}
@@ -1065,6 +971,7 @@ const OverviewTab = () => {
               ))}
             </div>
 
+            {/* Quick Actions */}
             <div className="flex justify-center mt-6">
               <button
                 onClick={() => openPhotoModal(0)}
@@ -1086,9 +993,10 @@ const OverviewTab = () => {
         )}
       </div>
     );
-  };
+  }, [businessPhotos, photosLoading, openPhotoModal]);
 
-  const PhotoModal = () => {
+  // Photo Modal Component - FIXED: useCallback added
+  const PhotoModal = useCallback(() => {
     if (!isPhotoModalOpen || businessPhotos.length === 0) return null;
 
     const currentPhoto = businessPhotos[currentPhotoIndex];
@@ -1096,111 +1004,63 @@ const OverviewTab = () => {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
         <div className="relative w-full max-w-6xl max-h-full">
+          {/* Close Button */}
           <button
             onClick={closePhotoModal}
-            className="absolute top-4 right-4 z-20 text-white text-2xl bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-70 transition-all duration-200"
+            className="absolute top-4 right-4 z-10 text-white text-2xl bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-70 transition-all duration-200"
           >
             ✕
           </button>
 
-          <div className="absolute top-4 left-4 z-20 flex items-center gap-2 bg-black bg-opacity-50 rounded-lg p-2">
-            <button
-              onClick={zoomIn}
-              disabled={zoomLevel >= 3}
-              className="text-white text-xl bg-transparent p-2 rounded hover:bg-white hover:bg-opacity-20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Zoom In"
-            >
-              🔍+
-            </button>
-            <button
-              onClick={zoomOut}
-              disabled={zoomLevel <= 1}
-              className="text-white text-xl bg-transparent p-2 rounded hover:bg-white hover:bg-opacity-20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Zoom Out"
-            >
-              🔍-
-            </button>
-            <button
-              onClick={resetZoom}
-              disabled={zoomLevel === 1}
-              className="text-white text-lg bg-transparent p-2 rounded hover:bg-white hover:bg-opacity-20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Reset Zoom"
-            >
-              ⟳
-            </button>
-            <span className="text-white text-sm px-2">
-              {Math.round(zoomLevel * 100)}%
-            </span>
-          </div>
-
+          {/* Navigation Arrows */}
           {businessPhotos.length > 1 && (
             <>
               <button
                 onClick={goToPrevPhoto}
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 text-white text-2xl bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-70 transition-all duration-200"
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 text-white text-2xl bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-70 transition-all duration-200"
               >
                 ‹
               </button>
               <button
                 onClick={goToNextPhoto}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 text-white text-2xl bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-70 transition-all duration-200"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 text-white text-2xl bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-70 transition-all duration-200"
               >
                 ›
               </button>
             </>
           )}
 
-          <div
-            className="flex items-center justify-center h-full zoom-container"
-            onWheel={handleWheel}
-          >
-            <div
-              className={`relative overflow-hidden ${isZoomed ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-              onDoubleClick={handleDoubleClick}
-              style={{
-                transform: `scale(${zoomLevel}) translate(${position.x}px, ${position.y}px)`,
-                transition: isDragging ? 'none' : 'transform 0.2s ease',
-                transformOrigin: 'center center'
+          {/* Main Image */}
+          <div className="flex items-center justify-center h-full">
+            <img
+              src={currentPhoto.url}
+              alt={currentPhoto.alt}
+              className="max-w-full max-h-[80vh] object-contain rounded-lg"
+              onError={(e) => {
+                e.currentTarget.src = "/default-listing.jpg";
               }}
-            >
-              <img
-                src={currentPhoto.url}
-                alt={currentPhoto.alt}
-                className="max-w-full max-h-[80vh] object-contain rounded-lg select-none"
-                draggable={false}
-                onError={(e) => {
-                  e.currentTarget.src = "/default-listing.jpg";
-                }}
-              />
-            </div>
+            />
           </div>
 
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-center bg-black bg-opacity-50 rounded-lg px-4 py-2 z-20">
+          {/* Photo Info */}
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-center bg-black bg-opacity-50 rounded-lg px-4 py-2">
             <div className="text-sm">
               {currentPhoto.title} • {currentPhotoIndex + 1} of {businessPhotos.length}
-              {isZoomed && ` • Zoom: ${Math.round(zoomLevel * 100)}%`}
             </div>
           </div>
 
+          {/* Thumbnail Strip */}
           {businessPhotos.length > 1 && (
-            <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 flex gap-2 max-w-full overflow-x-auto py-2 z-20">
-              {businessPhotos.map((photo: BusinessImage, index: number) => (
+            <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 flex gap-2 max-w-full overflow-x-auto py-2">
+              {businessPhotos.map((photo, index) => (
                 <button
                   key={photo.id}
-                  onClick={() => {
-                    goToPhoto(index);
-                  }}
-                  className={`flex-shrink-0 w-16 h-16 rounded border-2 transition-all duration-200 ${index === currentPhotoIndex
-                      ? 'border-blue-500 scale-110'
+                  onClick={() => goToPhoto(index)}
+                  className={`flex-shrink-0 w-16 h-16 rounded border-2 transition-all duration-200 ${
+                    index === currentPhotoIndex 
+                      ? 'border-blue-500 scale-110' 
                       : 'border-transparent hover:border-white'
-                    }`}
+                  }`}
                 >
                   <img
                     src={photo.thumbnail || photo.url}
@@ -1215,32 +1075,28 @@ const OverviewTab = () => {
             </div>
           )}
 
-          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 rounded-lg px-3 py-1 hidden md:block z-20">
-            Use ← → to navigate • +/- to zoom • ESC to close • Double-click to toggle zoom
+          {/* Keyboard Shortcuts Info */}
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 rounded-lg px-3 py-1 hidden md:block">
+            Use ← → keys to navigate • ESC to close
           </div>
-
-          {zoomLevel === 1 && (
-            <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 rounded-lg px-3 py-1 text-center z-20">
-              Double-click or use mouse wheel to zoom
-            </div>
-          )}
         </div>
       </div>
     );
-  };
+  }, [isPhotoModalOpen, businessPhotos, currentPhotoIndex, closePhotoModal, goToPrevPhoto, goToNextPhoto, goToPhoto]);
 
-  const PriceListTab = () => (
+  // Price List Tab Content - FIXED: useCallback added with null safety
+  const PriceListTab = useCallback(() => (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <h3 className="font-semibold text-xl mb-6">Price List</h3>
-
+      
       <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
         <div className="text-gray-400 text-6xl mb-4">💰</div>
         <h4 className="text-lg font-medium text-gray-600 mb-2">Price List Coming Soon</h4>
         <p className="text-gray-500 max-w-md mx-auto">
           The business is working on updating their price list. Please contact them directly for current pricing information.
         </p>
-
-        {businessData.phone && (
+        
+        {businessData?.phone && (
           <button
             onClick={() => window.open(`tel:${businessData.phone}`)}
             className="mt-4 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
@@ -1250,69 +1106,72 @@ const OverviewTab = () => {
         )}
       </div>
     </div>
-  );
+  ), [businessData?.phone]);
 
-  const QuickInfoTab = () => (
+  // Quick Info Tab Content - FIXED: useCallback added with null safety
+  const QuickInfoTab = useCallback(() => (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <h3 className="font-semibold text-xl mb-6">Quick Information</h3>
-
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Basic Information */}
         <div className="space-y-4">
           <h4 className="font-semibold text-lg text-gray-800 border-b pb-2">Basic Info</h4>
-
+          
           <div className="space-y-3">
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
               <span className="text-gray-600">Business Name</span>
-              <span className="font-medium text-gray-800">{businessData.displayName}</span>
+              <span className="font-medium text-gray-800">{businessData?.displayName || 'Business Name'}</span>
             </div>
-
-            {businessData.contact_info?.contact_person_name && (
+            
+            {businessData?.contact_info?.contact_person_name && (
               <div className="flex justify-between items-center py-2 border-b border-gray-100">
                 <span className="text-gray-600">Contact Person</span>
                 <span className="font-medium text-gray-800">{businessData.contact_info.contact_person_name}</span>
               </div>
             )}
-
+            
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
               <span className="text-gray-600">Status</span>
-              <span className={`font-medium ${businessData.isOpen ? 'text-green-600' : 'text-red-600'}`}>
-                {businessData.isOpen ? 'Open' : 'Closed'}
+              <span className={`font-medium ${businessData?.isOpen ? 'text-green-600' : 'text-red-600'}`}>
+                {businessData?.isOpen ? 'Open' : 'Closed'}
               </span>
             </div>
-
+            
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
               <span className="text-gray-600">Rating</span>
               <span className="font-medium text-gray-800 flex items-center gap-1">
                 {Array.from({ length: 5 }, (_, i) => (
-                  <span key={i} className={`text-sm ${i < Math.floor(businessData.rating || 0) ? "text-yellow-500" : "text-gray-300"}`}>
+                  <span key={i} className={`text-sm ${i < Math.floor(businessData?.rating || 0) ? "text-yellow-500" : "text-gray-300"}`}>
                     ★
                   </span>
                 ))}
-                <span>({businessData.reviewCount || 0})</span>
+                <span>({businessData?.reviewCount || 0})</span>
               </span>
             </div>
           </div>
         </div>
 
+        {/* Contact Information */}
         <div className="space-y-4">
           <h4 className="font-semibold text-lg text-gray-800 border-b pb-2">Contact Info</h4>
-
+          
           <div className="space-y-3">
-            {businessData.phone ? (
+            {businessData?.phone ? (
               <div className="flex justify-between items-center py-2 border-b border-gray-100">
                 <span className="text-gray-600">Phone</span>
                 <span className="font-medium text-gray-800">{businessData.phone}</span>
               </div>
             ) : null}
-
-            {businessData.contact_info?.email && (
+            
+            {businessData?.contact_info?.email && (
               <div className="flex justify-between items-center py-2 border-b border-gray-100">
                 <span className="text-gray-600">Email</span>
                 <span className="font-medium text-gray-800">{businessData.contact_info.email}</span>
               </div>
             )}
-
-            {businessData.location && (
+            
+            {businessData?.location && (
               <div className="flex justify-between items-start py-2 border-b border-gray-100">
                 <span className="text-gray-600">Location</span>
                 <span className="font-medium text-gray-800 text-right max-w-[200px]">{businessData.location}</span>
@@ -1322,7 +1181,8 @@ const OverviewTab = () => {
         </div>
       </div>
 
-      {businessData.services && businessData.services.length > 0 && (
+      {/* Services Summary */}
+      {businessData?.services && businessData.services.length > 0 && (
         <div className="mt-6">
           <h4 className="font-semibold text-lg text-gray-800 border-b pb-2 mb-4">Services Summary</h4>
           <div className="flex flex-wrap gap-2">
@@ -1340,14 +1200,16 @@ const OverviewTab = () => {
         </div>
       )}
     </div>
-  );
+  ), [businessData]);
 
-  const ServicesTab = () => (
+  // Services Tab Content - FIXED: useCallback added with null safety
+  const ServicesTab = useCallback(() => (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <h3 className="font-semibold text-xl mb-6">Services & Offerings</h3>
-
-      {businessData.services && businessData.services.length > 0 ? (
+      
+      {businessData?.services && businessData.services.length > 0 ? (
         <div className="space-y-6">
+          {/* All Services Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {businessData.services.map((service: string, index: number) => (
               <div key={index} className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5 hover:shadow-lg transition-all duration-300 hover:scale-105">
@@ -1367,6 +1229,7 @@ const OverviewTab = () => {
             ))}
           </div>
 
+          {/* Service Features */}
           <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
             <h4 className="font-semibold text-lg text-gray-800 mb-4">Why Choose Our Services?</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1404,8 +1267,8 @@ const OverviewTab = () => {
           <p className="text-gray-500 max-w-md mx-auto">
             The business is working on updating their service offerings. Please contact them directly to learn more about available services.
           </p>
-
-          {businessData.phone && (
+          
+          {businessData?.phone && (
             <button
               onClick={() => window.open(`tel:${businessData.phone}`)}
               className="mt-4 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
@@ -1416,63 +1279,70 @@ const OverviewTab = () => {
         </div>
       )}
     </div>
-  );
+  ), [businessData]);
 
-  const ReviewTab = () => (
+  // Review Tab Content - Desktop version - FIXED: useCallback added with null safety
+  const ReviewTab = useCallback(() => (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <h3 className="font-semibold text-xl mb-6">Rate & Review</h3>
 
+      {/* Big Star Rating */}
       <div className="flex flex-col items-center justify-center mb-6">
         <div className="flex items-center gap-2 mb-4">
           {Array.from({ length: 5 }, (_, i) => (
             <span
               key={i}
               onClick={() => handleStarClick(i + 1, businessData)}
-              className={`cursor-pointer text-5xl transition-all duration-200 transform hover:scale-110 ${i < selectedRating
+              className={`cursor-pointer text-5xl transition-all duration-200 transform hover:scale-110 ${
+                i < selectedRating
                   ? "text-yellow-500 drop-shadow-lg"
                   : "text-gray-300 hover:text-yellow-300"
-                }`}
+              }`}
             >
               ★
             </span>
           ))}
         </div>
         <span className="text-gray-600 text-lg font-medium">
-          {selectedRating > 0
-            ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}`
+          {selectedRating > 0 
+            ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}` 
             : 'Click stars to rate'
           }
         </span>
       </div>
 
+      {/* Current Rating Display and Reviews Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Rating Summary */}
         <div className="lg:col-span-1">
           <div className="bg-gray-50 rounded-lg p-6 text-center">
             <div className="text-4xl font-bold text-gray-900 mb-2">
-              {businessData.rating || 0}
+              {businessData?.rating || 0}
             </div>
             <div className="flex items-center justify-center gap-1 mb-2">
               {Array.from({ length: 5 }, (_, i) => (
                 <span
                   key={i}
-                  className={`text-xl ${i < Math.floor(businessData.rating || 0)
-                      ? "text-yellow-500"
+                  className={`text-xl ${
+                    i < Math.floor(businessData?.rating || 0) 
+                      ? "text-yellow-500" 
                       : "text-gray-300"
-                    }`}
+                  }`}
                 >
                   ★
                 </span>
               ))}
             </div>
             <div className="text-gray-600 text-sm">
-              ({businessData.reviewCount || 0} reviews)
+              ({businessData?.reviewCount || 0} reviews)
             </div>
           </div>
         </div>
 
+        {/* Review Messages */}
         <div className="lg:col-span-2">
           <h4 className="font-semibold text-lg mb-4 text-gray-800">Customer Reviews</h4>
-
+          
           {reviewsLoading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -1495,10 +1365,11 @@ const OverviewTab = () => {
                           {Array.from({ length: 5 }, (_, i) => (
                             <span
                               key={i}
-                              className={`text-sm ${i < Math.floor(review.rating || 0)
-                                  ? "text-yellow-500"
+                              className={`text-sm ${
+                                i < Math.floor(review.rating || 0) 
+                                  ? "text-yellow-500" 
                                   : "text-gray-300"
-                                }`}
+                              }`}
                             >
                               ★
                             </span>
@@ -1510,17 +1381,17 @@ const OverviewTab = () => {
                       </div>
                     </div>
                     <div className="text-sm text-gray-500">
-                      {review.created_at
+                      {review.created_at 
                         ? new Date(review.created_at).toLocaleDateString('en-IN', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })
                         : 'Recently'
                       }
                     </div>
                   </div>
-
+                  
                   {review.review && review.review.trim() !== '' ? (
                     <p className="text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-3 border-l-4 border-blue-500">
                       "{review.review}"
@@ -1545,72 +1416,76 @@ const OverviewTab = () => {
         </div>
       </div>
     </div>
-  );
+  ), [businessData, selectedRating, reviewsLoading, reviews, handleStarClick]);
 
-const InfoTab = () => (
-  <div className="lg:hidden">
-    {extractedBusinessId && (
-      <div className="bg-white rounded-lg shadow-lg">
-        <BusinessViewRightSideComponent 
-          businessId={extractedBusinessId} 
-          key={extractedBusinessId} // Important for re-renders
-        />
-      </div>
-    )}
-  </div>
-);
+  // Info Tab Content - BusinessViewRightSideComponent show karein mobile me - FIXED: useCallback added
+  const InfoTab = useCallback(() => (
+    <div className="lg:hidden">
+      {extractedBusinessId && (
+        <div className="bg-white rounded-lg shadow-lg">
+          <BusinessViewRightSideComponent businessId={extractedBusinessId} />
+        </div>
+      )}
+    </div>
+  ), [extractedBusinessId]);
 
-  const MobileReviewTab = () => (
+  // Mobile Review Tab Content (simplified version) - FIXED: useCallback added with null safety
+  const MobileReviewTab = useCallback(() => (
     <div className="bg-white rounded-lg shadow-lg p-6 lg:hidden">
       <h3 className="font-semibold text-xl mb-6">Rate & Review</h3>
 
+      {/* Big Star Rating */}
       <div className="flex flex-col items-center justify-center mb-6">
         <div className="flex items-center gap-2 mb-4">
           {Array.from({ length: 5 }, (_, i) => (
             <span
               key={i}
               onClick={() => handleStarClick(i + 1, businessData)}
-              className={`cursor-pointer text-5xl transition-all duration-200 transform hover:scale-110 ${i < selectedRating
+              className={`cursor-pointer text-5xl transition-all duration-200 transform hover:scale-110 ${
+                i < selectedRating
                   ? "text-yellow-500 drop-shadow-lg"
                   : "text-gray-300 hover:text-yellow-300"
-                }`}
+              }`}
             >
               ★
             </span>
           ))}
         </div>
         <span className="text-gray-600 text-lg font-medium">
-          {selectedRating > 0
-            ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}`
+          {selectedRating > 0 
+            ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}` 
             : 'Click stars to rate'
           }
         </span>
       </div>
 
+      {/* Current Rating Display */}
       <div className="bg-gray-50 rounded-lg p-6 text-center mb-6">
         <div className="text-4xl font-bold text-gray-900 mb-2">
-          {businessData.rating || 0}
+          {businessData?.rating || 0}
         </div>
         <div className="flex items-center justify-center gap-1 mb-2">
           {Array.from({ length: 5 }, (_, i) => (
             <span
               key={i}
-              className={`text-xl ${i < Math.floor(businessData.rating || 0)
-                  ? "text-yellow-500"
+              className={`text-xl ${
+                i < Math.floor(businessData?.rating || 0) 
+                  ? "text-yellow-500" 
                   : "text-gray-300"
-                }`}
+              }`}
             >
               ★
             </span>
           ))}
         </div>
         <div className="text-gray-600 text-sm">
-          ({businessData.reviewCount || 0} reviews)
+          ({businessData?.reviewCount || 0} reviews)
         </div>
       </div>
 
+      {/* Review Messages */}
       <h4 className="font-semibold text-lg mb-4 text-gray-800">Customer Reviews</h4>
-
+      
       {reviewsLoading ? (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -1633,10 +1508,11 @@ const InfoTab = () => (
                       {Array.from({ length: 5 }, (_, i) => (
                         <span
                           key={i}
-                          className={`text-sm ${i < Math.floor(review.rating || 0)
-                              ? "text-yellow-500"
+                          className={`text-sm ${
+                            i < Math.floor(review.rating || 0) 
+                              ? "text-yellow-500" 
                               : "text-gray-300"
-                            }`}
+                          }`}
                         >
                           ★
                         </span>
@@ -1648,17 +1524,17 @@ const InfoTab = () => (
                   </div>
                 </div>
                 <div className="text-sm text-gray-500">
-                  {review.created_at
+                  {review.created_at 
                     ? new Date(review.created_at).toLocaleDateString('en-IN', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric'
-                    })
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })
                     : 'Recently'
                   }
                 </div>
               </div>
-
+              
               {review.review && review.review.trim() !== '' ? (
                 <p className="text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-3 border-l-4 border-blue-500">
                   "{review.review}"
@@ -1681,8 +1557,9 @@ const InfoTab = () => (
         </div>
       )}
     </div>
-  );
+  ), [businessData, selectedRating, reviewsLoading, reviews, handleStarClick]);
 
+  // Determine if this is a category page or business details page
   useEffect(() => {
     const determinePageType = async () => {
       try {
@@ -1694,6 +1571,7 @@ const InfoTab = () => (
           return;
         }
 
+        // Check if this is a business details page
         if (slug.length >= 2) {
           const lastSegment = slug[slug.length - 1];
           const secondLastSegment = slug[slug.length - 2];
@@ -1723,6 +1601,7 @@ const InfoTab = () => (
     determinePageType();
   }, [params]);
 
+  // Fetch business details
   const fetchBusinessDetails = async (businessId: string, categorySlug: string[]) => {
     try {
       const directBusinessData = await fetchBusinessDirectly(businessId);
@@ -1764,6 +1643,7 @@ const InfoTab = () => (
     }
   };
 
+  // METHOD 1: Fetch business directly by ID
   const fetchBusinessDirectly = async (businessId: string): Promise<any> => {
     try {
       const formData = new FormData();
@@ -1804,6 +1684,7 @@ const InfoTab = () => (
     }
   };
 
+  // METHOD 3: Search through all categories for the business
   const searchAllCategoriesForBusiness = async (businessId: string): Promise<any> => {
     try {
       const categories = await fetchAndFormatCategories();
@@ -1838,6 +1719,7 @@ const InfoTab = () => (
     }
   };
 
+  // Format and set business data
   const formatAndSetBusinessData = (business: any, categorySlug: string[]) => {
     if (!business) {
       notFound();
@@ -1885,10 +1767,12 @@ const InfoTab = () => (
 
     if (businessDetails.id) {
       fetchReviews(businessDetails.id);
+      // Photos fetch karo business data set hone ke baad
       fetchBusinessPhotos(businessDetails.id);
     }
   };
 
+  // Fetch category data
   const fetchCategoryData = async (slugArray: string[]) => {
     try {
       const { id, name, path } = await getCategoryInfo(slugArray);
@@ -1933,13 +1817,16 @@ const InfoTab = () => (
     );
   }
 
+  // Render business details page
   if (pageType === 'business' && businessData) {
     return (
       <div className="bg-gray-50 min-h-screen">
         <SubHeader />
 
         <main className="container mx-auto px-4 py-8">
+          {/* Navigation Section */}
           <div className="mb-6">
+            {/* Back and Home Buttons */}
             <div className="flex items-center gap-4 mb-4">
               <button
                 onClick={handleBack}
@@ -1947,7 +1834,7 @@ const InfoTab = () => (
               >
                 ← Back
               </button>
-
+              
               <button
                 onClick={handleHome}
                 className="text-gray-600 hover:text-gray-800 font-medium flex items-center gap-2"
@@ -1956,21 +1843,28 @@ const InfoTab = () => (
               </button>
             </div>
 
+            {/* Simple Breadcrumb Navigation */}
             <SimpleBreadcrumb />
           </div>
 
+          {/* Desktop Tabs - Main content ke under */}
           <DesktopTabs />
 
+          {/* Mobile Tabs */}
           <MobileTabs />
 
+          {/* Main Business Content - Responsive Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6">
+            {/* Left Column - Main Business Content (3/4 width on desktop) */}
             <div className="lg:col-span-3 space-y-6">
+              {/* Mobile View: Tab Content - OVERVIEW BY DEFAULT */}
               <div className="lg:hidden">
                 {activeTab === 'overview' && <OverviewTab />}
                 {activeTab === 'review' && <MobileReviewTab />}
                 {activeTab === 'info' && <InfoTab />}
               </div>
 
+              {/* Desktop View: All tabs content */}
               <div className="hidden lg:block space-y-6">
                 {activeTab === 'overview' && <OverviewTab />}
                 {activeTab === 'photos' && <PhotosTab />}
@@ -1981,6 +1875,7 @@ const InfoTab = () => (
               </div>
             </div>
 
+            {/* Right Column - BusinessViewRightSideComponent (1/4 width on desktop) - Mobile me hidden */}
             <div className="hidden lg:block lg:col-span-1">
               {extractedBusinessId && (
                 <BusinessViewRightSideComponent businessId={extractedBusinessId} />
@@ -1991,8 +1886,10 @@ const InfoTab = () => (
 
         <Footer />
 
+        {/* Photo Modal */}
         <PhotoModal />
 
+        {/* Review Modal */}
         <ReviewModal
           isOpen={isReviewModalOpen}
           onClose={closeReviewModal}
@@ -2003,6 +1900,7 @@ const InfoTab = () => (
           initialRating={selectedRating}
         />
 
+        {/* Awesome Login Modal */}
         {isLoginModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg w-full max-w-md">
@@ -2032,6 +1930,7 @@ const InfoTab = () => (
           </div>
         )}
 
+        {/* Awesome Signup Modal */}
         {showRegisterModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg w-full max-w-md">
@@ -2061,6 +1960,7 @@ const InfoTab = () => (
     );
   }
 
+  // Render category listings page
   if (!pageData) return notFound();
 
   const { name, location, area, categoryIcon, categoryDescription, pageTitle } = pageData;
@@ -2071,7 +1971,9 @@ const InfoTab = () => (
       <SubHeader />
       <main className="theia-exception">
         <div className="container mx-auto px-3 sm:px-4 py-6 md:py-8">
+          {/* Navigation Section */}
           <div className="mb-6 px-4">
+            {/* Back and Home Buttons */}
             <div className="flex items-center gap-4 mb-4">
               <button
                 onClick={handleBack}
@@ -2079,7 +1981,7 @@ const InfoTab = () => (
               >
                 ← Back
               </button>
-
+              
               <button
                 onClick={handleHome}
                 className="text-gray-600 hover:text-gray-800 font-medium flex items-center gap-2"
@@ -2088,6 +1990,7 @@ const InfoTab = () => (
               </button>
             </div>
 
+            {/* Simple Breadcrumb Navigation */}
             <SimpleBreadcrumb />
           </div>
 
@@ -2110,6 +2013,7 @@ const InfoTab = () => (
         onLoginRequest={handleLoginRequest}
       />
 
+      {/* Awesome Login Modal for category page */}
       {isLoginModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-md">
@@ -2139,6 +2043,7 @@ const InfoTab = () => (
         </div>
       )}
 
+      {/* Awesome Signup Modal for category page */}
       {showRegisterModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-md">
@@ -2169,6 +2074,8 @@ const InfoTab = () => (
     </div>
   );
 }
+
+/* -------------------- HELPER FUNCTIONS -------------------- */
 
 function getListingImagesFromAPI(listing: any): string[] {
   if (listing.images && Array.isArray(listing.images) && listing.images.length > 0) {
@@ -2245,6 +2152,7 @@ async function getCategoryInfo(slugArray: string[]) {
   return { id, name, path };
 }
 
+// Synchronous version for business details
 function getCategoryInfoSync(slugArray: string[]) {
   const id = slugArray.at(-1) || "";
   const nameSlug = slugArray.at(-2) || slugArray[0];
@@ -2336,7 +2244,7 @@ async function fetchListings(slugArray: string[]) {
     console.error('Error fetching listings:', e);
     return [];
   }
-} 
+}
 
 function getBadgeType(index: number): string {
   const badges = ["Q Top Search", "Popular", "Trending", "Verified", "Best Rated"];
