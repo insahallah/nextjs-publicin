@@ -567,6 +567,8 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
       let response: any = {};
       try {
         response = await res.json();
+
+        console.log('Reviews',response);
       } catch (jsonErr) {
         console.error("Error parsing JSON response:", jsonErr);
         alert("Failed to submit review: Invalid server response");
@@ -589,36 +591,65 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     }
   }, [getCurrentUserId, selectedBusiness, businessData?.id]);
 
-  // Fetch reviews function - FIXED: useCallback added
+  // ✅ FIXED: Fetch reviews function - Proper error handling and data extraction
   const fetchReviews = useCallback(async (businessId: string) => {
     try {
       setReviewsLoading(true);
+      console.log('🔄 Fetching reviews for business:', businessId);
       
       const params = new URLSearchParams();
       params.append('business_id', businessId);
 
+       //console.log('📥XXXXXXXXXXXXXXXXXXXX:',  `https://allupipay.in/publicsewa/api/users/get-reviews-for-one-business.php?${params}`);
+
       const res = await fetch(
-        `https://allupipay.in/publicsewa/api/users/get-reviews-for-one-business.php?${params}`,
+        `https://allupipay.in/publicsewa/api/users/get_reviews_for_one_bussiness.php?${params}`,
         {
           method: "GET",
           cache: "no-store"
         }
       );
 
+      console.log('📥XXXXXXXXXXXXXXXXXXXX:', res.status);
+
       if (res.ok) {
         const data = await res.json();
+        console.log('📄 Full reviews API response:', data);
         
-        if (data && (data.status === "success" || data.reviews)) {
-          const reviewsData = data.data || data.reviews || [];
-          setReviews(reviewsData);
-        } else {
-          setReviews([]);
+        // ✅ CORRECTED: Multiple possible response formats handle karein
+        let reviewsData: any[] = [];
+        
+        if (data && data.status === "success") {
+          reviewsData = data.data || [];
+        } else if (data && data.reviews) {
+          reviewsData = data.reviews;
+        } else if (Array.isArray(data)) {
+          reviewsData = data;
+        } else if (data && Array.isArray(data.data)) {
+          reviewsData = data.data;
         }
+        
+        console.log('✅ Extracted reviews:', reviewsData);
+        
+        // ✅ CORRECTED: Reviews ko properly format karein with COMMENT field
+        const formattedReviews = reviewsData.map((review: any, index: number) => ({
+          id: review.id || `review-${index}-${Date.now()}`,
+          username: review.username || review.user_name || 'Anonymous User',
+          rating: parseInt(review.rating) || 0,
+          review: review.review || review.comment || review.description || '',
+          comment: review.comment || review.review || review.description || '', // ✅ COMMENT field explicitly
+          created_at: review.created_at || review.date || review.created_date || new Date().toISOString(),
+          user_avatar: review.user_avatar || null
+        }));
+        
+        console.log('✅ Formatted reviews with comments:', formattedReviews);
+        setReviews(formattedReviews);
       } else {
+        console.log('❌ Reviews API request failed');
         setReviews([]);
       }
     } catch (error) {
-      console.error('Error fetching reviews:', error);
+      console.error('💥 Error fetching reviews:', error);
       setReviews([]);
     } finally {
       setReviewsLoading(false);
@@ -1516,49 +1547,24 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     </div>
   ), [businessData]);
 
-  // Review Tab Content - Desktop version - FIXED: useCallback added with null safety
+  // ✅ FIXED: Review Tab Content - Comments properly display honge
   const ReviewTab = useCallback(() => (
     <div className="bg-white rounded-lg shadow-lg p-6">
-      <h3 className="font-semibold text-xl mb-6">Rate & Review</h3>
+      <h3 className="font-semibold text-xl mb-6">Customer Reviews & Ratings</h3>
 
-      {/* Big Star Rating */}
-      <div className="flex flex-col items-center justify-center mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          {Array.from({ length: 5 }, (_, i) => (
-            <span
-              key={i}
-              onClick={() => handleStarClick(i + 1, businessData)}
-              className={`cursor-pointer text-5xl transition-all duration-200 transform hover:scale-110 ${
-                i < selectedRating
-                  ? "text-yellow-500 drop-shadow-lg"
-                  : "text-gray-300 hover:text-yellow-300"
-              }`}
-            >
-              ★
-            </span>
-          ))}
-        </div>
-        <span className="text-gray-600 text-lg font-medium">
-          {selectedRating > 0 
-            ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}` 
-            : 'Click stars to rate'
-          }
-        </span>
-      </div>
-
-      {/* Current Rating Display and Reviews Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Rating Summary */}
+      {/* Rating Summary Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Overall Rating */}
         <div className="lg:col-span-1">
-          <div className="bg-gray-50 rounded-lg p-6 text-center">
-            <div className="text-4xl font-bold text-gray-900 mb-2">
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-6 text-center border border-blue-200">
+            <div className="text-5xl font-bold text-gray-900 mb-2">
               {businessData?.rating || 0}
             </div>
-            <div className="flex items-center justify-center gap-1 mb-2">
+            <div className="flex items-center justify-center gap-1 mb-3">
               {Array.from({ length: 5 }, (_, i) => (
                 <span
                   key={i}
-                  className={`text-xl ${
+                  className={`text-2xl ${
                     i < Math.floor(businessData?.rating || 0) 
                       ? "text-yellow-500" 
                       : "text-gray-300"
@@ -1568,34 +1574,78 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
                 </span>
               ))}
             </div>
-            <div className="text-gray-600 text-sm">
+            <div className="text-gray-600 text-lg font-medium">
               ({businessData?.reviewCount || 0} reviews)
             </div>
           </div>
+
+          {/* Add Review Button */}
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => handleStarClick(0, businessData)}
+              className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+            >
+              <span>⭐</span>
+              Write a Review
+            </button>
+          </div>
         </div>
 
-        {/* Review Messages */}
+        {/* Rating Distribution */}
         <div className="lg:col-span-2">
-          <h4 className="font-semibold text-lg mb-4 text-gray-800">Customer Reviews</h4>
-          
-          {reviewsLoading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading reviews...</p>
-            </div>
-          ) : reviews.length > 0 ? (
-            <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-              {reviews.map((review, index) => (
-                <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-md">
-                        {review.username ? review.username.charAt(0).toUpperCase() : 'U'}
+          <h4 className="font-semibold text-lg mb-4 text-gray-800">Rating Distribution</h4>
+          <div className="space-y-3">
+            {[5, 4, 3, 2, 1].map((stars) => {
+              const starReviews = reviews.filter(review => Math.floor(review.rating) === stars).length;
+              const percentage = reviews.length > 0 ? (starReviews / reviews.length) * 100 : 0;
+              
+              return (
+                <div key={stars} className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 w-16">
+                    <span className="text-sm text-gray-600">{stars}</span>
+                    <span className="text-yellow-500">★</span>
+                  </div>
+                  <div className="flex-1 bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-yellow-500 h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${percentage}%` }}
+                    ></div>
+                  </div>
+                  <div className="text-sm text-gray-600 w-12 text-right">
+                    {starReviews}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Reviews List Section */}
+      <div className="border-t border-gray-200 pt-6">
+        <h4 className="font-semibold text-lg mb-6 text-gray-800">
+          Customer Reviews ({reviews.length})
+        </h4>
+        
+        {reviewsLoading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading reviews...</p>
+          </div>
+        ) : reviews.length > 0 ? (
+          <div className="space-y-6 max-h-[600px] overflow-y-auto pr-4">
+            {reviews.map((review) => (
+              <div key={review.id} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-lg shadow-md">
+                      {review.username ? review.username.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-gray-900 text-lg">
+                        {review.username || 'Anonymous User'}
                       </div>
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {review.username || 'Anonymous User'}
-                        </div>
+                      <div className="flex items-center gap-2 mt-1">
                         <div className="flex items-center gap-1">
                           {Array.from({ length: 5 }, (_, i) => (
                             <span
@@ -1609,49 +1659,65 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
                               ★
                             </span>
                           ))}
-                          <span className="text-sm text-gray-500 ml-1">
-                            {review.rating || 0}
-                          </span>
                         </div>
+                        <span className="text-sm font-medium text-gray-700">
+                          {review.rating || 0}.0
+                        </span>
                       </div>
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {review.created_at 
-                        ? new Date(review.created_at).toLocaleDateString('en-IN', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                          })
-                        : 'Recently'
-                      }
-                    </div>
                   </div>
-                  
-                  {review.review && review.review.trim() !== '' ? (
-                    <p className="text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-3 border-l-4 border-blue-500">
-                      "{review.review}"
+                  <div className="text-sm text-gray-500 text-right">
+                    {review.created_at ? (
+                      new Date(review.created_at).toLocaleDateString('en-IN', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })
+                    ) : (
+                      'Recently'
+                    )}
+                  </div>
+                </div>
+                
+                {/* ✅ FIXED: Comment/Review Text Display */}
+                {(review.comment && review.comment.trim() !== '') || 
+                 (review.review && review.review.trim() !== '') ? (
+                  <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-500">
+                    <p className="text-gray-700 leading-relaxed text-lg">
+                      "{review.comment || review.review}"
                     </p>
-                  ) : (
-                    <p className="text-gray-500 italic bg-gray-50 rounded-lg p-3">
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-gray-300">
+                    <p className="text-gray-500 italic text-lg">
                       No comment provided
                     </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-              <div className="text-gray-400 text-6xl mb-4">💬</div>
-              <h4 className="text-lg font-medium text-gray-600 mb-2">No Reviews Yet</h4>
-              <p className="text-gray-500 max-w-md mx-auto">
-                Be the first to share your experience with this business! Click the stars above to leave a review.
-              </p>
-            </div>
-          )}
-        </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+            <div className="text-gray-400 text-6xl mb-4">💬</div>
+            <h4 className="text-xl font-medium text-gray-600 mb-3">No Reviews Yet</h4>
+            <p className="text-gray-500 text-lg max-w-md mx-auto mb-6">
+              Be the first to share your experience with this business! Your review will help others make better decisions.
+            </p>
+            <button
+              onClick={() => handleStarClick(0, businessData)}
+              className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-lg flex items-center gap-2 mx-auto"
+            >
+              <span>⭐</span>
+              Be the First to Review
+            </button>
+          </div>
+        )}
       </div>
     </div>
-  ), [businessData, selectedRating, reviewsLoading, reviews, handleStarClick]);
+  ), [businessData, reviews, reviewsLoading, handleStarClick]);
 
   // Info Tab Content - BusinessViewRightSideComponent show karein mobile me - FIXED: useCallback added
   const InfoTab = useCallback(() => (
@@ -1664,13 +1730,13 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     </div>
   ), [extractedBusinessId]);
 
-  // Mobile Review Tab Content (simplified version) - FIXED: useCallback added with null safety
+  // ✅ FIXED: Mobile Review Tab Content - Comments properly display honge mobile me bhi
   const MobileReviewTab = useCallback(() => (
     <div className="bg-white rounded-lg shadow-lg p-6 lg:hidden">
       <h3 className="font-semibold text-xl mb-6">Rate & Review</h3>
 
-      {/* Big Star Rating */}
-      <div className="flex flex-col items-center justify-center mb-6">
+      {/* Big Star Rating for Mobile */}
+      <div className="flex flex-col items-center justify-center mb-6 p-4 bg-gray-50 rounded-xl">
         <div className="flex items-center gap-2 mb-4">
           {Array.from({ length: 5 }, (_, i) => (
             <span
@@ -1686,16 +1752,23 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
             </span>
           ))}
         </div>
-        <span className="text-gray-600 text-lg font-medium">
+        <span className="text-gray-600 text-lg font-medium text-center">
           {selectedRating > 0 
             ? `You rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}` 
-            : 'Click stars to rate'
+            : 'Tap stars to rate this business'
           }
         </span>
+        
+        <button
+          onClick={() => handleStarClick(selectedRating || 1, businessData)}
+          className="mt-4 bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors w-full"
+        >
+          {selectedRating > 0 ? 'Submit Review' : 'Write a Review'}
+        </button>
       </div>
 
       {/* Current Rating Display */}
-      <div className="bg-gray-50 rounded-lg p-6 text-center mb-6">
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-6 text-center mb-6 border border-blue-200">
         <div className="text-4xl font-bold text-gray-900 mb-2">
           {businessData?.rating || 0}
         </div>
@@ -1714,12 +1787,14 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
           ))}
         </div>
         <div className="text-gray-600 text-sm">
-          ({businessData?.reviewCount || 0} reviews)
+          Based on {businessData?.reviewCount || 0} reviews
         </div>
       </div>
 
       {/* Review Messages */}
-      <h4 className="font-semibold text-lg mb-4 text-gray-800">Customer Reviews</h4>
+      <h4 className="font-semibold text-lg mb-4 text-gray-800">
+        Customer Reviews ({reviews.length})
+      </h4>
       
       {reviewsLoading ? (
         <div className="text-center py-8">
@@ -1728,8 +1803,8 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         </div>
       ) : reviews.length > 0 ? (
         <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-          {reviews.map((review, index) => (
-            <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+          {reviews.map((review) => (
+            <div key={review.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-md">
@@ -1758,26 +1833,31 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
                     </div>
                   </div>
                 </div>
-                <div className="text-sm text-gray-500">
+                <div className="text-xs text-gray-500 text-right">
                   {review.created_at 
                     ? new Date(review.created_at).toLocaleDateString('en-IN', {
-                        year: 'numeric',
                         month: 'short',
                         day: 'numeric'
                       })
-                    : 'Recently'
+                    : 'Recent'
                   }
                 </div>
               </div>
               
-              {review.review && review.review.trim() !== '' ? (
-                <p className="text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-3 border-l-4 border-blue-500">
-                  "{review.review}"
-                </p>
+              {/* ✅ FIXED: Comment/Review Text Display for Mobile */}
+              {(review.comment && review.comment.trim() !== '') || 
+               (review.review && review.review.trim() !== '') ? (
+                <div className="bg-gray-50 rounded-lg p-3 border-l-4 border-blue-500">
+                  <p className="text-gray-700 leading-relaxed">
+                    "{review.comment || review.review}"
+                  </p>
+                </div>
               ) : (
-                <p className="text-gray-500 italic bg-gray-50 rounded-lg p-3">
-                  No comment provided
-                </p>
+                <div className="bg-gray-50 rounded-lg p-3 border-l-4 border-gray-300">
+                  <p className="text-gray-500 italic">
+                    No comment provided
+                  </p>
+                </div>
               )}
             </div>
           ))}
@@ -1786,9 +1866,15 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
         <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
           <div className="text-gray-400 text-6xl mb-4">💬</div>
           <h4 className="text-lg font-medium text-gray-600 mb-2">No Reviews Yet</h4>
-          <p className="text-gray-500 max-w-md mx-auto">
-            Be the first to share your experience with this business! Click the stars above to leave a review.
+          <p className="text-gray-500 max-w-md mx-auto mb-4">
+            Be the first to share your experience with this business!
           </p>
+          <button
+            onClick={() => handleStarClick(1, businessData)}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+          >
+            Write First Review
+          </button>
         </div>
       )}
     </div>
@@ -2001,7 +2087,10 @@ export default function ListPage({ params }: { params: Promise<{ slug: string[] 
     });
 
     if (businessDetails.id) {
+      // ✅ FIXED: Reviews fetch karo business data set hone ke baad
+      console.log('🔄 Fetching reviews for business:', businessDetails.id);
       fetchReviews(businessDetails.id);
+      
       // Photos fetch karo business data set hone ke baad
       fetchBusinessPhotos(businessDetails.id);
     }

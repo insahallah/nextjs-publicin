@@ -158,6 +158,12 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
   const [currentPath, setCurrentPath] = useState<string>('');
   const [isVisible, setIsVisible] = useState(false);
 
+
+    useEffect(() => {
+    console.log('📋 LISTING DATA:', listing);
+
+  }, [listing]);
+
   // Get current URL path on client side
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -240,6 +246,14 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
     }
   };
 
+  // ✅ ADDED: Review button handler
+  const handleReviewClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onReviewClick) {
+      onReviewClick();
+    }
+  };
+
   return (
     <div 
       className={`
@@ -294,11 +308,6 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
                 <div className="flex items-center gap-1 text-gray-600 mb-2 transition-colors duration-300 group-hover:text-gray-800">
                   <span className="text-sm">🏢</span>
                   <span className="text-xs">{listing.location || 'Location not specified'}</span>
-                  {listing.latitude && listing.longitude && (
-                    <span className="text-[8px] text-gray-400 ml-1">
-                      ({parseFloat(listing.latitude).toFixed(4)}, {parseFloat(listing.longitude).toFixed(4)})
-                    </span>
-                  )}
                 </div>
               </div>
               
@@ -319,7 +328,7 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
             {/* Description */}
             <div className="mb-3 flex-1">
               <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed transition-colors duration-300 group-hover:text-gray-700">
-                {listing.description || "Welcome to our service provider. While our name might echo a legacy of trust, our primary focus is entirely on delivering quality services. We offer a comprehensive range of services to meet your needs..."}
+                {listing.description || "Welcome to our service provider. We offer a comprehensive range of services to meet your needs..."}
               </p>
             </div>
 
@@ -350,16 +359,16 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
               </div>
             </div>
 
-            {/* Action Buttons - Removed Review Button */}
+            {/* Action Buttons - ✅ INCLUDES REVIEW BUTTON */}
             <div className="mt-auto">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 mb-2">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-1.5 mb-2">
                 {/* Call Button */}
                 {listing.phone ? (
                   <button 
                     onClick={handleCallClick}
-                    className="flex items-center justify-center gap-1 px-2 py-1.5 bg-[#058A07] text-white rounded-lg font-semibold transition-all duration-300 shadow-sm hover:shadow-lg hover:scale-105 active:scale-95 animate-pulse hover:animate-none"
+                    className="flex items-center justify-center gap-1 px-2 py-1.5 bg-[#058A07] text-white rounded-lg font-semibold transition-all duration-300 shadow-sm hover:shadow-lg hover:scale-105 active:scale-95 text-[10px]"
                   >
-                    <span className="text-xs animate-bounce">📞</span>
+                    <span className="text-xs">📞</span>
                     <span>Call Now</span>
                   </button>
                 ) : (
@@ -373,9 +382,9 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
                 {listing.phone ? (
                   <button 
                     onClick={handleWhatsAppClick}
-                    className="flex items-center justify-center gap-1 px-2 py-1.5 bg-[#058A07] text-white rounded-lg font-semibold transition-all duration-300 shadow-sm hover:shadow-lg hover:scale-105 active:scale-95 animate-pulse hover:animate-none"
+                    className="flex items-center justify-center gap-1 px-2 py-1.5 bg-[#058A07] text-white rounded-lg font-semibold transition-all duration-300 shadow-sm hover:shadow-lg hover:scale-105 active:scale-95 text-[10px]"
                   >
-                    <span className="text-xs animate-bounce">💬</span>
+                    <span className="text-xs">💬</span>
                     <span>WhatsApp</span>
                   </button>
                 ) : (
@@ -385,13 +394,22 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
                   </button>
                 )}
                 
+                {/* ✅ REVIEW BUTTON */}
+                <button 
+                  onClick={handleReviewClick}
+                  className="flex items-center justify-center gap-1 px-2 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-semibold transition-all duration-300 shadow-sm hover:shadow-lg hover:scale-105 active:scale-95 text-[10px]"
+                >
+                  <span className="text-xs">⭐</span>
+                  <span>Review</span>
+                </button>
+                
                 {/* Direction Button */}
                 <button 
                   onClick={handleDirectionClick}
-                  className="flex items-center justify-center gap-1 px-2 py-1.5 bg-[#FF6B00] text-white rounded-lg font-semibold transition-all duration-300 shadow-sm hover:shadow-lg hover:scale-105 active:scale-95 hover:bg-[#E55A00]"
+                  className="flex items-center justify-center gap-1 px-2 py-1.5 bg-[#FF6B00] text-white rounded-lg font-semibold transition-all duration-300 shadow-sm hover:shadow-lg hover:scale-105 active:scale-95 hover:bg-[#E55A00] text-[10px]"
                 >
                   <span className="text-xs">📍</span>
-                  <span className="text-[10px]">Direction</span>
+                  <span>Direction</span>
                 </button>
                 
                 {/* Enquiry Button */}
@@ -400,14 +418,14 @@ export default function ListingCard({ listing, fallbackImage, categoryName, onRe
                   className="flex items-center justify-center gap-1 px-2 py-1.5 bg-white border border-[#0076D7] text-[#0076D7] rounded-lg font-semibold transition-all duration-300 shadow-sm hover:shadow hover:bg-[#0076D7] hover:text-white hover:scale-105 text-[10px]"
                 >
                   <span className="text-xs">📩</span>
-                  <span>Send Enquiry</span>
+                  <span>Enquiry</span>
                 </button>
               </div>
 
               {/* Response Time */}
               {listing.respondsIn && (
                 <div className="flex items-center gap-1 text-[10px] text-[#058A07] font-semibold bg-[#058A07]/10 px-2 py-1 rounded border border-[#058A07]/20 transition-all duration-300 hover:bg-[#058A07]/20 hover:shadow-sm">
-                  <span className="text-[10px] animate-pulse">⚡</span>
+                  <span className="text-[10px]">⚡</span>
                   <span>Responds within {listing.respondsIn}</span>
                 </div>
               )}

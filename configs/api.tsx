@@ -20,6 +20,7 @@ export const API_ENDPOINTS2 = {
     GET_BLOCK: `${API_BASE_URL2}/get_blocks.php`,
     FETCH_BUSINESS_BY_USER_ID: `${API_BASE_URL2}/fetch-business-by-user-id.php`,
     BUSINESS_VIEW_RIGHTSIDE: `${API_BASE_URL2}/business_view_rightside.php`,
+    GET_VILLAGE_FOR_FILTER: `${API_BASE_URL2}/get_villages_for_filter.php`,
 
   }
 }
