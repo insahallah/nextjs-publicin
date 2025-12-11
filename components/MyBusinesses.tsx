@@ -1,79 +1,79 @@
-'use client'
+'use client';
 import { API_ENDPOINTS2 } from '@/configs/api';
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface Business {
-  id: string
-  name: string
-  address: string
-  image: string
-  profileScore: number
-  category: string
-  city: string
-  status: string
-  created_at: string
-  mobile: string
-  building_name: string
-  street: string
-  landmark: string
-  district_name: string
-  village: string
-  pin_code: string
-  image_path: string
-  category_id: string
-  subcategory_id: string
-  childcategory_id: string
-  parent_category_data?: any
-  sub_category_data?: any
-  child_category_data?: any
-  category_data?: any
-  business_name?: string
+  id: string;
+  name: string;
+  address: string;
+  image: string;
+  profileScore: number;
+  category: string;
+  city: string;
+  status: string;
+  created_at: string;
+  mobile: string;
+  building_name: string;
+  street: string;
+  landmark: string;
+  district_name: string;
+  village: string;
+  pin_code: string;
+  image_path: string;
+  category_id: string;
+  subcategory_id: string;
+  childcategory_id: string;
+  parent_category_data?: any;
+  sub_category_data?: any;
+  child_category_data?: any;
+  category_data?: any;
+  business_name?: string;
 }
 
 interface ApiBusiness {
-  id: number
-  business_name: string
-  address: string
-  profile_score: number
-  category: string
-  city: string
-  status: string
-  created_at: string
-  mobile: string
-  building_name: string
-  street: string
-  landmark: string
-  district_name: string
-  village: string
-  pin_code: string
-  category_id: number
-  subcategory_id: number
-  childcategory_id?: number
+  id: number;
+  business_name: string;
+  address: string;
+  profile_score: number;
+  category: string;
+  city: string;
+  status: string;
+  created_at: string;
+  mobile: string;
+  building_name: string;
+  street: string;
+  landmark: string;
+  district_name: string;
+  village: string;
+  pin_code: string;
+  category_id: number;
+  subcategory_id: number;
+  childcategory_id?: number;
   images: Array<{
-    image_path: string
-    full_url: string
-  }>
-  image_count: number
-  primary_image: string
-  parent_category_data?: any
-  sub_category_data?: any
-  child_category_data?: any
-  category_data?: any
+    image_path: string;
+    full_url: string;
+  }>;
+  image_count: number;
+  primary_image: string;
+  parent_category_data?: any;
+  sub_category_data?: any;
+  child_category_data?: any;
+  category_data?: any;
 }
 
 interface ApiResponse {
-  success: boolean
-  data: ApiBusiness[]
-  message: string
-  count: number
+  success: boolean;
+  data: ApiBusiness[];
+  message: string;
+  count: number;
 }
 
 export default function MyBusinesses() {
-  const [businesses, setBusinesses] = useState<Business[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string>('')
-  const router = useRouter()
+  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
+  const router = useRouter();
 
   const formatAddress = (business: ApiBusiness): string => {
     const addressParts = [
@@ -83,10 +83,10 @@ export default function MyBusinesses() {
       business.village,
       business.district_name,
       business.pin_code ? `PIN: ${business.pin_code}` : ''
-    ].filter(part => part && part.toString().trim() !== '')
+    ].filter(part => part && part.toString().trim() !== '');
 
-    return addressParts.join(', ') || business.address || 'Address not provided'
-  }
+    return addressParts.join(', ') || business.address || 'Address not provided';
+  };
 
   const formatCreatedDate = (dateString: string): string => {
     try {
@@ -99,19 +99,19 @@ export default function MyBusinesses() {
     } catch (error) {
       return 'Date not available';
     }
-  }
+  };
 
   const getBusinessImage = (business: ApiBusiness): string => {
     if (business.primary_image && business.primary_image !== 'null') {
-      return business.primary_image
+      return business.primary_image;
     }
 
     if (business.images && business.images.length > 0) {
-      return business.images[0].full_url
+      return business.images[0].full_url;
     }
 
-    return getDefaultImage(business.category_id)
-  }
+    return getDefaultImage(business.category_id);
+  };
 
   const getDefaultImage = (categoryId: number): string => {
     const categoryImages: { [key: string]: string } = {
@@ -123,16 +123,16 @@ export default function MyBusinesses() {
       '14': 'https://images.jdmagicbox.com/comp/def_content/businesses/default-businesses-1.jpg',
       '29': 'https://images.jdmagicbox.com/comp/def_content/businesses/default-businesses-2.jpg',
       '369': 'https://images.jdmagicbox.com/comp/def_content/businesses/default-businesses-0.jpg',
-    }
-    return categoryImages[categoryId.toString()] || 'https://images.jdmagicbox.com/comp/def_content/businesses/default-businesses-0.jpg'
-  }
+    };
+    return categoryImages[categoryId.toString()] || 'https://images.jdmagicbox.com/comp/def_content/businesses/default-businesses-0.jpg';
+  };
 
   const calculateProfileScore = (business: ApiBusiness): number => {
     if (business.profile_score && business.profile_score > 0) {
-      return business.profile_score
+      return business.profile_score;
     }
 
-    let score = 0
+    let score = 0;
     const fields = [
       'business_name',
       'building_name',
@@ -143,42 +143,42 @@ export default function MyBusinesses() {
       'pin_code',
       'mobile',
       'category_id'
-    ]
+    ];
 
     fields.forEach(field => {
-      const value = business[field as keyof ApiBusiness]
+      const value = business[field as keyof ApiBusiness];
       if (value && value.toString().trim() !== '' && value.toString() !== '0') {
-        score += 10
+        score += 10;
       }
-    })
+    });
 
-    if (business.images && business.images.length > 0) score += 10
-    if (business.primary_image && business.primary_image !== 'null') score += 10
+    if (business.images && business.images.length > 0) score += 10;
+    if (business.primary_image && business.primary_image !== 'null') score += 10;
 
-    return Math.min(score, 100)
-  }
+    return Math.min(score, 100);
+  };
 
   const getCategoryPath = (business: ApiBusiness): string => {
     const parts = [];
-    
+
     if (business.parent_category_data?.name) {
       parts.push(business.parent_category_data.name);
     }
-    
+
     if (business.sub_category_data?.name) {
       parts.push(business.sub_category_data.name);
     }
-    
+
     if (business.child_category_data?.subcategory_name) {
       parts.push(business.child_category_data.subcategory_name);
     }
-    
+
     return parts.join(' > ');
-  }
+  };
 
   const generateSlug = (text: string): string => {
     if (!text) return '';
-    
+
     return text
       .toString()
       .toLowerCase()
@@ -189,31 +189,31 @@ export default function MyBusinesses() {
       .replace(/\-\-+/g, '-')
       .replace(/^-+/, '')
       .replace(/-+$/, '');
-  }
+  };
 
   const generateBusinessUrl = (business: Business): string => {
     const basePath = '/list';
     const businessId = business.id;
-    
+
     const businessName = business.business_name || business.name;
     const businessNameSlug = generateSlug(businessName || `business-${businessId}`);
-    
+
     let categoryPath = '';
-    
+
     if (business.parent_category_data?.name) {
       categoryPath += `/${generateSlug(business.parent_category_data.name)}`;
     } else {
       categoryPath += '/business';
     }
-    
+
     if (business.sub_category_data?.name) {
       categoryPath += `/${generateSlug(business.sub_category_data.name)}`;
     }
-    
+
     if (business.child_category_data?.subcategory_name) {
       categoryPath += `/${generateSlug(business.child_category_data.subcategory_name)}`;
     }
-    
+
     if (business.childcategory_id) {
       categoryPath += `/child${business.childcategory_id}`;
     } else if (business.subcategory_id) {
@@ -223,18 +223,18 @@ export default function MyBusinesses() {
     } else {
       categoryPath += '/general';
     }
-    
+
     return `${basePath}${categoryPath}/${businessNameSlug}/${businessId}`;
-  }
+  };
 
   const handleBusinessClick = (business: Business) => {
     const url = generateBusinessUrl(business);
     router.push(url);
-  }
+  };
 
   const getStatusText = (status: string): string => {
     if (typeof status === 'string') {
-      return status
+      return status;
     }
 
     const statusMap: { [key: number]: string } = {
@@ -242,33 +242,33 @@ export default function MyBusinesses() {
       2: 'Pending',
       3: 'Rejected',
       4: 'Inactive'
-    }
-    return statusMap[status as unknown as number] || 'Unknown'
-  }
+    };
+    return statusMap[status as unknown as number] || 'Unknown';
+  };
 
   const fetchBusinessByUserId = async () => {
     try {
       setLoading(true);
-      setError("");
+      setError('');
 
-      const userData = localStorage.getItem("userData");
+      const userData = localStorage.getItem('userData');
       if (!userData) {
-        throw new Error("User not logged in");
+        throw new Error('User not logged in');
       }
 
       const user = JSON.parse(userData);
       const userId = user.id;
 
       if (!userId) {
-        throw new Error("User ID not found");
+        throw new Error('User ID not found');
       }
 
       const response = await fetch(
         `${API_ENDPOINTS2.AUTH.FETCH_BUSINESS_BY_USER_ID}?user_id=${userId}`,
         {
-          method: "GET",
+          method: 'GET',
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
         }
       );
@@ -282,7 +282,7 @@ export default function MyBusinesses() {
       if (result.success && result.data) {
         const transformedBusinesses: Business[] = result.data.map(
           (business: ApiBusiness) => ({
-            id: business.id?.toString() || "",
+            id: business.id?.toString() || '',
             name: business.business_name || `Business ${business.id}`,
             business_name: business.business_name,
             address: formatAddress(business),
@@ -293,7 +293,7 @@ export default function MyBusinesses() {
               business.district_name ||
               business.village ||
               business.city ||
-              "City not specified",
+              'City not specified',
             status: getStatusText(business.status),
             created_at: business.created_at,
             mobile: business.mobile,
@@ -306,16 +306,16 @@ export default function MyBusinesses() {
             image_path:
               business.primary_image ||
               business.images?.[0]?.image_path ||
-              "",
+              '',
             category_id: business.category_id
               ? business.category_id.toString()
-              : "",
+              : '',
             subcategory_id: business.subcategory_id
               ? business.subcategory_id.toString()
-              : "",
+              : '',
             childcategory_id: business.childcategory_id
               ? business.childcategory_id.toString()
-              : "",
+              : '',
             parent_category_data: business.parent_category_data,
             sub_category_data: business.sub_category_data,
             child_category_data: business.child_category_data,
@@ -325,13 +325,13 @@ export default function MyBusinesses() {
 
         setBusinesses(transformedBusinesses);
       } else {
-        throw new Error(result.message || "No businesses found");
+        throw new Error(result.message || 'No businesses found');
       }
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "Failed to fetch businesses"
+          : 'Failed to fetch businesses'
       );
       setBusinesses([]);
     } finally {
@@ -340,38 +340,39 @@ export default function MyBusinesses() {
   };
 
   const handleRefresh = () => {
-    fetchBusinessByUserId()
-  }
+    fetchBusinessByUserId();
+  };
 
   const handleAddNewBusiness = () => {
-    window.location.href = '/list-your-business'
-  }
+    window.location.href = '/list-your-business';
+  };
 
+  // ✅ UPDATE: Business Edit Page पर navigate करें
   const handleEditBusiness = (businessId: string) => {
-    // Add edit business functionality here
-  }
+    router.push(`/BusinessEdit/${businessId}/edit`);
+  };
 
   useEffect(() => {
-    fetchBusinessByUserId()
-  }, [])
+    fetchBusinessByUserId();
+  }, []);
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return '#22c55e'
-    if (score >= 60) return '#3b82f6'
-    if (score >= 40) return '#f59e0b'
-    return '#ef4444'
-  }
+    if (score >= 80) return '#22c55e';
+    if (score >= 60) return '#3b82f6';
+    if (score >= 40) return '#f59e0b';
+    return '#ef4444';
+  };
 
   const getScoreText = (score: number) => {
-    if (score >= 80) return 'Excellent'
-    if (score >= 60) return 'Good'
-    if (score >= 40) return 'Fair'
-    return 'Poor'
-  }
+    if (score >= 80) return 'Excellent';
+    if (score >= 60) return 'Good';
+    if (score >= 40) return 'Fair';
+    return 'Poor';
+  };
 
   const calculateStrokeDashoffset = (score: number) => {
-    return 100 - score
-  }
+    return 100 - score;
+  };
 
   if (loading) {
     return (
@@ -381,7 +382,7 @@ export default function MyBusinesses() {
           Loading your businesses...
         </div>
       </div>
-    )
+    );
   }
 
   if (error && businesses.length === 0) {
@@ -395,7 +396,7 @@ export default function MyBusinesses() {
           </button>
         </div>
       </div>
-    )
+    );
   }
 
   if (businesses.length === 0) {
@@ -409,154 +410,11 @@ export default function MyBusinesses() {
           </button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="my-businesses-container">
-      <div className="businesses-header">
-        <div className="header-content">
-          <h1 className="page-title">My Businesses</h1>
-          <p className="page-subtitle">Manage and grow your business listings</p>
-          <div className="header-actions">
-            <button onClick={handleRefresh} className="btn-refresh">
-              Refresh
-            </button>
-            <span className="business-count">{businesses.length} business{businesses.length !== 1 ? 'es' : ''}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="businesses-list">
-        {businesses.map((business) => (
-          <div key={business.id} className="jd_favli pointer">
-            <div className="created-date-header">
-              <div className="created-date-text">
-                Created on: {formatCreatedDate(business.created_at)}
-              </div>
-            </div>
-
-            <div className="business-main-content">
-              <div className="business-image-section">
-                <div 
-                  className="imageZoom jd_fav_img clickable-element" 
-                  onClick={() => handleBusinessClick(business)}
-                >
-                  <div className="imageZoom jd_fav_img">
-                    <img
-                      src={business.image}
-                      alt={business.name}
-                      width="140"
-                      height="140"
-                      onError={(e) => {
-                        e.currentTarget.src = getDefaultImage(parseInt(business.category_id))
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="jd_fav_content">
-                  <div 
-                    className="category-path font13 color666 mb-5 clickable-element"
-                    onClick={() => handleBusinessClick(business)}
-                  >
-                    {business.category || "Business Category"}
-                  </div>
-                  
-                  <div 
-                    className="clickable-content"
-                    onClick={() => handleBusinessClick(business)}
-                  >
-                    <div>
-                      <div className="jd_fav_title font24 fw700 color111 mb-10 clickable-element">
-                        {business.name}
-                      </div>
-                      <div className="jd_fav_address font15 color111 mb-10 clickable-element">{business.address}</div>
-                    </div>
-                  </div>
-
-                  <div className="mybusiness_btnbox">
-                    <button className="bluefill_animate mybusiness_button font14 fw500 colorFFF mr-15">
-                      Advertise Now
-                    </button>
-                    <button
-                      className="blue_whitefill_animate mybusiness_button font14 fw500 color007 mr-15"
-                      onClick={() => handleEditBusiness(business.id)}
-                    >
-                      Edit Business Profile
-                    </button>
-                    <button className="blue_whitefill_animate mybusiness_button font14 fw500 color007 mr-15 dn">
-                      Ratings
-                    </button>
-                    <button className="blue_whitefill_animate mybusiness_button font14 fw500 color007 mr-10">
-                      Upload Catalogue
-                      <span className="headnav_tagm font8 fw700 colorFFF text_uppercase mr-4 ml-10">Free</span>
-                      <span className="button_flare"></span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pscore">
-                <div className="score-circle-container">
-                  <svg height="80" width="80" className="score-circle">
-                    <circle
-                      cx="40"
-                      cy="40"
-                      r="38"
-                      strokeWidth="4px"
-                      className="circle-bg"
-                    />
-                    <circle
-                      cx="40"
-                      cy="40"
-                      r="38"
-                      fill="none"
-                      strokeWidth="4px"
-                      stroke={getScoreColor(business.profileScore)}
-                      pathLength="100"
-                      className="circle-progress"
-                      style={{
-                        strokeDashoffset: calculateStrokeDashoffset(business.profileScore)
-                      }}
-                    />
-                    <text
-                      x="40"
-                      y="45"
-                      textAnchor="middle"
-                      className="score-text"
-                      fill="#000000"
-                    >
-                      {business.profileScore}%
-                    </text>
-                    <text
-                      x="40"
-                      y="60"
-                      textAnchor="middle"
-                      className="rating-text"
-                      fill={getScoreColor(business.profileScore)}
-                    >
-                      {getScoreText(business.profileScore)}
-                    </text>
-                  </svg>
-                </div>
-
-                <button className="blue_whitefill_animate mybusiness_button font14 fw500 color007">
-                  Increase Profile Score
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="add-business-footer">
-        <button className="btn-add-new-business" onClick={handleAddNewBusiness}>
-          <span className="add-icon">+</span>
-          Add New Business
-        </button>
-      </div>
-
       <style jsx>{`
         .my-businesses-container {
           padding: 20px;
@@ -812,6 +670,25 @@ export default function MyBusinesses() {
           background: white;
           color: #007bff;
           border: 2px solid #007bff;
+          position: relative;
+          overflow: hidden;
+          z-index: 1;
+        }
+
+        .blue_whitefill_animate::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+          transition: left 0.5s;
+          z-index: -1;
+        }
+
+        .blue_whitefill_animate:hover::before {
+          left: 100%;
         }
 
         .blue_whitefill_animate:hover {
@@ -1285,6 +1162,152 @@ export default function MyBusinesses() {
           }
         }
       `}</style>
+
+      <div className="businesses-header">
+        <div className="header-content">
+          <h1 className="page-title">My Businesses</h1>
+          <p className="page-subtitle">Manage and grow your business listings</p>
+          <div className="header-actions">
+            <button onClick={handleRefresh} className="btn-refresh">
+              Refresh
+            </button>
+            <span className="business-count">{businesses.length} business{businesses.length !== 1 ? 'es' : ''}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="businesses-list">
+        {businesses.map((business) => (
+          <div key={business.id} className="jd_favli pointer">
+            <div className="created-date-header">
+              <div className="created-date-text">
+                Created on: {formatCreatedDate(business.created_at)}
+              </div>
+            </div>
+
+            <div className="business-main-content">
+              <div className="business-image-section">
+                <div
+                  className="imageZoom jd_fav_img clickable-element"
+                  onClick={() => handleBusinessClick(business)}
+                >
+                  <div className="imageZoom jd_fav_img">
+                    <img
+                      src={business.image}
+                      alt={business.name}
+                      width="140"
+                      height="140"
+                      onError={(e) => {
+                        e.currentTarget.src = getDefaultImage(parseInt(business.category_id));
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="jd_fav_content">
+                  <div
+                    className="category-path font13 color666 mb-5 clickable-element"
+                    onClick={() => handleBusinessClick(business)}
+                  >
+                    {business.category || 'Business Category'}
+                  </div>
+
+                  <div
+                    className="clickable-content"
+                    onClick={() => handleBusinessClick(business)}
+                  >
+                    <div>
+                      <div className="jd_fav_title font24 fw700 color111 mb-10 clickable-element">
+                        {business.name}
+                      </div>
+                      <div className="jd_fav_address font15 color111 mb-10 clickable-element">{business.address}</div>
+                    </div>
+                  </div>
+
+                  <div className="mybusiness_btnbox">
+                    <button className="bluefill_animate mybusiness_button font14 fw500 colorFFF mr-15">
+                      Advertise Now
+                    </button>
+                    
+                    {/* ✅ EDIT BUSINESS PROFILE BUTTON */}
+                    <button
+                      className="blue_whitefill_animate mybusiness_button font14 fw500 color007 mr-15"
+                      onClick={() => handleEditBusiness(business.id)}
+                    >
+                      Edit Business Profile
+                    </button>
+                    
+                    <button className="blue_whitefill_animate mybusiness_button font14 fw500 color007 mr-15 dn">
+                      Ratings
+                    </button>
+                    <button className="blue_whitefill_animate mybusiness_button font14 fw500 color007 mr-10">
+                      Upload Catalogue
+                      <span className="headnav_tagm font8 fw700 colorFFF text_uppercase mr-4 ml-10">Free</span>
+                      <span className="button_flare"></span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pscore">
+                <div className="score-circle-container">
+                  <svg height="80" width="80" className="score-circle">
+                    <circle
+                      cx="40"
+                      cy="40"
+                      r="38"
+                      strokeWidth="4px"
+                      className="circle-bg"
+                    />
+                    <circle
+                      cx="40"
+                      cy="40"
+                      r="38"
+                      fill="none"
+                      strokeWidth="4px"
+                      stroke={getScoreColor(business.profileScore)}
+                      pathLength="100"
+                      className="circle-progress"
+                      style={{
+                        strokeDashoffset: calculateStrokeDashoffset(business.profileScore)
+                      }}
+                    />
+                    <text
+                      x="40"
+                      y="45"
+                      textAnchor="middle"
+                      className="score-text"
+                      fill="#000000"
+                    >
+                      {business.profileScore}%
+                    </text>
+                    <text
+                      x="40"
+                      y="60"
+                      textAnchor="middle"
+                      className="rating-text"
+                      fill={getScoreColor(business.profileScore)}
+                    >
+                      {getScoreText(business.profileScore)}
+                    </text>
+                  </svg>
+                </div>
+
+                <button className="blue_whitefill_animate mybusiness_button font14 fw500 color007">
+                  Increase Profile Score
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="add-business-footer">
+        <button className="btn-add-new-business" onClick={handleAddNewBusiness}>
+          <span className="add-icon">+</span>
+          Add New Business
+        </button>
+      </div>
     </div>
-  )
+  );
 }

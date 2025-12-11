@@ -5,6 +5,8 @@ import { Eye, EyeOff, Phone, Lock, LogIn } from 'lucide-react';
 import AwesomeInput from './AwesomeInput';
 import AwesomeButton from './AwesomeButton';
 import Swal from 'sweetalert2';
+import { API_ENDPOINTS2 } from '@/configs/api';
+import { useRouter } from 'next/navigation';
 
 interface LoginData {
   mobile: string;
@@ -12,7 +14,7 @@ interface LoginData {
 }
 
 interface AwesomeLoginProps {
-  onLogin: (data: LoginData) => void;
+  onLoginSuccess?: (token: string, userData: any) => void;
   onSwitchToSignup: () => void;
   onForgotPassword?: () => void;
   loading?: boolean;
@@ -20,7 +22,7 @@ interface AwesomeLoginProps {
   showSocialLogin?: boolean;
 }
 
-// ✅ SweetAlert configuration (always above login box)
+// ✅ SweetAlert configuration
 const SwalFixed = Swal.mixin({
   customClass: {
     container: 'z-[9999999]',
@@ -28,21 +30,11 @@ const SwalFixed = Swal.mixin({
     title: 'text-2xl font-bold text-gray-900',
     confirmButton: 'px-6 py-3 rounded-lg font-medium transition-colors duration-200',
     cancelButton: 'px-6 py-3 rounded-lg font-medium transition-colors duration-200'
-  },
-  didOpen: () => {
-    const container = document.querySelector('.swal2-container') as HTMLElement;
-    const popup = document.querySelector('.swal2-popup') as HTMLElement;
-    if (container) {
-      container.style.zIndex = '9999999';
-      container.style.position = 'fixed';
-      container.style.inset = '0';
-    }
-    if (popup) popup.style.zIndex = '99999999';
   }
 });
 
 const AwesomeLogin: React.FC<AwesomeLoginProps> = ({
-  onLogin,
+  onLoginSuccess,
   onSwitchToSignup,
   onForgotPassword,
   loading = false,
@@ -55,6 +47,9 @@ const AwesomeLogin: React.FC<AwesomeLoginProps> = ({
   });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const router = useRouter();
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -75,30 +70,205 @@ const AwesomeLogin: React.FC<AwesomeLoginProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const showSuccessAlert = () => {
+  const showSuccessAlert = (userName?: string) => {
     SwalFixed.fire({
       title: 'Login Successful!',
-      text: 'Welcome back! You have been successfully logged in.',
+      text: userName ? `Welcome back, ${userName}! Redirecting to dashboard...` : 'Welcome back! Redirecting to dashboard...',
       icon: 'success',
-      confirmButtonText: 'Continue',
-      confirmButtonColor: '#3B82F6',
+      timer: 1500,
+      timerProgressBar: true,
+      showConfirmButton: false,
       background: '#ffffff',
-      color: '#1F2937',
       iconColor: '#10B981'
+    }).then(() => {
+      router.push('/UserDashboard');
     });
   };
 
   const showErrorAlert = (message: string) => {
+    // ✅ Pehle existing alert ko close karo
+    Swal.close();
+    
+    // ✅ Naya error alert show karo
     SwalFixed.fire({
       title: 'Login Failed',
       text: message,
       icon: 'error',
       confirmButtonText: 'Try Again',
       confirmButtonColor: '#EF4444',
-      background: '#ffffff',
-      color: '#1F2937',
-      iconColor: '#DC2626'
+      background: '#ffffff'
     });
+  };
+
+  // ✅ Direct Login API Call using API_ENDPOINTS2.AUTH.LOGIN
+const handleLoginAPI = async (loginData: LoginData) => {
+    setIsLoading(true);
+    
+    try {
+      // Create FormData for multipart/form-data
+      const formDataToSend = new FormData();
+      formDataToSend.append('mobile', loginData.mobile);
+      formDataToSend.append('password', loginData.password);
+
+      // Use API_ENDPOINTS2.AUTH.LOGIN endpoint
+      const response = await fetch(API_ENDPOINTS2.AUTH.LOGIN, {
+        method: 'POST',
+        body: formDataToSend,
+      });
+
+      const data = await response.json();
+
+      // Handle different response formats
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      // Check for success status
+      if (data.status === 'success') {
+        // ✅ SUCCESSFUL LOGIN - Create complete user object
+        const token = 'authenticated';
+        
+        // ✅ SAARA DATA EK HI USER OBJECT MEIN
+        const user = {
+          // Basic user info
+          id: data.id,
+          name: data.name,
+          fullName: data.name,
+          mobile: data.mobile,
+          city: data.city,
+          village: data.village,
+          email: data.email,
+          state: data.state,
+          profile_image: data.profile_image,
+          pin: data.pin,
+          
+          // Additional user info from users table
+          block: data.block,
+          date_of_birth: data.date_of_birth,
+          gender: data.gender,
+          occupation: data.occupation,
+          marital_status: data.marital_status,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          profile_complete: data.profile_complete,
+          
+          // Home address from home_address table (as object)
+          home_address: data.home_address || {},
+          
+          // Family & friends from family_friends table (as array)
+          family_friends: data.family_friends || []
+        };
+        
+        // ✅ EK HI BAR MEIN SAB KUCH STORE KARO
+        localStorage.setItem('authToken', 'dummy-token');
+        localStorage.setItem('userData', JSON.stringify(user));
+        
+        // Dispatch custom event for other components
+        window.dispatchEvent(new CustomEvent('userLoggedIn', { 
+          detail: { user } 
+        }));
+        
+        // Call success callback with complete user
+        if (onLoginSuccess) {
+          onLoginSuccess(token, user);
+        }
+        
+        // ✅ Pehle loading alert ko close karo
+        Swal.close();
+        
+        // ✅ Fir success alert show karo
+        showSuccessAlert(user.fullName || user.mobile);
+        
+        return { 
+          success: true, 
+          data: user  // Return complete user as data
+        };
+        
+      } else if (data.success) {
+        // Alternative success format
+        const token = data.token || 'authenticated';
+        const userData = data.user || data.data;
+        
+        // Create complete user for alternative format
+        const user = {
+          ...userData,
+          home_address: data.home_address || data.address || {},
+          family_friends: data.family_friends || data.contacts || []
+        };
+        
+        // ✅ EK HI BAR MEIN STORE
+        localStorage.setItem('authToken', token);
+        localStorage.setItem('userData', JSON.stringify(user));
+        
+        window.dispatchEvent(new CustomEvent('userLoggedIn', { 
+          detail: { user } 
+        }));
+        
+        if (onLoginSuccess) {
+          onLoginSuccess(token, user);
+        }
+        
+        // ✅ Pehle loading alert ko close karo
+        Swal.close();
+        
+        // ✅ Fir success alert show karo
+        showSuccessAlert(user?.name || user?.mobile);
+        
+        return { 
+          success: true, 
+          data: user
+        };
+        
+      } else {
+        throw new Error(data.message || 'Invalid credentials');
+      }
+      
+    } catch (error: any) {
+      console.error('Login error:', error);
+      
+      // ✅ Pehle loading alert ko close karo
+      Swal.close();
+      
+      // ✅ Fir error alert show karo
+      showErrorAlert(error.message || 'Invalid mobile number or password');
+      
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ✅ Forgot Password API Call
+  const handleForgotPasswordAPI = async (mobile: string) => {
+    try {
+      // If you have a forgot password endpoint, use it:
+      // const response = await fetch(API_ENDPOINTS2.AUTH.FORGOT_PASSWORD, {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ mobile })
+      // });
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      SwalFixed.fire({
+        title: 'Reset Link Sent!',
+        text: `Password reset OTP has been sent to ${mobile}`,
+        icon: 'success',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#10B981'
+      });
+
+      return { success: true };
+    } catch (error: any) {
+      SwalFixed.fire({
+        title: 'Failed',
+        text: error.message || 'Something went wrong',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+      return { success: false };
+    }
   };
 
   const showForgotPasswordAlert = () => {
@@ -106,11 +276,11 @@ const AwesomeLogin: React.FC<AwesomeLoginProps> = ({
       title: 'Reset Password',
       html: `
         <div class="text-left">
-          <p class="text-gray-600 mb-4">Enter your mobile number to reset your password:</p>
+          <p class="text-gray-600 mb-4">Enter your mobile number to reset password:</p>
           <input 
             type="tel" 
             id="reset-mobile" 
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200" 
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
             placeholder="Enter your mobile number"
             maxlength="10"
           />
@@ -122,38 +292,23 @@ const AwesomeLogin: React.FC<AwesomeLoginProps> = ({
       cancelButtonText: 'Cancel',
       confirmButtonColor: '#3B82F6',
       cancelButtonColor: '#6B7280',
-      background: '#ffffff',
-      color: '#1F2937',
-      preConfirm: () => {
+      preConfirm: async () => {
         const mobileInput = document.getElementById('reset-mobile') as HTMLInputElement;
         const mobile = mobileInput?.value.trim();
         
         if (!mobile) {
-          SwalFixed.showValidationMessage('Please enter your mobile number');
+          SwalFixed.showValidationMessage('Please enter mobile number');
           return false;
         }
         
         if (!/^\d{10}$/.test(mobile)) {
-          SwalFixed.showValidationMessage('Please enter a valid 10-digit mobile number');
+          SwalFixed.showValidationMessage('Please enter valid 10-digit number');
           return false;
         }
         
+        // Call API
+        await handleForgotPasswordAPI(mobile);
         return mobile;
-      }
-    }).then((result) => {
-      if (result.isConfirmed) {
-        SwalFixed.fire({
-          title: 'Reset Link Sent!',
-          text: `We've sent a password reset link to ${result.value}`,
-          icon: 'success',
-          confirmButtonText: 'OK',
-          confirmButtonColor: '#10B981',
-          background: '#ffffff'
-        });
-        
-        if (onForgotPassword) {
-          onForgotPassword();
-        }
       }
     });
   };
@@ -162,32 +317,22 @@ const AwesomeLogin: React.FC<AwesomeLoginProps> = ({
     e.preventDefault();
     
     if (!validateForm()) {
-      showErrorAlert('Please fix the form errors before submitting.');
+      // ✅ Form validation fail hone par direkt error show karo
+      showErrorAlert('Please fix form errors');
       return;
     }
 
-    try {
-      SwalFixed.fire({
-        title: 'Signing In...',
-        text: 'Please wait while we authenticate your credentials',
-        allowOutsideClick: false,
-        didOpen: () => {
-          SwalFixed.showLoading();
-        },
-        background: '#ffffff'
-      });
+    // Show loading alert
+    SwalFixed.fire({
+      title: 'Signing In...',
+      text: 'Please wait while we authenticate',
+      allowOutsideClick: false,
+      didOpen: () => SwalFixed.showLoading(),
+      background: '#ffffff'
+    });
 
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      onLogin(formData);
-      
-      SwalFixed.close();
-      showSuccessAlert();
-      
-    } catch (error) {
-      SwalFixed.close();
-      showErrorAlert('Invalid mobile number or password. Please try again.');
-    }
+    // API call karo - handleLoginAPI mein alerts handle ho rahe hain
+    await handleLoginAPI(formData);
   };
 
   const handleForgotPassword = () => {
@@ -221,7 +366,7 @@ const AwesomeLogin: React.FC<AwesomeLoginProps> = ({
   };
 
   return (
-    <div className={`max-w-md w-full mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden relative z-10 ${className}`}>
+    <div className={`max-w-md w-full mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden ${className}`}>
       <div className="p-8">
         {/* Header */}
         <div className="text-center mb-8">
@@ -231,7 +376,7 @@ const AwesomeLogin: React.FC<AwesomeLoginProps> = ({
           <h2 className="text-3xl font-bold text-gray-900 mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Welcome Back!
           </h2>
-          <p className="text-gray-600">Sign in to continue your awesome journey</p>
+          <p className="text-gray-600">Sign in to continue</p>
         </div>
 
         {/* Login Form */}
@@ -261,7 +406,7 @@ const AwesomeLogin: React.FC<AwesomeLoginProps> = ({
             />
             <button
               type="button"
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200 z-20"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
               onClick={() => setShowPassword(!showPassword)}
               style={{ top: 'calc(50% + 12px)' }}
             >
@@ -273,16 +418,16 @@ const AwesomeLogin: React.FC<AwesomeLoginProps> = ({
             <label className="flex items-center cursor-pointer">
               <input
                 type="checkbox"
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 transition duration-200"
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <span className="ml-2 text-gray-600 hover:text-gray-800 transition-colors duration-200">
+              <span className="ml-2 text-gray-600 hover:text-gray-800">
                 Remember me
               </span>
             </label>
             <button
               type="button"
               onClick={handleForgotPassword}
-              className="text-blue-600 hover:text-blue-500 font-medium transition-colors duration-200"
+              className="text-blue-600 hover:text-blue-500 font-medium"
             >
               Forgot password?
             </button>
@@ -292,7 +437,7 @@ const AwesomeLogin: React.FC<AwesomeLoginProps> = ({
             type="submit"
             variant="primary"
             size="large"
-            loading={loading}
+            loading={isLoading || loading}
             className="w-full"
             icon={<LogIn size={18} />}
           >
@@ -307,7 +452,7 @@ const AwesomeLogin: React.FC<AwesomeLoginProps> = ({
             <button
               type="button"
               onClick={onSwitchToSignup}
-              className="text-blue-600 hover:text-blue-500 font-medium transition-colors duration-200 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent hover:from-blue-500 hover:to-purple-500"
+              className="text-blue-600 hover:text-blue-500 font-medium bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
             >
               Create one now!
             </button>
@@ -315,31 +460,9 @@ const AwesomeLogin: React.FC<AwesomeLoginProps> = ({
         </div>
       </div>
 
-      {/* ✅ Z-Index & Overlay Fix for SweetAlert */}
       <style jsx global>{`
         .swal2-container {
-          position: fixed !important;
-          inset: 0 !important;
           z-index: 999999999 !important;
-          backdrop-filter: blur(4px);
-          background-color: rgba(0, 0, 0, 0.3) !important;
-        }
-        .swal2-popup {
-          z-index: 999999999 !important;
-          position: relative !important;
-        }
-        body.swal2-shown {
-          overflow-y: hidden !important;
-        }
-        input {
-          padding-left: 3rem !important;
-          padding-right: 1rem !important;
-        }
-        .relative > div:first-child {
-          left: 1rem !important;
-        }
-        .relative > button {
-          right: 1rem !important;
         }
       `}</style>
     </div>

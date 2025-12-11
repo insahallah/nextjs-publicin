@@ -2,14 +2,14 @@
 // Simple API Configuration
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://allupipay.in/publicsewa/api';
 
-
+export const IMAGES_URL = process.env.NEXT_PUBLIC_API_URL || 'https://allupipay.in/publicsewa/images';
 export const API_BASE_URL2 = process.env.NEXT_PUBLIC_API_URL || 'https://allupipay.in/publicsewa/api/users';
 
 export const API_ENDPOINTS2 = {
   // Auth endpoints 
   AUTH: {
     LOGIN: `${API_BASE_URL2}/login.php`,
-    REGISTER: `${API_BASE_URL2}/register`,
+    REGISTER: `${API_BASE_URL2}/register.php`,
     LOGOUT: `${API_BASE_URL2}/logout`,
     PROFILE: `${API_BASE_URL2}/profile`,
     MOBILE_VALIDATION: `${API_BASE_URL2}/check-mobile.php`,
@@ -21,6 +21,12 @@ export const API_ENDPOINTS2 = {
     FETCH_BUSINESS_BY_USER_ID: `${API_BASE_URL2}/fetch-business-by-user-id.php`,
     BUSINESS_VIEW_RIGHTSIDE: `${API_BASE_URL2}/business_view_rightside.php`,
     GET_VILLAGE_FOR_FILTER: `${API_BASE_URL2}/get_villages_for_filter.php`,
+    USERS_PROFILE_UPDATE: `${API_BASE_URL2}/users_profile_update.php`,
+    FETCH_USER_SECTION_DATA_FOR_UPDATE: `${API_BASE_URL2}/fetch_user_section_data_for_update_web.php`,
+    FETCH_USER_SECTION_DATA_ALL_ADDRESS_FOR_UPDATE: `${API_BASE_URL2}/user_profiles/fetch_user_section_data_all_address_for_update_web.php`,
+    FETCH_FEMILYFRIEND_DATA_FOR_UPDATE: `${API_BASE_URL2}/user_profiles/fetch_FamilyFriends_data_for_web.php`,
+    DISPLAY_PROFILE_DATA_FOR_RIGHTMODLE: `${API_BASE_URL2}/business_profile/display_business_profile_data_for_RightModel.php`,
+    
 
   }
 }

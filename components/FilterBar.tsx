@@ -342,7 +342,7 @@ export default function BusinessFilter({ onFilterChange, listings = [] }: Busine
           <div className="w-full">
             <input
               type="text"
-              placeholder="Search for businesses, services, village/block/district or categories..."
+              placeholder="Search by businesses, services, village/block/district or categories..."
               value={filters.searchQuery}
               onChange={(e) => updateSearchQuery(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"

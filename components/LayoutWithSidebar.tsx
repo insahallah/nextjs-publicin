@@ -1,8 +1,8 @@
-// components/LayoutWithSidebar.tsx - Sidebar updated
+// components/LayoutWithSidebar.tsx - Updated with active link tracking
 'use client'
 
 import { ReactNode, useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 
 interface LayoutProps {
   children: ReactNode
@@ -18,6 +18,7 @@ interface UserData {
 
 export default function LayoutWithSidebar({ children }: LayoutProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
@@ -26,6 +27,9 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [isPulsing, setIsPulsing] = useState(true)
+  
+  // 🔥 Track active link
+  const [activeLink, setActiveLink] = useState('/UserDashboard')
 
   // Check authentication status on mount
   useEffect(() => {
@@ -41,6 +45,13 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
       window.removeEventListener('storage', handleStorageChange)
     }
   }, [])
+
+  // Update active link based on current pathname
+  useEffect(() => {
+    if (pathname) {
+      setActiveLink(pathname)
+    }
+  }, [pathname])
 
   // Pulse animation interval
   useEffect(() => {
@@ -99,6 +110,7 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
 
   // Home page redirect function
   const goToHomePage = () => {
+    setActiveLink('/')
     router.push('/')
   }
 
@@ -115,6 +127,7 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
     
     // Navigate after animation
     setTimeout(() => {
+      setActiveLink('/list-your-business')
       router.push('/list-your-business')
     }, 150)
   }
@@ -201,6 +214,12 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
       window.removeEventListener('openLoginModalFromLayout', handleOpenLoginModalFromLayout)
     }
   }, [])
+
+  // Handle link click in sidebar
+  const handleLinkClick = (path: string) => {
+    setActiveLink(path)
+    closeMobileSidebar()
+  }
 
   // Show loading or redirect - no login prompt
   const renderContent = () => {
@@ -333,17 +352,23 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
                       
                       <a 
                         href="/UserDashboard" 
-                        className="dropdown-link"
-                        onClick={() => setShowUserDropdown(false)}
+                        className={`dropdown-link ${activeLink === '/UserDashboard' ? 'active' : ''}`}
+                        onClick={() => {
+                          setActiveLink('/UserDashboard')
+                          setShowUserDropdown(false)
+                        }}
                       >
                         <span className="link-icon">📊</span>
                         Dashboard
                       </a>
                       
                       <a 
-                        href="/profile" 
-                        className="dropdown-link"
-                        onClick={() => setShowUserDropdown(false)}
+                        href="/myprofile" 
+                        className={`dropdown-link ${activeLink === '/myprofile' ? 'active' : ''}`}
+                        onClick={() => {
+                          setActiveLink('/myprofile')
+                          setShowUserDropdown(false)
+                        }}
                       >
                         <span className="link-icon">👤</span>
                         My Profile
@@ -351,8 +376,11 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
                       
                       <a 
                         href="/my-businesses" 
-                        className="dropdown-link"
-                        onClick={() => setShowUserDropdown(false)}
+                        className={`dropdown-link ${activeLink === '/my-businesses' ? 'active' : ''}`}
+                        onClick={() => {
+                          setActiveLink('/my-businesses')
+                          setShowUserDropdown(false)
+                        }}
                       >
                         <span className="link-icon">🏢</span>
                         My Businesses
@@ -483,24 +511,26 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
               {/* HOME LINK IN SIDEBAR */}
               <li className="nav-item">
                 <button 
-                  onClick={goToHomePage}
-                  className="nav-link home-nav-link"
+                  onClick={() => {
+                    setActiveLink('/')
+                    goToHomePage()
+                  }}
+                  className={`nav-link home-nav-link ${activeLink === '/' ? 'active' : ''}`}
                 >
                   <span className="nav-icon">🏠</span>
                   {(!sidebarCollapsed || isMobile) && <span className="nav-text">Home Page</span>}
+                  {activeLink === '/' && <div className="active-indicator"></div>}
                 </button>
               </li>
-
-              {/* 🔥 DASHBOARD REMOVE KAR DIYA */}
 
               {/* 🔥 SUPER STYLISH ADD BUSINESS IN SIDEBAR - TOP ME */}
               <li className="nav-item highlight-item">
                 <button 
                   onClick={() => {
-                    goToAddBusiness();
-                    closeMobileSidebar();
+                    setActiveLink('/list-your-business')
+                    goToAddBusiness()
                   }}
-                  className="nav-link add-business-nav-link"
+                  className={`nav-link add-business-nav-link ${activeLink === '/list-your-business' ? 'active' : ''}`}
                 >
                   <span className="nav-icon">🚀</span>
                   {(!sidebarCollapsed || isMobile) && (
@@ -512,21 +542,36 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
                       </div>
                     </div>
                   )}
+                  {activeLink === '/list-your-business' && <div className="active-indicator"></div>}
                 </button>
               </li>
 
               {/* 🔥 MY BUSINESSES KO TOP ME KAR DIYA */}
               <li className="nav-item">
-                <a href="/my-businesses" className="nav-link" onClick={closeMobileSidebar}>
+                <a 
+                  href="/my-businesses" 
+                  className={`nav-link ${activeLink === '/my-businesses' ? 'active' : ''}`}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    handleLinkClick('/my-businesses')
+                    router.push('/my-businesses')
+                  }}
+                >
                   <span className="nav-icon">🏢</span>
                   {(!sidebarCollapsed || isMobile) && <span className="nav-text">My Businesses</span>}
+                  {activeLink === '/my-businesses' && <div className="active-indicator"></div>}
                 </a>
               </li>
 
-              {/* 🔥 MESSAGES REMOVE KAR DIYA */}
-
               <li className="nav-item">
-                <a href="#" className="nav-link" onClick={closeMobileSidebar}>
+                <a 
+                  href="#" 
+                  className={`nav-link ${activeLink === '/bookings' ? 'active' : ''}`}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    handleLinkClick('/bookings')
+                  }}
+                >
                   <span className="nav-icon">📅</span>
                   {(!sidebarCollapsed || isMobile) && (
                     <>
@@ -534,33 +579,53 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
                       <span className="nav-badge">6 New</span>
                     </>
                   )}
+                  {activeLink === '/bookings' && <div className="active-indicator"></div>}
                 </a>
               </li>
 
               <li className="nav-item">
-                <a href="#" className="nav-link" onClick={closeMobileSidebar}>
+                <a 
+                  href="#" 
+                  className={`nav-link ${activeLink === '/reviews' ? 'active' : ''}`}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    handleLinkClick('/reviews')
+                  }}
+                >
                   <span className="nav-icon">⭐</span>
                   {(!sidebarCollapsed || isMobile) && <span className="nav-text">Reviews</span>}
+                  {activeLink === '/reviews' && <div className="active-indicator"></div>}
                 </a>
               </li>
-
-              {/* 🔥 BOOKMARKS REMOVE KAR DIYA */}
 
               <li className="nav-divider"></li>
 
               <li className="nav-item">
-                <a href="/profile" className="nav-link" onClick={closeMobileSidebar}>
+                <a 
+                  href="/myprofile" 
+                  className={`nav-link ${activeLink === '/myprofile' ? 'active' : ''}`}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    handleLinkClick('/myprofile')
+                    router.push('/myprofile')
+                  }}
+                >
                   <span className="nav-icon">👤</span>
                   {(!sidebarCollapsed || isMobile) && <span className="nav-text">My Profile</span>}
+                  {activeLink === '/myprofile' && <div className="active-indicator"></div>}
                 </a>
               </li>
 
               <li className="nav-item logout-item">
-                <a href="#" className="nav-link" onClick={(e) => { 
-                  e.preventDefault(); 
-                  handleLogout(); 
-                  closeMobileSidebar(); 
-                }}>
+                <a 
+                  href="#" 
+                  className="nav-link"
+                  onClick={(e) => { 
+                    e.preventDefault(); 
+                    handleLogout(); 
+                    closeMobileSidebar(); 
+                  }}
+                >
                   <span className="nav-icon">🚪</span>
                   {(!sidebarCollapsed || isMobile) && <span className="nav-text">Logout</span>}
                 </a>
@@ -583,7 +648,7 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
         {renderContent()}
       </div>
 
-      {/* 🔥 COMPLETE CSS STYLES WITH SIDEBAR UPDATES */}
+      {/* 🔥 COMPLETE CSS STYLES WITH ACTIVE LINK INDICATORS */}
       <style jsx>{`
         .layout-wrapper {
           display: flex;
@@ -623,6 +688,71 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
+        }
+        
+        /* 🔥 ACTIVE LINK INDICATOR */
+        .active-indicator {
+          position: absolute;
+          right: 15px;
+          width: 8px;
+          height: 8px;
+          background: #3b82f6;
+          border-radius: 50%;
+          animation: activePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes activePulse {
+          0%, 100% { 
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+          }
+          50% { 
+            transform: scale(1.2);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0);
+          }
+        }
+
+        /* 🔥 ACTIVE LINK STYLES */
+        .nav-link.active {
+          background: #3b82f6 !important;
+          color: white !important;
+          font-weight: 600;
+        }
+
+        .nav-link.active .nav-icon {
+          color: white !important;
+        }
+
+        .nav-link.active .nav-badge {
+          background: white !important;
+          color: #3b82f6 !important;
+        }
+
+        .dropdown-link.active {
+          background: #f0f8ff !important;
+          color: #3b82f6 !important;
+          font-weight: 600;
+          border-left: 3px solid #3b82f6;
+        }
+
+        .dropdown-link.active .link-icon {
+          color: #3b82f6 !important;
+        }
+
+        /* 🔥 HIGHLIGHT ITEM ACTIVE STATE */
+        .nav-item.highlight-item .nav-link.active {
+          background: linear-gradient(135deg, #ff5252, #357abd) !important;
+          border-left: 4px solid #ffeb3b !important;
+          animation: activePulseGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes activePulseGlow {
+          0%, 100% { 
+            box-shadow: 0 4px 16px rgba(255, 107, 107, 0.6);
+          }
+          50% { 
+            box-shadow: 0 6px 24px rgba(255, 107, 107, 0.9);
+          }
         }
         
         /* Top Header Bar */
@@ -1552,11 +1682,6 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
         .nav-item {
           margin-bottom: 2px;
           position: relative;
-        }
-        
-        .nav-item.active .nav-link {
-          background: #3b82f6;
-          color: white;
         }
 
         /* 🔥 SUPER STYLISH ADD BUSINESS IN SIDEBAR */
