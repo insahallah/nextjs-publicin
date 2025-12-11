@@ -9,27 +9,21 @@ export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (loginData: any) => {
-    setLoading(true);
-    try {
-      // Yahan aapka actual login logic aayega
-      console.log('Login data:', loginData);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      alert('Login successful!');
-    } catch (error) {
-      alert('Login failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+  // This callback will be called when login is successful
+  const handleLoginSuccess = (token: string, userData: any) => {
+    console.log('Login successful!', { token, userData });
+    // You can handle successful login here if needed
+    // The actual login logic and redirection is already handled inside AwesomeLogin
   };
 
+  // This will be called when signup is needed
   const handleSignup = async (signupData: any) => {
     setLoading(true);
     try {
-      // Yahan aapka actual signup logic aayega
       console.log('Signup data:', signupData);
       await new Promise(resolve => setTimeout(resolve, 1500));
-      alert('Signup successful!');
+      alert('Signup successful! Please login with your credentials.');
+      setIsLogin(true); // Switch to login after successful signup
     } catch (error) {
       alert('Signup failed. Please try again.');
     } finally {
@@ -37,18 +31,14 @@ export default function AuthPage() {
     }
   };
 
-  const handleForgotPassword = () => {
-    alert('Password reset feature coming soon!');
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 flex items-center justify-center p-4">
       {isLogin ? (
         <AwesomeLogin
-          onLogin={handleLogin}
+          onLoginSuccess={handleLoginSuccess} // Changed from onLogin to onLoginSuccess
           onSwitchToSignup={() => setIsLogin(false)}
-          onForgotPassword={handleForgotPassword}
           loading={loading}
+          // Note: We removed onForgotPassword prop since the component handles it internally
         />
       ) : (
         <AwesomeSignup
