@@ -1,4 +1,3 @@
-// app/auth/page.tsx - Fixed version
 'use client';
 
 import { useState } from 'react';
@@ -9,23 +8,20 @@ export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  // This callback will be called when login is successful
+  // Called when login is successful
   const handleLoginSuccess = (token: string, userData: any) => {
-    console.log('Login successful!', { token, userData });
-    // You can handle successful login here if needed
-    // The actual login logic and redirection is already handled inside AwesomeLogin
+    console.log("Login completed:", token, userData);
+    // Redirection already handled in AwesomeLogin
   };
 
-  // This will be called when signup is needed
-  const handleSignup = async (signupData: any) => {
+  // Signup handler
+  const handleSignup = async (data: any) => {
     setLoading(true);
     try {
-      console.log('Signup data:', signupData);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      alert('Signup successful! Please login with your credentials.');
-      setIsLogin(true); // Switch to login after successful signup
-    } catch (error) {
-      alert('Signup failed. Please try again.');
+      console.log("Signup:", data);
+      await new Promise((r) => setTimeout(r, 1000));
+      alert("Signup successful! Please login.");
+      setIsLogin(true);
     } finally {
       setLoading(false);
     }
@@ -35,10 +31,9 @@ export default function AuthPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 flex items-center justify-center p-4">
       {isLogin ? (
         <AwesomeLogin
-          onLoginSuccess={handleLoginSuccess} // Changed from onLogin to onLoginSuccess
+          onLoginSuccess={handleLoginSuccess}   // FIXED
           onSwitchToSignup={() => setIsLogin(false)}
           loading={loading}
-          // Note: We removed onForgotPassword prop since the component handles it internally
         />
       ) : (
         <AwesomeSignup
