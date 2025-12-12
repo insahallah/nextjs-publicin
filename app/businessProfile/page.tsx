@@ -750,7 +750,7 @@ export default function MyProfile() {
         html {
           scroll-behavior: smooth;
         }
-      `}</style>   
+      `}</style>     
     </div>
   );
 }
