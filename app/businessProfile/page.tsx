@@ -18,10 +18,25 @@ import {
   ArrowRight
 } from 'lucide-react';
 
+// Define type for the item IDs
+type BusinessItemId = 
+  | 'Business Name'
+  | 'Contact Details'
+  | 'Business Address'
+  | 'Map Location'
+  | 'Business Timings'
+  | 'Year of Establishment'
+  | 'Business Categories'
+  | 'Business Website'
+  | 'Social Media'
+  | 'Business Tools'
+  | 'KYC, Payments & Invoices'
+  | 'Additional Business Info';
+
 export default function MyProfile() {
   const router = useRouter();
-  const [businessScore, setBusinessScore] = useState(27);
-  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const [businessScore, setBusinessScore] = useState<number>(27);
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState<boolean>(false);
 
   const handleBack = () => {
     router.back();
@@ -35,7 +50,8 @@ export default function MyProfile() {
     setIsEditProfileModalOpen(false);
   };
 
-  const handleItemClick = (itemId) => {
+  // Add explicit type for itemId parameter
+  const handleItemClick = (itemId: BusinessItemId) => {
     // Handle navigation for different items
     switch(itemId) {
       case 'Business Name':
@@ -95,7 +111,13 @@ export default function MyProfile() {
     { icon: <Star size={20} />, label: "Ratings", color: "bg-yellow-600" }
   ];
 
-  const businessProfileItems = [
+  const businessProfileItems: Array<{
+    id: BusinessItemId;
+    icon: string;
+    title: string;
+    status: string;
+    value: string;
+  }> = [
     {
       id: "Business Name",
       icon: "https://akam.cdn.jdmagicbox.com/images/icontent/analytics/business_name_icon.svg",
@@ -190,14 +212,14 @@ export default function MyProfile() {
           {/* Left Section */}
           <div className="Header_header__wrap__left__vye4_">
             <span 
-              tabIndex="0" 
+              tabIndex={0}
               className="Header_backicon__oKkvl"
               onClick={handleBack}
               role="button"
               aria-label="Go back"
             ></span>
             
-            <div className="Header_companyname__FBv6M" tabIndex="0">
+            <div className="Header_companyname__FBv6M" tabIndex={0}>
               <div className="color111 Header_companyname__name__RKVtv">
                 Alisha computer
               </div>
@@ -208,7 +230,7 @@ export default function MyProfile() {
           </div>
 
           {/* Right Section */}
-          <div className="Header_header__wrap__right__9crNK" tabIndex="0">
+          <div className="Header_header__wrap__right__9crNK" tabIndex={0}>
             <button className="Header_help_btn__kCm_a">
               <figure className="Header_help_figure__xVmFC">
                 <img 
