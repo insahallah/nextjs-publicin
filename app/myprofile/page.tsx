@@ -68,6 +68,7 @@ interface PersonalDetailsType {
 }
 
 interface HomeAddress {
+    id?: number;
     full_name: string;
     address_line: string;
     area: string;
@@ -82,6 +83,10 @@ interface HomeAddress {
     email: string;
     address_tag: string;
     is_primary?: boolean;
+    is_active?: number;
+    user_id?: number;
+    created_at?: string;
+    updated_at?: string;
 }
 
 interface FamilyFriend {
@@ -327,7 +332,7 @@ const saveCompleteProfile = async (userId: string, personalDetails: PersonalDeta
 export default function MyProfile() {
     const router = useRouter();
     const auth = useAuth();
-    
+
     // Type assertion to fix the TypeScript error
     const user = auth.user as UserType | null;
     const { logout, isLoggedIn, isLoading } = auth;
@@ -452,7 +457,7 @@ export default function MyProfile() {
                 }));
             } else if (homeAddresses.length === 0) {
                 // Initial address setup
-                const initialAddress = {
+                const initialAddress: HomeAddress = {
                     full_name: user?.name || user?.fullname || user?.fullName || '',
                     address_line: '',
                     area: '',
@@ -465,8 +470,10 @@ export default function MyProfile() {
                     landline_std: '',
                     landline_number: '',
                     email: user?.email || '',
-                    address_tag: 'Home'
+                    address_tag: 'Home',
+                    is_primary: true
                 };
+
                 setHomeAddresses([initialAddress]);
             }
 
@@ -657,8 +664,9 @@ export default function MyProfile() {
                         // Fallback: यदि ref नहीं है तो manual save करें
                         if (!user || !user.id) return false;
 
-                        const addresses = addressDetailsRef.current?.getAddresses() || homeAddresses;
-                        result = await saveAddresses(user.id, addresses);
+                        // When ref.current is null, we can't call getAddresses on it
+                        // So we use the homeAddresses state directly
+                        result = await saveAddresses(user.id, homeAddresses);
                         saved = result.success;
                     }
 
@@ -682,8 +690,8 @@ export default function MyProfile() {
                         // Fallback: यदि ref नहीं है तो manual save करें
                         if (!user || !user.id) return false;
 
-                        const contacts = familyFriendsRef.current?.getContacts() || familyFriends;
-                        result = await saveFamilyFriends(user.id, contacts);
+                        // When ref.current is null, use familyFriends state directly
+                        result = await saveFamilyFriends(user.id, familyFriends);
                         saved = result.success;
                     }
 
@@ -970,58 +978,80 @@ export default function MyProfile() {
     );
 
     // ✅ Render Address Details Form
-    const renderAddressDetails = () => (
-        <AddressDetails
-            ref={addressDetailsRef}
-            user={user}
-            initialAddresses={homeAddresses}
-            isSaving={sectionSaveStatus.Addresses.saving}
-            completed={completedSections.Addresses}
-            onSave={async (addresses) => {
-                if (!user || !user.id) {
-                    await Swal.fire({
-                        title: 'Authentication Error',
-                        text: 'User not authenticated. Please login again.',
-                        icon: 'error',
-                        confirmButtonColor: '#EF4444',
-                        confirmButtonText: 'OK'
+    const renderAddressDetails = () => {
+        // Create a compatible addresses array
+        const compatibleAddresses = homeAddresses.map(addr => ({
+            ...addr,
+            // Ensure all required fields are present
+            full_name: addr.full_name || '',
+            address_line: addr.address_line || '',
+            area: addr.area || '',
+            landmark: addr.landmark || '',
+            contact_mobile: addr.contact_mobile || '',
+            city: addr.city || '',
+            state: addr.state || '',
+            district: addr.district || '',
+            pincode: addr.pincode || '',
+            landline_std: addr.landline_std || '',
+            landline_number: addr.landline_number || '',
+            email: addr.email || '',
+            address_tag: addr.address_tag || 'Home',
+            is_primary: addr.is_primary || false
+        }));
+
+        return (
+            <AddressDetails
+                ref={addressDetailsRef}
+                user={user}
+                initialAddresses={compatibleAddresses}
+                isSaving={sectionSaveStatus.Addresses.saving}
+                completed={completedSections.Addresses}
+                onSave={async (addresses: HomeAddress[]) => {
+                    if (!user || !user.id) {
+                        await Swal.fire({
+                            title: 'Authentication Error',
+                            text: 'User not authenticated. Please login again.',
+                            icon: 'error',
+                            confirmButtonColor: '#EF4444',
+                            confirmButtonText: 'OK'
+                        });
+                        return { success: false, message: 'User not authenticated' };
+                    }
+
+                    try {
+                        const result = await saveAddresses(user.id, addresses);
+                        return result;
+                    } catch (error) {
+                        console.error('Error saving addresses:', error);
+                        throw error;
+                    }
+                }}
+                onSaveSuccess={(result: any) => {
+                    setSectionSaveStatus(prev => ({
+                        ...prev,
+                        Addresses: { saved: true, saving: false }
+                    }));
+                    setCompletedSections(prev => ({
+                        ...prev,
+                        Addresses: true
+                    }));
+
+                    Swal.fire({
+                        title: '✅ Addresses Saved!',
+                        text: 'Your addresses have been saved successfully to the database.',
+                        icon: 'success',
+                        confirmButtonColor: '#10B981',
+                        confirmButtonText: 'Continue',
+                        timer: 3000
                     });
-                    return false;
-                }
-
-                try {
-                    const result = await saveAddresses(user.id, addresses);
-
-                    return result;
-                } catch (error) {
-                    throw error;
-                }
-            }}
-            onSaveSuccess={(result) => {
-                setSectionSaveStatus(prev => ({
-                    ...prev,
-                    Addresses: { saved: true, saving: false }
-                }));
-                setCompletedSections(prev => ({
-                    ...prev,
-                    Addresses: true
-                }));
-
-                Swal.fire({
-                    title: '✅ Addresses Saved!',
-                    text: 'Your addresses have been saved successfully to the database.',
-                    icon: 'success',
-                    confirmButtonColor: '#10B981',
-                    confirmButtonText: 'Continue',
-                    timer: 3000
-                });
-            }}
-            onAddressesChange={(addresses) => {
-                setHomeAddresses(addresses);
-            }}
-            apiEndpoint={API_ENDPOINTS2.AUTH.USERS_PROFILE_UPDATE}
-        />
-    );
+                }}
+                onAddressesChange={(addresses: HomeAddress[]) => {
+                    setHomeAddresses(addresses);
+                }}
+                apiEndpoint={API_ENDPOINTS2.AUTH.USERS_PROFILE_UPDATE}
+            />
+        );
+    };
 
     // Render Family & Friends Form
     const renderFamilyFriends = () => (
@@ -1031,7 +1061,7 @@ export default function MyProfile() {
             initialContacts={familyFriends}
             isSaving={sectionSaveStatus.FamilyFriends.saving}
             completed={completedSections.FamilyFriends}
-            onSave={async (contacts) => {
+            onSave={async (contacts: FamilyFriend[]) => {
                 if (!user || !user.id) {
                     await Swal.fire({
                         title: 'Authentication Error',
@@ -1040,7 +1070,7 @@ export default function MyProfile() {
                         confirmButtonColor: '#EF4444',
                         confirmButtonText: 'OK'
                     });
-                    return false;
+                    return { success: false };
                 }
 
                 try {
@@ -1050,7 +1080,7 @@ export default function MyProfile() {
                     throw error;
                 }
             }}
-            onSaveSuccess={(result) => {
+            onSaveSuccess={(result: any) => {
                 setSectionSaveStatus(prev => ({
                     ...prev,
                     FamilyFriends: { saved: true, saving: false }
@@ -1069,7 +1099,7 @@ export default function MyProfile() {
                     timer: 3000
                 });
             }}
-            onContactsChange={(updatedContacts) => {
+            onContactsChange={(updatedContacts: FamilyFriend[]) => {
                 setFamilyFriends(updatedContacts);
             }}
             apiEndpoint={API_ENDPOINTS2.AUTH.USERS_PROFILE_UPDATE}
@@ -1380,7 +1410,7 @@ export default function MyProfile() {
                                 >
                                     <Home size={20} />
                                 </button>
-                                
+
                                 <div className="relative">
                                     {/* Header logo - ✅ userProfileImage का उपयोग किया */}
                                     <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center">

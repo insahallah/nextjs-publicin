@@ -37,15 +37,18 @@ interface User {
     mobile?: string;
 }
 
-interface AddressDetailsProps {
+
+// In AddressDetails.tsx, check the interface:
+export interface AddressDetailsProps {
+    ref?: React.Ref<AddressDetailsHandle>;
     user: User | null;
-    initialAddresses?: HomeAddress[];
-    isSaving?: boolean;
-    completed?: boolean;
-    onSave?: (addresses: HomeAddress[]) => Promise<boolean>;
-    onSaveSuccess?: (result: any) => void;
-    onAddressesChange?: (addresses: HomeAddress[]) => void;
-    apiEndpoint?: string;
+    initialAddresses: HomeAddress[];
+    isSaving: boolean;
+    completed: boolean;
+    onSave: (addresses: HomeAddress[]) => Promise<any>;
+    onSaveSuccess: (result: any) => void;
+    onAddressesChange: (addresses: HomeAddress[]) => void;
+    apiEndpoint: string;
 }
 
 export interface AddressDetailsHandle {
