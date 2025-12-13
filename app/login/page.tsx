@@ -1,21 +1,22 @@
-// app/login/page.tsx
+// app/login/page.tsx - SIMPLE FIX
 'use client';
 
 import AwesomeLogin from '@/components/AwesomeLogin';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/app/providers'; // यह path सही है
-
+import { useAuth } from '@/app/context/AuthContext'; // Make sure this is the correct path
 import { useEffect } from 'react';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const auth = useAuth();
+  // Destructure with the correct property name
+  const { isLoggedIn, isLoading } = auth; // Use isLoggedIn instead of isAuthenticated
 
   useEffect(() => {
-    if (isAuthenticated && !isLoading) {
+    if (isLoggedIn && !isLoading) {
       router.push('/dashboard');
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isLoggedIn, isLoading, router]);
 
   if (isLoading) {
     return (
