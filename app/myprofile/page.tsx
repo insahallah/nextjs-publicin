@@ -386,120 +386,122 @@ export default function MyProfile() {
 
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    // Initialize data when user is available
-    useEffect(() => {
-        if (user && isLoggedIn && !isPersonalDetailsLoaded) {
+// Initialize data when user is available
+useEffect(() => {
+    if (user && isLoggedIn && !isPersonalDetailsLoaded) {
+        // Type assertion to handle TypeScript error
+        const typedUser = user as any;
+        
+        const userDob = typedUser?.dob || typedUser?.date_of_birth || '';
+        const formattedDob = userDob ? formatDateForInput(userDob) : '';
 
-            const userDob = user?.dob || user?.date_of_birth || '';
-            const formattedDob = userDob ? formatDateForInput(userDob) : '';
+        const userGender = typedUser?.gender || '';
+        const normalizedGender = normalizeGenderValue(userGender);
 
-            const userGender = user?.gender || '';
-            const normalizedGender = normalizeGenderValue(userGender);
+        const userMaritalStatus = typedUser?.maritalStatus || typedUser?.marital_status || '';
+        const normalizedMaritalStatus = normalizeMaritalStatusValue(userMaritalStatus);
 
-            const userMaritalStatus = user?.maritalStatus || user?.marital_status || '';
-            const normalizedMaritalStatus = normalizeMaritalStatusValue(userMaritalStatus);
+        const newPersonalDetails = {
+            fullName: typedUser?.fullname || typedUser?.name || typedUser?.fullName || '',
+            email: typedUser?.email || '',
+            phone: typedUser?.mobile || typedUser?.phone || '',
+            dob: formattedDob,
+            gender: normalizedGender,
+            occupation: typedUser?.occupation || '',
+            maritalStatus: normalizedMaritalStatus
+        };
 
-            const newPersonalDetails = {
-                fullName: user?.fullname || user?.name || user?.fullName || '',
-                email: user?.email || '',
-                phone: user?.mobile || user?.phone || '',
-                dob: formattedDob,
-                gender: normalizedGender,
-                occupation: user?.occupation || '',
-                maritalStatus: normalizedMaritalStatus
+        setPersonalDetails(newPersonalDetails);
+        setIsPersonalDetailsLoaded(true);
+
+        // ✅ Profile image initialization
+        if (typedUser.profileImage || typedUser.profile_image) {
+            const imageUrl = getProfileImageUrl(typedUser.profileImage || typedUser.profile_image);
+            setUserProfileImage(imageUrl);
+        }
+
+        if (typedUser.home_address && Object.keys(typedUser.home_address).length > 0) {
+            const existingAddress: HomeAddress = {
+                full_name: typedUser.home_address.full_name || typedUser?.name || typedUser?.fullName || '',
+                address_line: typedUser.home_address.address_line || '',
+                area: typedUser.home_address.area || '',
+                landmark: typedUser.home_address.landmark || '',
+                contact_mobile: typedUser.home_address.contact_mobile || typedUser?.mobile || typedUser?.phone || '',
+                city: typedUser.home_address.city || '',
+                state: typedUser.home_address.state || '',
+                district: typedUser.home_address.district || '',
+                pincode: typedUser.home_address.pincode || '',
+                landline_std: typedUser.home_address.landline_std || '',
+                landline_number: typedUser.home_address.landline_number || '',
+                email: typedUser.home_address.email || typedUser?.email || '',
+                address_tag: typedUser.home_address.address_tag || 'Home',
+                is_primary: typedUser.home_address.is_primary === 1
             };
 
-            setPersonalDetails(newPersonalDetails);
-            setIsPersonalDetailsLoaded(true);
+            setHomeAddresses([existingAddress]);
 
-            // ✅ Profile image initialization
-            if (user.profileImage || user.profile_image) {
-                const imageUrl = getProfileImageUrl(user.profileImage || user.profile_image);
-                setUserProfileImage(imageUrl);
-            }
-
-            if (user.home_address && Object.keys(user.home_address).length > 0) {
-                const existingAddress: HomeAddress = {
-                    full_name: user.home_address.full_name || user?.name || user?.fullName || '',
-                    address_line: user.home_address.address_line || '',
-                    area: user.home_address.area || '',
-                    landmark: user.home_address.landmark || '',
-                    contact_mobile: user.home_address.contact_mobile || user?.mobile || user?.phone || '',
-                    city: user.home_address.city || '',
-                    state: user.home_address.state || '',
-                    district: user.home_address.district || '',
-                    pincode: user.home_address.pincode || '',
-                    landline_std: user.home_address.landline_std || '',
-                    landline_number: user.home_address.landline_number || '',
-                    email: user.home_address.email || user?.email || '',
-                    address_tag: user.home_address.address_tag || 'Home',
-                    is_primary: user.home_address.is_primary === 1
-                };
-
-                setHomeAddresses([existingAddress]);
-
-                setCompletedSections(prev => ({
-                    ...prev,
-                    Addresses: true
-                }));
-                setSectionSaveStatus(prev => ({
-                    ...prev,
-                    Addresses: { saved: true, saving: false }
-                }));
-            } else if (homeAddresses.length === 0) {
-                // Initial address setup
-                const initialAddress = {
-                    full_name: user?.name || user?.fullname || user?.fullName || '',
-                    address_line: '',
-                    area: '',
-                    landmark: '',
-                    contact_mobile: user?.mobile || user?.phone || '',
-                    city: '',
-                    state: '',
-                    district: '',
-                    pincode: '',
-                    landline_std: '',
-                    landline_number: '',
-                    email: user?.email || '',
-                    address_tag: 'Home'
-                };
-                setHomeAddresses([initialAddress]);
-            }
-
-            if (user.family_friends && Array.isArray(user.family_friends) && user.family_friends.length > 0) {
-                const existingFamilyFriends: FamilyFriend[] = user.family_friends.map((friend: any, index: number) => ({
-                    id: index + 1,
-                    name: friend.name || '',
-                    relationship: friend.relationship || '',
-                    phone: friend.phone || '',
-                    email: friend.email || '',
-                    address: friend.address || ''
-                }));
-
-                setFamilyFriends(existingFamilyFriends);
-
-                setCompletedSections(prev => ({
-                    ...prev,
-                    FamilyFriends: true
-                }));
-                setSectionSaveStatus(prev => ({
-                    ...prev,
-                    FamilyFriends: { saved: true, saving: false }
-                }));
-            }
-
-            if (newPersonalDetails.fullName && newPersonalDetails.email && newPersonalDetails.phone && newPersonalDetails.dob) {
-                setCompletedSections(prev => ({
-                    ...prev,
-                    PersonalDetails: true
-                }));
-                setSectionSaveStatus(prev => ({
-                    ...prev,
-                    PersonalDetails: { saved: true, saving: false }
-                }));
-            }
+            setCompletedSections(prev => ({
+                ...prev,
+                Addresses: true
+            }));
+            setSectionSaveStatus(prev => ({
+                ...prev,
+                Addresses: { saved: true, saving: false }
+            }));
+        } else if (homeAddresses.length === 0) {
+            // Initial address setup
+            const initialAddress = {
+                full_name: typedUser?.name || typedUser?.fullname || typedUser?.fullName || '',
+                address_line: '',
+                area: '',
+                landmark: '',
+                contact_mobile: typedUser?.mobile || typedUser?.phone || '',
+                city: '',
+                state: '',
+                district: '',
+                pincode: '',
+                landline_std: '',
+                landline_number: '',
+                email: typedUser?.email || '',
+                address_tag: 'Home'
+            };
+            setHomeAddresses([initialAddress]);
         }
-    }, [user, isLoggedIn, isPersonalDetailsLoaded]);
+
+        if (typedUser.family_friends && Array.isArray(typedUser.family_friends) && typedUser.family_friends.length > 0) {
+            const existingFamilyFriends: FamilyFriend[] = typedUser.family_friends.map((friend: any, index: number) => ({
+                id: index + 1,
+                name: friend.name || '',
+                relationship: friend.relationship || '',
+                phone: friend.phone || '',
+                email: friend.email || '',
+                address: friend.address || ''
+            }));
+
+            setFamilyFriends(existingFamilyFriends);
+
+            setCompletedSections(prev => ({
+                ...prev,
+                FamilyFriends: true
+            }));
+            setSectionSaveStatus(prev => ({
+                ...prev,
+                FamilyFriends: { saved: true, saving: false }
+            }));
+        }
+
+        if (newPersonalDetails.fullName && newPersonalDetails.email && newPersonalDetails.phone && newPersonalDetails.dob) {
+            setCompletedSections(prev => ({
+                ...prev,
+                PersonalDetails: true
+            }));
+            setSectionSaveStatus(prev => ({
+                ...prev,
+                PersonalDetails: { saved: true, saving: false }
+            }));
+        }
+    }
+}, [user, isLoggedIn, isPersonalDetailsLoaded]);
 
     // Update progress based on saved sections
     useEffect(() => {
@@ -1376,7 +1378,7 @@ export default function MyProfile() {
                                 >
                                     <Home size={20} />
                                 </button>
-                                
+
                                 <div className="relative">
                                     {/* Header logo - ✅ userProfileImage का उपयोग किया */}
                                     <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center">
