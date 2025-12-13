@@ -2,7 +2,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Providers } from './providers';
-import LoginModalWrapper from '@/components/LoginModalWrapper';
+//import LoginModalWrapper from '@/components/LoginModalWrapper';
 //import { AuthProvider } from './context/AuthContext'; // Import from the correct path
 
 import './globals.css';
@@ -136,7 +136,7 @@ export default function RootLayout({
       <body className={`${inter.className} bg-gray-50 text-gray-900 antialiased`}>
         <Providers>
           {children}
-          <LoginModalWrapper />
+         
         </Providers>
         
         {/* Scripts - Deferred for better performance */}

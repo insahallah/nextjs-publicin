@@ -1,8 +1,11 @@
+// app/page.tsx
 import Header from "../components/Header";
 import Hero from "../components/Hero";
 import SearchSection from "../components/SearchSection";
 import AppSection from "../components/AppSection";
 import Footer from "../components/Footer";
+import LoginModalWrapper from '../components/LoginModalWrapper';
+
 
 export default function Home() {
   return (
@@ -12,6 +15,7 @@ export default function Home() {
       <SearchSection />
       <AppSection />
       <Footer />
+      <LoginModalWrapper /> {/* ✅ Modal को यहाँ डालो */}
     </>
   );
 }
