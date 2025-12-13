@@ -1,8 +1,10 @@
-// components/LayoutWithSidebar.tsx - Updated with safe charAt and proper user.name
+// components/LayoutWithSidebar.tsx - Complete with Profile Image
 'use client'
 
 import { ReactNode, useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import Image from 'next/image'
+import { IMAGES_URL } from '@/configs/api';
 
 interface LayoutProps {
   children: ReactNode
@@ -10,7 +12,7 @@ interface LayoutProps {
 
 interface UserData {
   id: string
-  name: string  // Changed from fullName to name
+  name: string
   mobile: string
   email?: string
   city?: string
@@ -75,7 +77,7 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
         
         if (token && userData) {
           const parsedUser = JSON.parse(userData)
-          //console.log('XXXX', parsedUser) // Debug log
+          console.log('XXXX', parsedUser) // Debug log
           setIsLoggedIn(true)
           setUser(parsedUser)
         } else {
@@ -228,6 +230,21 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
     closeMobileSidebar()
   }
 
+// Profile image URL बनाने का function
+const getProfileImageUrl = (profileImage: string | undefined) => {
+  if (!profileImage) return null
+  
+  // अगर image URL में http:// या https:// है तो वैसे ही return करें
+  if (profileImage.startsWith('http://') || profileImage.startsWith('https://')) {
+    return profileImage
+  }
+  
+  // 🔥 CORRECTION: IMAGES_URL का उपयोग करें
+  return `${IMAGES_URL}/${profileImage}`
+  
+  // Note: IMAGES_URL पहले ही import किया गया है: import { IMAGES_URL } from '@/configs/api'
+}
+
   // Show loading or redirect - no login prompt
   const renderContent = () => {
     if (isLoading) {
@@ -314,9 +331,30 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
                   className="user-dropdown-trigger"
                   title="User Menu"
                 >
-                  {/* 🔥 UPDATED: user.name का उपयोग */}
+                  {/* 🔥 PROFILE IMAGE DISPLAY - UPDATED */}
                   <div className="user-avatar-small">
-                    {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                    {user.profile_image ? (
+                      <img 
+                        src={getProfileImageUrl(user.profile_image) || ''}
+                        alt={user.name}
+                        className="profile-image-avatar"
+                        onError={(e) => {
+                          // अगर image load नहीं होती, तो fallback initial show करें
+                          e.currentTarget.style.display = 'none'
+                          const parent = e.currentTarget.parentElement
+                          if (parent) {
+                            const fallback = document.createElement('div')
+                            fallback.className = 'avatar-fallback'
+                            fallback.textContent = user.name?.charAt(0)?.toUpperCase() || 'U'
+                            parent.appendChild(fallback)
+                          }
+                        }}
+                      />
+                    ) : (
+                      <div className="avatar-fallback">
+                        {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </div>
+                    )}
                   </div>
                   <span className="user-name dark-user-name">{user.name || 'User'}</span>
                   <i className={`dropdown-arrow ${showUserDropdown ? 'rotated' : ''}`}>▼</i>
@@ -325,9 +363,29 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
                 {showUserDropdown && (
                   <div className="user-dropdown-menu">
                     <div className="dropdown-user-info">
-                      {/* 🔥 UPDATED: user.name का उपयोग */}
+                      {/* 🔥 PROFILE IMAGE IN DROPDOWN */}
                       <div className="dropdown-user-avatar">
-                        {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                        {user.profile_image ? (
+                          <img 
+                            src={getProfileImageUrl(user.profile_image) || ''}
+                            alt={user.name}
+                            className="dropdown-profile-image"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none'
+                              const parent = e.currentTarget.parentElement
+                              if (parent) {
+                                const fallback = document.createElement('div')
+                                fallback.className = 'dropdown-avatar-fallback'
+                                fallback.textContent = user.name?.charAt(0)?.toUpperCase() || 'U'
+                                parent.appendChild(fallback)
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div className="dropdown-avatar-fallback">
+                            {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                          </div>
+                        )}
                       </div>
                       <div className="dropdown-user-details">
                         <div className="dropdown-user-name">{user.name || 'User'}</div>
@@ -444,7 +502,30 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
           {isLoggedIn && user && (
             <div className="mobile-user-actions">
               <div className="user-info-mobile">
-                {/* 🔥 UPDATED: user.name का उपयोग */}
+                {/* 🔥 MOBILE PROFILE IMAGE */}
+                <div className="mobile-user-avatar">
+                  {user.profile_image ? (
+                    <img 
+                      src={getProfileImageUrl(user.profile_image) || ''}
+                      alt={user.name}
+                      className="mobile-profile-image"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none'
+                        const parent = e.currentTarget.parentElement
+                        if (parent) {
+                          const fallback = document.createElement('div')
+                          fallback.className = 'mobile-avatar-fallback'
+                          fallback.textContent = user.name?.charAt(0)?.toUpperCase() || 'U'
+                          parent.appendChild(fallback)
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div className="mobile-avatar-fallback">
+                      {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                    </div>
+                  )}
+                </div>
                 <span className="user-greet">Hi, {user.name?.split(' ')[0] || 'User'}</span>
               </div>
               
@@ -504,12 +585,32 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
 
           {(!sidebarCollapsed || isMobile) && user && (
             <div className="user-profile">
-              {/* 🔥 UPDATED: user.name का उपयोग */}
+              {/* 🔥 SIDEBAR PROFILE IMAGE */}
               <div className="user-avatar">
-                {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                {user.profile_image ? (
+                  <img 
+                    src={getProfileImageUrl(user.profile_image) || ''}
+                    alt={user.name}
+                    className="sidebar-profile-image"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                      const parent = e.currentTarget.parentElement
+                      if (parent) {
+                        const fallback = document.createElement('div')
+                        fallback.className = 'sidebar-avatar-fallback'
+                        fallback.textContent = user.name?.charAt(0)?.toUpperCase() || 'U'
+                        parent.appendChild(fallback)
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="sidebar-avatar-fallback">
+                    {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </div>
+                )}
               </div>
               <div className="user-details">
-                {/* 🔥 UPDATED: user.name का उपयोग */}
+                {/* 🔥 USER NAME BLACK COLOR KAR DIYA */}
                 <div className="user-name black-user-name">{user.name || 'User'}</div>
                 <div className="user-mobile">{user.mobile}</div>
                 {user.city && <div className="user-location">{user.city}</div>}
@@ -659,7 +760,7 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
         {renderContent()}
       </div>
 
-      {/* 🔥 COMPLETE CSS STYLES WITH ACTIVE LINK INDICATORS */}
+      {/* 🔥 COMPLETE CSS STYLES WITH PROFILE IMAGE SUPPORT */}
       <style jsx>{`
         .layout-wrapper {
           display: flex;
@@ -701,6 +802,152 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
           100% { transform: rotate(360deg); }
         }
         
+        /* 🔥 PROFILE IMAGE STYLES */
+        .user-avatar-small {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: #3b82f6;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: bold;
+          font-size: 14px;
+          flex-shrink: 0;
+          overflow: hidden;
+          position: relative;
+        }
+
+        .profile-image-avatar {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: 50%;
+        }
+
+        .avatar-fallback {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #3b82f6;
+          color: white;
+          font-weight: bold;
+          font-size: 16px;
+          border-radius: 50%;
+        }
+
+        /* Dropdown Avatar */
+        .dropdown-user-avatar {
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          background: #3b82f6;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: bold;
+          font-size: 18px;
+          flex-shrink: 0;
+          overflow: hidden;
+        }
+
+        .dropdown-profile-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: 50%;
+        }
+
+        .dropdown-avatar-fallback {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #3b82f6;
+          color: white;
+          font-weight: bold;
+          font-size: 20px;
+          border-radius: 50%;
+        }
+
+        /* Sidebar Avatar */
+        .user-avatar {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          background: #3b82f6;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: bold;
+          font-size: 16px;
+          flex-shrink: 0;
+          overflow: hidden;
+        }
+
+        .sidebar-profile-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: 50%;
+        }
+
+        .sidebar-avatar-fallback {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #3b82f6;
+          color: white;
+          font-weight: bold;
+          font-size: 16px;
+          border-radius: 50%;
+        }
+
+        /* Mobile Avatar */
+        .mobile-user-avatar {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: #3b82f6;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: bold;
+          font-size: 12px;
+          flex-shrink: 0;
+          overflow: hidden;
+          margin-right: 8px;
+        }
+
+        .mobile-profile-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: 50%;
+        }
+
+        .mobile-avatar-fallback {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #3b82f6;
+          color: white;
+          font-weight: bold;
+          font-size: 12px;
+          border-radius: 50%;
+        }
+
         /* 🔥 ACTIVE LINK INDICATOR */
         .active-indicator {
           position: absolute;
@@ -1176,20 +1423,6 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
           background: #f8fafc;
         }
         
-        .user-avatar-small {
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
-          background: #3b82f6;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-weight: bold;
-          font-size: 14px;
-          flex-shrink: 0;
-        }
-        
         /* 🔥 FIXED: User name dark color */
         .user-name, .dark-user-name {
           font-weight: 600;
@@ -1228,20 +1461,6 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
           padding: 20px;
           background: #f8fafc;
           border-bottom: 1px solid #e2e8f0;
-        }
-        
-        .dropdown-user-avatar {
-          width: 48px;
-          height: 48px;
-          border-radius: 50%;
-          background: #3b82f6;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-weight: bold;
-          font-size: 18px;
-          flex-shrink: 0;
         }
         
         .dropdown-user-details {
@@ -1627,30 +1846,6 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
           background: #475569;
         }
         
-        /* User Profile in Sidebar */
-        .user-profile {
-          padding: 20px;
-          border-bottom: 1px solid #334155;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background: rgba(255, 255, 255, 0.05);
-        }
-        
-        .user-avatar {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          background: #3b82f6;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-weight: bold;
-          font-size: 16px;
-          flex-shrink: 0;
-        }
-        
         .user-details {
           flex: 1;
           min-width: 0;
@@ -1911,6 +2106,10 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
           .add-business-text {
             font-size: 14px;
           }
+
+          .mobile-user-avatar {
+            margin-right: 6px;
+          }
         }
         
         @media (max-width: 480px) {
@@ -1944,7 +2143,11 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
             padding: 6px;
           }
 
-          .user-info-mobile {
+          .mobile-user-avatar {
+            display: none;
+          }
+
+          .user-info-mobile .user-greet {
             display: none;
           }
         }
