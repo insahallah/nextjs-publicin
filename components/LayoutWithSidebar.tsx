@@ -1,4 +1,4 @@
-// components/LayoutWithSidebar.tsx - Updated with safe charAt
+// components/LayoutWithSidebar.tsx - Updated with safe charAt and proper user.name
 'use client'
 
 import { ReactNode, useState, useEffect } from 'react'
@@ -10,10 +10,15 @@ interface LayoutProps {
 
 interface UserData {
   id: string
-  fullName: string
+  name: string  // Changed from fullName to name
   mobile: string
+  email?: string
   city?: string
   village?: string
+  profile_image?: string
+  state?: string
+  pin?: string
+  block?: string
 }
 
 export default function LayoutWithSidebar({ children }: LayoutProps) {
@@ -69,8 +74,10 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
         const userData = localStorage.getItem('userData')
         
         if (token && userData) {
+          const parsedUser = JSON.parse(userData)
+          //console.log('XXXX', parsedUser) // Debug log
           setIsLoggedIn(true)
-          setUser(JSON.parse(userData))
+          setUser(parsedUser)
         } else {
           setIsLoggedIn(false)
           setUser(null)
@@ -307,23 +314,23 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
                   className="user-dropdown-trigger"
                   title="User Menu"
                 >
-                  {/* 🔥 SAFE charAt */}
+                  {/* 🔥 UPDATED: user.name का उपयोग */}
                   <div className="user-avatar-small">
-                    {user.fullName?.charAt(0)?.toUpperCase() || 'U'}
+                    {user.name?.charAt(0)?.toUpperCase() || 'U'}
                   </div>
-                  <span className="user-name dark-user-name">{user.fullName}</span>
+                  <span className="user-name dark-user-name">{user.name || 'User'}</span>
                   <i className={`dropdown-arrow ${showUserDropdown ? 'rotated' : ''}`}>▼</i>
                 </button>
 
                 {showUserDropdown && (
                   <div className="user-dropdown-menu">
                     <div className="dropdown-user-info">
-                      {/* 🔥 SAFE charAt */}
+                      {/* 🔥 UPDATED: user.name का उपयोग */}
                       <div className="dropdown-user-avatar">
-                        {user.fullName?.charAt(0)?.toUpperCase() || 'U'}
+                        {user.name?.charAt(0)?.toUpperCase() || 'U'}
                       </div>
                       <div className="dropdown-user-details">
-                        <div className="dropdown-user-name">{user.fullName}</div>
+                        <div className="dropdown-user-name">{user.name || 'User'}</div>
                         <div className="dropdown-user-mobile">{user.mobile}</div>
                         {user.city && (
                           <div className="dropdown-user-location">{user.city}</div>
@@ -437,8 +444,8 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
           {isLoggedIn && user && (
             <div className="mobile-user-actions">
               <div className="user-info-mobile">
-                {/* 🔥 SAFE split */}
-                <span className="user-greet">Hi, {user.fullName?.split(' ')[0] || 'User'}</span>
+                {/* 🔥 UPDATED: user.name का उपयोग */}
+                <span className="user-greet">Hi, {user.name?.split(' ')[0] || 'User'}</span>
               </div>
               
               <button
@@ -497,13 +504,13 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
 
           {(!sidebarCollapsed || isMobile) && user && (
             <div className="user-profile">
-              {/* 🔥 SAFE charAt */}
+              {/* 🔥 UPDATED: user.name का उपयोग */}
               <div className="user-avatar">
-                {user.fullName?.charAt(0)?.toUpperCase() || 'U'}
+                {user.name?.charAt(0)?.toUpperCase() || 'U'}
               </div>
               <div className="user-details">
-                {/* 🔥 USER NAME BLACK COLOR KAR DIYA */}
-                <div className="user-name black-user-name">{user.fullName}</div>
+                {/* 🔥 UPDATED: user.name का उपयोग */}
+                <div className="user-name black-user-name">{user.name || 'User'}</div>
                 <div className="user-mobile">{user.mobile}</div>
                 {user.city && <div className="user-location">{user.city}</div>}
               </div>
