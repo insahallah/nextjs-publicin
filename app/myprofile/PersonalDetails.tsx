@@ -1,3 +1,4 @@
+// app/myprofile/PersonalDetails.tsx
 'use client';
 
 import { useState, useRef, ChangeEvent, useEffect, forwardRef, useImperativeHandle } from 'react';
@@ -253,7 +254,7 @@ const PersonalDetails = forwardRef<PersonalDetailsHandle, PersonalDetailsProps>(
                             setProfileImage(imageUrl);
                             // ✅ Parent component को भी image update करने दें
                             if (onImageChange) {
-                                onImageChange(imageUrl, null);
+                                onImageChange(imageUrl, undefined); // FIXED: Changed from null to undefined
                             }
                         }
                     }
@@ -370,7 +371,7 @@ const PersonalDetails = forwardRef<PersonalDetailsHandle, PersonalDetailsProps>(
                     
                     // ✅ Parent component को भी update करें
                     if (onImageChange) {
-                        onImageChange(newImageUrl, null);
+                        onImageChange(newImageUrl, undefined); // FIXED: Changed from null to undefined
                     }
                 }
 
