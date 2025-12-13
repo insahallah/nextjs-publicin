@@ -1,3 +1,4 @@
+// app/myprofile/page.tsx
 'use client';
 
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
@@ -325,7 +326,7 @@ const saveCompleteProfile = async (userId: string, personalDetails: PersonalDeta
 
 export default function MyProfile() {
     const router = useRouter();
-    const { user, logout, isPulsing, isLoggedIn, isLoading } = useAuth();
+    const { user, logout, isLoggedIn, isLoading } = useAuth(); // Removed isPulsing
 
     const [activeSection, setActiveSection] = useState('PersonalDetails');
     const [progress, setProgress] = useState(25);
@@ -1362,153 +1363,149 @@ export default function MyProfile() {
                 <span className="text-green-800 font-medium">Secure Session</span>
             </div>
 
-<header className="bg-white shadow-sm border-b border-gray-200">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-3">
-                    {/* Back to Home button */}
-                    <button
-                        onClick={() => router.push('/UserDashboard')}
-                        className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900"
-                        title="Back to Dashboard"
-                    >
-                        <Home size={20} />
-                    </button>
-                    
-                    <div className="relative">
-                        {/* Header logo - ✅ userProfileImage का उपयोग किया */}
-                        <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center">
-                            {userProfileImage ? (
-                                <Image
-                                    src={userProfileImage}
-                                    alt={userName}
-                                    width={40}
-                                    height={40}
-                                    className="object-cover w-full h-full"
-                                    unoptimized={userProfileImage.startsWith('blob:')}
-                                    sizes="(max-width: 40px) 100vw, 40px"
-                                />
-                            ) : (
-                                <div className="w-full h-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
-                                    <span className="text-white font-bold text-lg">{userInitial}</span>
-                                </div>
-                            )}
-                        </div>
-                        {isPulsing && (
-                            <div className="absolute inset-0 rounded-lg bg-blue-400 animate-ping opacity-20"></div>
-                        )}
-                    </div>
-                    <div>
-                        <h1 className="text-xl font-semibold text-gray-900">Profile Setup</h1>
-                        <p className="text-sm text-gray-500">Complete your profile step by step</p>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex items-center space-x-4">
-                <div className="text-right hidden md:block">
-                    <p className="text-sm font-medium text-gray-900">{userName}</p>
-                    <p className="text-sm text-gray-500">{userPhone}</p>
-                </div>
-
-                <div className="relative">
-                    {/* User dropdown button - ✅ userProfileImage का उपयोग किया */}
-                    <button
-                        onClick={() => setShowUserDropdown(!showUserDropdown)}
-                        className={`flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors ${isPulsing ? 'ring-2 ring-blue-400 ring-opacity-50' : ''
-                            }`}
-                    >
-                        <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center">
-                            {userProfileImage ? (
-                                <Image
-                                    src={userProfileImage}
-                                    alt={userName}
-                                    width={40}
-                                    height={40}
-                                    className="object-cover w-full h-full"
-                                    unoptimized={userProfileImage.startsWith('blob:')}
-                                    sizes="(max-width: 40px) 100vw, 40px"
-                                />
-                            ) : (
-                                <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-                                    <span className="text-white font-medium text-sm">{userInitial}</span>
-                                </div>
-                            )}
-                        </div>
-                        <User size={16} className="text-gray-600" />
-                    </button>
-
-                    {showUserDropdown && (
-                        <>
-                            <div
-                                className="fixed inset-0 z-40"
-                                onClick={() => setShowUserDropdown(false)}
-                            />
-                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                                <div className="px-4 py-2 border-b border-gray-100">
-                                    {/* Dropdown में profile image - ✅ userProfileImage का उपयोग किया */}
-                                    <div className="flex items-center space-x-3 mb-2">
-                                        <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                                            {userProfileImage ? (
-                                                <Image
-                                                    src={userProfileImage}
-                                                    alt={userName}
-                                                    width={32}
-                                                    height={32}
-                                                    className="object-cover w-full h-full"
-                                                    unoptimized={userProfileImage.startsWith('blob:')}
-                                                    sizes="(max-width: 32px) 100vw, 32px"
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-                                                    <span className="text-white font-medium text-xs">{userInitial}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-gray-900 truncate">{userName}</p>
-                                            <p className="text-xs text-gray-500 truncate">{userEmail}</p>
-                                        </div>
+            <header className="bg-white shadow-sm border-b border-gray-200">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between items-center py-4">
+                        <div className="flex items-center space-x-4">
+                            <div className="flex items-center space-x-3">
+                                {/* Back to Home button */}
+                                <button
+                                    onClick={() => router.push('/UserDashboard')}
+                                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900"
+                                    title="Back to Dashboard"
+                                >
+                                    <Home size={20} />
+                                </button>
+                                
+                                <div className="relative">
+                                    {/* Header logo - ✅ userProfileImage का उपयोग किया */}
+                                    <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center">
+                                        {userProfileImage ? (
+                                            <Image
+                                                src={userProfileImage}
+                                                alt={userName}
+                                                width={40}
+                                                height={40}
+                                                className="object-cover w-full h-full"
+                                                unoptimized={userProfileImage.startsWith('blob:')}
+                                                sizes="(max-width: 40px) 100vw, 40px"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
+                                                <span className="text-white font-bold text-lg">{userInitial}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                                <div className="py-1">
-                                    <button
-                                        onClick={() => {
-                                            setShowUserDropdown(false);
-                                            router.push('/UserDashboard');
-                                        }}
-                                        className="w-full flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                    >
-                                        <Home size={16} />
-                                        <span>Home</span>
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setShowUserDropdown(false);
-                                            router.push('/app/myprofile');
-                                        }}
-                                        className="w-full flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                    >
-                                        <User size={16} />
-                                        <span>My Profile</span>
-                                    </button>
-                                    <button
-                                        onClick={handleLogout}
-                                        className="w-full flex items-center space-x-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                                    >
-                                        <LogOut size={16} />
-                                        <span>Logout</span>
-                                    </button>
+                                <div>
+                                    <h1 className="text-xl font-semibold text-gray-900">Profile Setup</h1>
+                                    <p className="text-sm text-gray-500">Complete your profile step by step</p>
                                 </div>
                             </div>
-                        </>
-                    )}
+                        </div>
+
+                        <div className="flex items-center space-x-4">
+                            <div className="text-right hidden md:block">
+                                <p className="text-sm font-medium text-gray-900">{userName}</p>
+                                <p className="text-sm text-gray-500">{userPhone}</p>
+                            </div>
+
+                            <div className="relative">
+                                {/* User dropdown button - ✅ userProfileImage का उपयोग किया */}
+                                <button
+                                    onClick={() => setShowUserDropdown(!showUserDropdown)}
+                                    className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                                >
+                                    <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center">
+                                        {userProfileImage ? (
+                                            <Image
+                                                src={userProfileImage}
+                                                alt={userName}
+                                                width={40}
+                                                height={40}
+                                                className="object-cover w-full h-full"
+                                                unoptimized={userProfileImage.startsWith('blob:')}
+                                                sizes="(max-width: 40px) 100vw, 40px"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                                                <span className="text-white font-medium text-sm">{userInitial}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <User size={16} className="text-gray-600" />
+                                </button>
+
+                                {showUserDropdown && (
+                                    <>
+                                        <div
+                                            className="fixed inset-0 z-40"
+                                            onClick={() => setShowUserDropdown(false)}
+                                        />
+                                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                                            <div className="px-4 py-2 border-b border-gray-100">
+                                                {/* Dropdown में profile image - ✅ userProfileImage का उपयोग किया */}
+                                                <div className="flex items-center space-x-3 mb-2">
+                                                    <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                                                        {userProfileImage ? (
+                                                            <Image
+                                                                src={userProfileImage}
+                                                                alt={userName}
+                                                                width={32}
+                                                                height={32}
+                                                                className="object-cover w-full h-full"
+                                                                unoptimized={userProfileImage.startsWith('blob:')}
+                                                                sizes="(max-width: 32px) 100vw, 32px"
+                                                            />
+                                                        ) : (
+                                                            <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                                                                <span className="text-white font-medium text-xs">{userInitial}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium text-gray-900 truncate">{userName}</p>
+                                                        <p className="text-xs text-gray-500 truncate">{userEmail}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="py-1">
+                                                <button
+                                                    onClick={() => {
+                                                        setShowUserDropdown(false);
+                                                        router.push('/UserDashboard');
+                                                    }}
+                                                    className="w-full flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                                >
+                                                    <Home size={16} />
+                                                    <span>Home</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setShowUserDropdown(false);
+                                                        router.push('/app/myprofile');
+                                                    }}
+                                                    className="w-full flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                                >
+                                                    <User size={16} />
+                                                    <span>My Profile</span>
+                                                </button>
+                                                <button
+                                                    onClick={handleLogout}
+                                                    className="w-full flex items-center space-x-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                                >
+                                                    <LogOut size={16} />
+                                                    <span>Logout</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-    </div>
-</header>
+            </header>
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
