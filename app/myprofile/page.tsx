@@ -67,6 +67,7 @@ interface PersonalDetailsType {
     maritalStatus: string;
 }
 
+// FIXED: Changed is_primary to number to match AddressDetails component
 interface HomeAddress {
     id?: number;
     full_name: string;
@@ -82,7 +83,7 @@ interface HomeAddress {
     landline_number: string;
     email: string;
     address_tag: string;
-    is_primary?: boolean;
+    is_primary?: number; // Changed from boolean to number
     is_active?: number;
     user_id?: number;
     created_at?: string;
@@ -442,7 +443,12 @@ export default function MyProfile() {
                     landline_number: user.home_address.landline_number || '',
                     email: user.home_address.email || user?.email || '',
                     address_tag: user.home_address.address_tag || 'Home',
-                    is_primary: user.home_address.is_primary === 1
+                    is_primary: user.home_address.is_primary || 0, // Changed to number
+                    is_active: user.home_address.is_active,
+                    user_id: user.home_address.user_id,
+                    id: user.home_address.id,
+                    created_at: user.home_address.created_at,
+                    updated_at: user.home_address.updated_at
                 };
 
                 setHomeAddresses([existingAddress]);
@@ -471,7 +477,7 @@ export default function MyProfile() {
                     landline_number: '',
                     email: user?.email || '',
                     address_tag: 'Home',
-                    is_primary: true
+                    is_primary: 1 // Changed to number (1 for true, 0 for false)
                 };
 
                 setHomeAddresses([initialAddress]);
@@ -979,7 +985,7 @@ export default function MyProfile() {
 
     // ✅ Render Address Details Form
     const renderAddressDetails = () => {
-        // Create a compatible addresses array
+        // Create a compatible addresses array with is_primary as number
         const compatibleAddresses = homeAddresses.map(addr => ({
             ...addr,
             // Ensure all required fields are present
@@ -996,7 +1002,12 @@ export default function MyProfile() {
             landline_number: addr.landline_number || '',
             email: addr.email || '',
             address_tag: addr.address_tag || 'Home',
-            is_primary: addr.is_primary || false
+            is_primary: addr.is_primary || 0, // Ensure is_primary is a number
+            is_active: addr.is_active || 1,
+            user_id: addr.user_id || (user?.id ? parseInt(user.id) : 0),
+            id: addr.id || 0,
+            created_at: addr.created_at || new Date().toISOString(),
+            updated_at: addr.updated_at || new Date().toISOString()
         }));
 
         return (
@@ -1264,6 +1275,12 @@ export default function MyProfile() {
                                     {address.area && `${address.area}, `}
                                     {address.city}, {address.pincode}
                                 </p>
+                                {address.is_primary === 1 && (
+                                    <div className="mt-2 inline-flex items-center bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs">
+                                        <CheckCircle size={12} className="mr-1" />
+                                        Primary Address
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -1788,6 +1805,6 @@ export default function MyProfile() {
                     🔒 Each section is saved individually to the database. Next section is locked until current section is saved.
                 </p>
             </div>
-        </div>
+        </div>  
     );
 }
