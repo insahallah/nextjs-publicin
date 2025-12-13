@@ -1,4 +1,4 @@
-// components/LayoutWithSidebar.tsx - Updated with active link tracking
+// components/LayoutWithSidebar.tsx - Updated with safe charAt
 'use client'
 
 import { ReactNode, useState, useEffect } from 'react'
@@ -307,8 +307,9 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
                   className="user-dropdown-trigger"
                   title="User Menu"
                 >
+                  {/* 🔥 SAFE charAt */}
                   <div className="user-avatar-small">
-                    {user.fullName.charAt(0).toUpperCase()}
+                    {user.fullName?.charAt(0)?.toUpperCase() || 'U'}
                   </div>
                   <span className="user-name dark-user-name">{user.fullName}</span>
                   <i className={`dropdown-arrow ${showUserDropdown ? 'rotated' : ''}`}>▼</i>
@@ -317,8 +318,9 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
                 {showUserDropdown && (
                   <div className="user-dropdown-menu">
                     <div className="dropdown-user-info">
+                      {/* 🔥 SAFE charAt */}
                       <div className="dropdown-user-avatar">
-                        {user.fullName.charAt(0).toUpperCase()}
+                        {user.fullName?.charAt(0)?.toUpperCase() || 'U'}
                       </div>
                       <div className="dropdown-user-details">
                         <div className="dropdown-user-name">{user.fullName}</div>
@@ -435,7 +437,8 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
           {isLoggedIn && user && (
             <div className="mobile-user-actions">
               <div className="user-info-mobile">
-                <span className="user-greet">Hi, {user.fullName.split(' ')[0]}</span>
+                {/* 🔥 SAFE split */}
+                <span className="user-greet">Hi, {user.fullName?.split(' ')[0] || 'User'}</span>
               </div>
               
               <button
@@ -494,8 +497,9 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
 
           {(!sidebarCollapsed || isMobile) && user && (
             <div className="user-profile">
+              {/* 🔥 SAFE charAt */}
               <div className="user-avatar">
-                {user.fullName.charAt(0).toUpperCase()}
+                {user.fullName?.charAt(0)?.toUpperCase() || 'U'}
               </div>
               <div className="user-details">
                 {/* 🔥 USER NAME BLACK COLOR KAR DIYA */}
