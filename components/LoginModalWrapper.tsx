@@ -38,19 +38,26 @@ export default function LoginModalWrapper() {
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden animate-slideUp">
           {!showSignupForm ? (
             <AwesomeLogin
-              onLogin={(data) => {
-                const mockUserData = {
-                  id: '1',
-                  name: data.name || 'User',
-                  email: data.email || `${data.mobile}@publicin.in`,
-                  mobile: data.mobile,
-                  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=User'
-                };
-                handleLoginSuccess(mockUserData, `token_${Date.now()}`);
-                setShowSignupForm(false); // Reset on successful login
+              onLogin={async (data: any) => {
+                return new Promise<void>((resolve) => {
+                  // Extract mobile from data - adjust based on what AwesomeLogin actually sends
+                  const mobile = data.mobile || data.phone || data.username || '';
+                  const name = data.name || 'User';
+                  const email = data.email || `${mobile}@publicin.in`;
+                  
+                  const mockUserData = {
+                    id: '1',
+                    name: name,
+                    email: email,
+                    mobile: mobile,
+                    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=User'
+                  };
+                  handleLoginSuccess(mockUserData, `token_${Date.now()}`);
+                  setShowSignupForm(false);
+                  resolve();
+                });
               }}
               onSwitchToSignup={() => {
-                // ✅ Modal ke andar hi signup form show karein
                 setShowSignupForm(true);
               }}
               showSocialLogin={true}
@@ -58,19 +65,15 @@ export default function LoginModalWrapper() {
             />
           ) : (
             <AwesomeSignup
-              onSignup={(data) => {
+              onSignup={async (data: any) => {
                 console.log('Signup data:', data);
-                // Add your signup API call here
-                // After signup, you can:
-                // 1. Automatically login the user
-                // 2. Show success message and switch back to login
-                // 3. Close modal
-                
-                // For example: Signup successful, now show login form
-                setTimeout(() => {
-                  setShowSignupForm(false);
-                  alert('Signup successful! Please login.');
-                }, 1000);
+                return new Promise<void>((resolve) => {
+                  setTimeout(() => {
+                    setShowSignupForm(false);
+                    alert('Signup successful! Please login.');
+                    resolve();
+                  }, 1000);
+                });
               }}
               onSwitchToLogin={() => {
                 setShowSignupForm(false);

@@ -11,6 +11,7 @@ export const API_ENDPOINTS2 = {
     LOGIN: `${API_BASE_URL2}/login.php`,
     REGISTER: `${API_BASE_URL2}/register.php`,
     LOGOUT: `${API_BASE_URL2}/logout`,
+    FORGOT_PASSWORD: `${API_BASE_URL2}/forgot_password.php`,
     PROFILE: `${API_BASE_URL2}/profile`,
     MOBILE_VALIDATION: `${API_BASE_URL2}/check-mobile.php`,
     CATEGORY_LIST: `${API_BASE_URL2}/category_list.php`,

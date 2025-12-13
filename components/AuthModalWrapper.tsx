@@ -86,7 +86,7 @@ export default function AuthModalWrapper({
       formData.append('confirm_password', signupData.confirmPassword);
 
       // API call for signup
-      const response = await fetch(API_ENDPOINTS2.AUTH.SIGNUP, {
+      const response = await fetch(API_ENDPOINTS2.AUTH.REGISTER, {
         method: 'POST',
         body: formData,
       });
