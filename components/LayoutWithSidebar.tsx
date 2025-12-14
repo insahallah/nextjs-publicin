@@ -1,9 +1,8 @@
-// components/LayoutWithSidebar.tsx - Complete with Profile Image
+// components/LayoutWithSidebar.tsx - Complete with Centered Profile
 'use client'
 
 import { ReactNode, useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import Image from 'next/image'
 import { IMAGES_URL } from '@/configs/api';
 
 interface LayoutProps {
@@ -230,20 +229,18 @@ export default function LayoutWithSidebar({ children }: LayoutProps) {
     closeMobileSidebar()
   }
 
-// Profile image URL बनाने का function
-const getProfileImageUrl = (profileImage: string | undefined) => {
-  if (!profileImage) return null
-  
-  // अगर image URL में http:// या https:// है तो वैसे ही return करें
-  if (profileImage.startsWith('http://') || profileImage.startsWith('https://')) {
-    return profileImage
+  // Profile image URL बनाने का function
+  const getProfileImageUrl = (profileImage: string | undefined) => {
+    if (!profileImage) return null
+    
+    // अगर image URL में http:// या https:// है तो वैसे ही return करें
+    if (profileImage.startsWith('http://') || profileImage.startsWith('https://')) {
+      return profileImage
+    }
+    
+    // 🔥 CORRECTION: IMAGES_URL का उपयोग करें
+    return `${IMAGES_URL}/${profileImage}`
   }
-  
-  // 🔥 CORRECTION: IMAGES_URL का उपयोग करें
-  return `${IMAGES_URL}/${profileImage}`
-  
-  // Note: IMAGES_URL पहले ही import किया गया है: import { IMAGES_URL } from '@/configs/api'
-}
 
   // Show loading or redirect - no login prompt
   const renderContent = () => {
@@ -585,7 +582,7 @@ const getProfileImageUrl = (profileImage: string | undefined) => {
 
           {(!sidebarCollapsed || isMobile) && user && (
             <div className="user-profile">
-              {/* 🔥 SIDEBAR PROFILE IMAGE */}
+              {/* 🔥 SIDEBAR PROFILE IMAGE - CENTERED */}
               <div className="user-avatar">
                 {user.profile_image ? (
                   <img 
@@ -610,7 +607,7 @@ const getProfileImageUrl = (profileImage: string | undefined) => {
                 )}
               </div>
               <div className="user-details">
-                {/* 🔥 USER NAME BLACK COLOR KAR DIYA */}
+                {/* 🔥 USER NAME CENTERED */}
                 <div className="user-name black-user-name">{user.name || 'User'}</div>
                 <div className="user-mobile">{user.mobile}</div>
                 {user.city && <div className="user-location">{user.city}</div>}
@@ -760,7 +757,7 @@ const getProfileImageUrl = (profileImage: string | undefined) => {
         {renderContent()}
       </div>
 
-      {/* 🔥 COMPLETE CSS STYLES WITH PROFILE IMAGE SUPPORT */}
+      {/* 🔥 COMPLETE CSS STYLES WITH CENTERED PROFILE */}
       <style jsx>{`
         .layout-wrapper {
           display: flex;
@@ -875,20 +872,73 @@ const getProfileImageUrl = (profileImage: string | undefined) => {
           border-radius: 50%;
         }
 
-        /* Sidebar Avatar */
+        /* 🔥🔥🔥 SIDEBAR USER PROFILE - CENTERED STYLES 🔥🔥🔥 */
+        .user-profile {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          padding: 25px 20px;
+          border-bottom: 1px solid #334155;
+          background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
+          margin: 15px;
+          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 
+            0 4px 6px -1px rgba(0, 0, 0, 0.1),
+            0 2px 4px -1px rgba(0, 0, 0, 0.06),
+            inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+
+        /* 🔥 Sidebar Collapsed में Profile Hide करें */
+        .sidebar.collapsed .user-profile {
+          display: none;
+        }
+
         .user-avatar {
-          width: 40px;
-          height: 40px;
+          width: 80px;
+          height: 80px;
           border-radius: 50%;
-          background: #3b82f6;
+          background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
           display: flex;
           align-items: center;
           justify-content: center;
           color: white;
           font-weight: bold;
-          font-size: 16px;
+          font-size: 28px;
           flex-shrink: 0;
           overflow: hidden;
+          margin: 0 auto 20px auto;
+          border: 4px solid rgba(255, 255, 255, 0.3);
+          box-shadow: 
+            0 8px 32px rgba(59, 130, 246, 0.3),
+            0 0 0 1px rgba(255, 255, 255, 0.1);
+          position: relative;
+        }
+
+        /* Animated Border Effect */
+        .user-avatar::after {
+          content: '';
+          position: absolute;
+          top: -4px;
+          left: -4px;
+          right: -4px;
+          bottom: -4px;
+          border-radius: 50%;
+          background: conic-gradient(
+            #3b82f6,
+            #8b5cf6,
+            #ec4899,
+            #f59e0b,
+            #3b82f6
+          );
+          z-index: -1;
+          animation: rotate 3s linear infinite;
+        }
+
+        @keyframes rotate {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
 
         .sidebar-profile-image {
@@ -904,11 +954,76 @@ const getProfileImageUrl = (profileImage: string | undefined) => {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #3b82f6;
+          background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
           color: white;
           font-weight: bold;
-          font-size: 16px;
+          font-size: 32px;
           border-radius: 50%;
+        }
+
+        .user-details {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          width: 100%;
+        }
+
+        /* 🔥 USER NAME - CENTERED AND BEAUTIFUL */
+        .user-name.black-user-name {
+          font-weight: 700;
+          color: #ffffff !important;
+          font-size: 18px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          width: 100%;
+          text-align: center;
+          margin-bottom: 8px;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+          background: linear-gradient(90deg, #fff, #f0f0f0);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          letter-spacing: 0.5px;
+        }
+
+        .user-mobile {
+          color: #cbd5e1;
+          font-size: 15px;
+          margin-bottom: 6px;
+          text-align: center;
+          width: 100%;
+          font-weight: 600;
+          background: rgba(0, 0, 0, 0.25);
+          padding: 6px 14px;
+          border-radius: 25px;
+          display: inline-block;
+          max-width: fit-content;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-location {
+          color: #94a3b8;
+          font-size: 14px;
+          text-align: center;
+          width: 100%;
+          font-style: italic;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 4px 12px;
+          background: rgba(0, 0, 0, 0.15);
+          border-radius: 15px;
+          max-width: fit-content;
+        }
+
+        .user-location::before {
+          content: "📍";
+          font-size: 12px;
+          opacity: 0.8;
         }
 
         /* Mobile Avatar */
@@ -1846,33 +1961,6 @@ const getProfileImageUrl = (profileImage: string | undefined) => {
           background: #475569;
         }
         
-        .user-details {
-          flex: 1;
-          min-width: 0;
-        }
-        
-        /* 🔥 USER NAME BLACK COLOR KAR DIYA */
-        .user-name, .black-user-name {
-          font-weight: 600;
-          color: #000000 !important; /* Black color */
-          font-size: 14px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        
-        .user-mobile {
-          color: #cbd5e1;
-          font-size: 12px;
-          margin-top: 2px;
-        }
-        
-        .user-location {
-          color: #94a3b8;
-          font-size: 12px;
-          margin-top: 2px;
-        }
-        
         .sidebar-nav {
           padding: 20px 0;
           height: calc(100vh - 70px);
@@ -1922,6 +2010,32 @@ const getProfileImageUrl = (profileImage: string | undefined) => {
         .sidebar-badge-container {
           display: flex;
           gap: 4px;
+        }
+
+        .nav-badge {
+          background: #ef4444;
+          color: white;
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-size: 11px;
+          font-weight: 600;
+          margin-left: 8px;
+        }
+
+        /* 🔥 FREE BADGE STYLE */
+        .free-badge {
+          background: linear-gradient(135deg, #ffeb3b, #ff9800) !important;
+          color: #000 !important;
+          font-size: 10px !important;
+          padding: 3px 6px !important;
+          border-radius: 8px !important;
+          font-weight: 900 !important;
+          animation: badgeShine 2s ease-in-out infinite;
+        }
+
+        @keyframes badgeShine {
+          0%, 100% { filter: brightness(1); }
+          50% { filter: brightness(1.3); }
         }
 
         .hot-badge {
@@ -1994,32 +2108,6 @@ const getProfileImageUrl = (profileImage: string | undefined) => {
           font-size: 15px;
           font-weight: 500;
           white-space: nowrap;
-        }
-        
-        .nav-badge {
-          background: #ef4444;
-          color: white;
-          padding: 4px 8px;
-          border-radius: 12px;
-          font-size: 11px;
-          font-weight: 600;
-          margin-left: 8px;
-        }
-
-        /* 🔥 FREE BADGE STYLE */
-        .free-badge {
-          background: linear-gradient(135deg, #ffeb3b, #ff9800) !important;
-          color: #000 !important;
-          font-size: 10px !important;
-          padding: 3px 6px !important;
-          border-radius: 8px !important;
-          font-weight: 900 !important;
-          animation: badgeShine 2s ease-in-out infinite;
-        }
-
-        @keyframes badgeShine {
-          0%, 100% { filter: brightness(1); }
-          50% { filter: brightness(1.3); }
         }
         
         .nav-divider {
@@ -2110,6 +2198,35 @@ const getProfileImageUrl = (profileImage: string | undefined) => {
           .mobile-user-avatar {
             margin-right: 6px;
           }
+
+          /* 🔥 Mobile में Profile को भी center करें */
+          .user-profile {
+            margin: 10px;
+            padding: 20px 15px;
+          }
+
+          .user-avatar {
+            width: 70px;
+            height: 70px;
+            font-size: 24px;
+          }
+
+          .sidebar-avatar-fallback {
+            font-size: 28px;
+          }
+
+          .user-name.black-user-name {
+            font-size: 16px;
+          }
+
+          .user-mobile {
+            font-size: 14px;
+            padding: 5px 12px;
+          }
+
+          .user-location {
+            font-size: 13px;
+          }
         }
         
         @media (max-width: 480px) {
@@ -2149,6 +2266,35 @@ const getProfileImageUrl = (profileImage: string | undefined) => {
 
           .user-info-mobile .user-greet {
             display: none;
+          }
+
+          /* 🔥 Extra small screens के लिए */
+          .user-profile {
+            padding: 15px 10px;
+            margin: 10px 8px;
+          }
+
+          .user-avatar {
+            width: 60px;
+            height: 60px;
+            font-size: 20px;
+          }
+
+          .sidebar-avatar-fallback {
+            font-size: 24px;
+          }
+
+          .user-name.black-user-name {
+            font-size: 15px;
+          }
+
+          .user-mobile {
+            font-size: 13px;
+            padding: 4px 10px;
+          }
+
+          .user-location {
+            font-size: 12px;
           }
         }
 
