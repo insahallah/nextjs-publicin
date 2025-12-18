@@ -140,28 +140,23 @@ export default function BusinessTimings({ onTimingsSubmit, onBack }: BusinessTim
     }
   };
 
-  // Convert 12-hour format to 24-hour database format
-  const convertToDatabaseFormat = (time12h: string): string => {
+  // Convert 12-hour format to display format (04:30 instead of 16:30)
+  const convertToDisplayFormat = (time12h: string): string => {
     if (!time12h || time12h === "24HRS" || time12h === "CLOSED") return "";
     
     const [time, period] = time12h.split(' ');
     const [hours, minutes] = time.split(':').map(Number);
     
-    if (period === "AM") {
-      // Handle 12 AM (midnight)
-      if (hours === 12) {
-        return `00:${minutes.toString().padStart(2, '0')}`;
-      }
+    if (period === "PM" && hours !== 12) {
+      // For PM times, keep as 12-hour format (e.g., 04:30 PM becomes 04:30)
       return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-    } else if (period === "PM") {
-      // Handle 12 PM (noon)
-      if (hours === 12) {
-        return `12:${minutes.toString().padStart(2, '0')}`;
-      }
-      return `${(hours + 12).toString()}:${minutes.toString().padStart(2, '0')}`;
+    } else if (period === "AM" && hours === 12) {
+      // 12 AM becomes 00:00
+      return `00:${minutes.toString().padStart(2, '0')}`;
+    } else {
+      // AM times and 12 PM stay as is
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
     }
-    
-    return time;
   };
 
   const validateForm = (): boolean => {
@@ -223,7 +218,7 @@ export default function BusinessTimings({ onTimingsSubmit, onBack }: BusinessTim
 
     console.log("Validation passed, preparing data...");
     
-    // Prepare data for database insertion
+    // Prepare data for database insertion - use display format (04:30 instead of 16:30)
     const timingsData: any[] = [];
     
     timeSlots.forEach(slot => {
@@ -240,18 +235,18 @@ export default function BusinessTimings({ onTimingsSubmit, onBack }: BusinessTim
             closed_at: ""
           });
         } else if (slot.open === "24HRS") {
-          // For 24 hours, insert 24:00 in BOTH fields
+          // For 24 hours, insert 24:00
           timingsData.push({
             days: dayLower,
-            open_at: "24:00",  // Changed from "00:00" to "24:00"
+            open_at: "24:00",
             closed_at: "24:00"
           });
         } else if (slot.open && slot.close) {
-          // For regular hours, convert to database format
+          // For regular hours, use display format (04:30 instead of 16:30)
           timingsData.push({
             days: dayLower,
-            open_at: convertToDatabaseFormat(slot.open),
-            closed_at: convertToDatabaseFormat(slot.close)
+            open_at: convertToDisplayFormat(slot.open),
+            closed_at: convertToDisplayFormat(slot.close)
           });
         }
       });
@@ -268,12 +263,11 @@ export default function BusinessTimings({ onTimingsSubmit, onBack }: BusinessTim
         if (slot.open === "CLOSED") {
           businessHours[dayLower] = { open: "", close: "", closed: true };
         } else if (slot.open === "24HRS") {
-          // For display, also use 24:00 for both fields
           businessHours[dayLower] = { open: "24:00", close: "24:00", closed: false, is24Hrs: true };
         } else if (slot.open && slot.close) {
           businessHours[dayLower] = { 
-            open: convertToDatabaseFormat(slot.open), 
-            close: convertToDatabaseFormat(slot.close), 
+            open: convertToDisplayFormat(slot.open), 
+            close: convertToDisplayFormat(slot.close), 
             closed: false 
           };
         }
@@ -474,7 +468,7 @@ export default function BusinessTimings({ onTimingsSubmit, onBack }: BusinessTim
                     <>
                       <span className="text-green-600 font-medium">24 Hours Operation</span><br />
                       <span className="text-xs text-gray-600">
-                        Will be stored as: <strong>24:00 - 24:00</strong> (Both fields will contain 24:00)
+                        Will be stored as: <strong>24:00 - 24:00</strong>
                       </span>
                     </>
                   ) : slot.open === "CLOSED" ? (
@@ -488,7 +482,7 @@ export default function BusinessTimings({ onTimingsSubmit, onBack }: BusinessTim
                     <>
                       Hours: {slot.open} - {slot.close || "Not selected yet"}<br />
                       <span className="text-xs text-gray-600">
-                        Will be stored as: {convertToDatabaseFormat(slot.open)} - {slot.close ? convertToDatabaseFormat(slot.close) : "??:??"}
+                        Will be stored as: {convertToDisplayFormat(slot.open)} - {slot.close ? convertToDisplayFormat(slot.close) : "??:??"}
                       </span>
                     </>
                   )}
