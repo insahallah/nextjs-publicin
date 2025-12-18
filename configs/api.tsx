@@ -27,7 +27,8 @@ export const API_ENDPOINTS2 = {
     FETCH_USER_SECTION_DATA_ALL_ADDRESS_FOR_UPDATE: `${API_BASE_URL2}/user_profiles/fetch_user_section_data_all_address_for_update_web.php`,
     FETCH_FEMILYFRIEND_DATA_FOR_UPDATE: `${API_BASE_URL2}/user_profiles/fetch_FamilyFriends_data_for_web.php`,
     DISPLAY_PROFILE_DATA_FOR_RIGHTMODLE: `${API_BASE_URL2}/business_profile/display_business_profile_data_for_RightModel.php`,
-    
+    BUSSINESS_FETCH_DATA: `${API_BASE_URL2}/bussiness_edit_page/bussiness_fetch_data.php`,
+    BUSSINESS_EDIT_PAGE: `${API_BASE_URL2}/bussiness_edit_page/bussiness_edit_page.php`,
 
   }
 }
