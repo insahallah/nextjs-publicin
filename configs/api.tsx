@@ -29,6 +29,8 @@ export const API_ENDPOINTS2 = {
     DISPLAY_PROFILE_DATA_FOR_RIGHTMODLE: `${API_BASE_URL2}/business_profile/display_business_profile_data_for_RightModel.php`,
     BUSSINESS_FETCH_DATA: `${API_BASE_URL2}/bussiness_edit_page/bussiness_fetch_data.php`,
     BUSSINESS_EDIT_PAGE: `${API_BASE_URL2}/bussiness_edit_page/bussiness_edit_page.php`,
+    BUSSINESS_CONTACT_FETCH_FOR_DISPLAY: `${API_BASE_URL2}/business_contact_edit/business_contact_fetch_for_display.php`,
+     BUSSINESS_CONTACT_UPDATE: `${API_BASE_URL2}/business_contact_edit/business_contact_update.php`,
 
   }
 }

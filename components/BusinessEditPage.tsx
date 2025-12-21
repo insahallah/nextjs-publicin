@@ -163,13 +163,55 @@ const BusinessEditPage: React.FC<BusinessEditPageProps> = ({ businessId }) => {
     setShowEditModal(true);
   };
 
-  // New function: When clicking on any field in modal
+  // FIXED FUNCTION: When clicking on any field in modal
   const handleFieldClick = (fieldName: string) => {
     // Close modal first
     setShowEditModal(false);
     
-    // Navigate to edit page with businessId
-    router.push(`/business-name-edit/${businessId}?field=${fieldName}`);
+    console.log('Clicked field:', fieldName); // Debug log
+    
+    // Map field names to their corresponding routes - UPDATED WITH ALL MODAL ITEMS
+    const routeMap: Record<string, string> = {
+      // Original mappings
+      'name': 'business-name-edit',
+      'contact': 'business-contact-edit',
+      'address': 'business-address-edit',
+      'map-location': 'business-map-location-edit',
+      'timings': 'business-timings-edit',
+      'year-establishment': 'business-year-of-establishment-edit',
+      'categories': 'business-categories-edit',
+      'turnover': 'business-yearly-turnover-edit',
+      'employees': 'business-number-of-employees-edit',
+      'website': 'business-website-edit',
+      'social-media': 'business-social-media-edit',
+      'tools': 'business-tools-edit',
+      'kyc': 'business-kyc-payments-option-edit',
+      'additional-info': 'business-additional-business-info',
+      
+      // Modal item text mappings
+      'Business Name': 'business-name-edit',
+      'Contact Details': 'business-contact-edit',
+      'Business Address': 'business-address-edit',
+      'Map Location': 'business-map-location-edit',
+      'Business Timings': 'business-timings-edit',
+      'Year of Establishment': 'business-year-of-establishment-edit',
+      'Business Categories': 'business-categories-edit',
+      'Yearly Turnover': 'business-yearly-turnover-edit',
+      'Number of Employees': 'business-number-of-employees-edit',
+      'Business Website': 'business-website-edit',
+      'Social Media': 'business-social-media-edit',
+      'Business Tools': 'business-tools-edit',
+      'KYC, Payments & Invoices': 'business-kyc-payments-option-edit',
+      'Additional Business Info': 'business-additional-business-info'
+    };
+    
+    // Get the route for the field
+    const route = routeMap[fieldName] || 'business-name-edit';
+    
+    console.log('Navigating to route:', route); // Debug log
+    
+    // Navigate to the corresponding edit page
+    router.push(`/${route}/${businessId}?field=${encodeURIComponent(fieldName)}`);
   };
 
   // Rest of your existing handlers...
@@ -422,14 +464,14 @@ const BusinessEditPage: React.FC<BusinessEditPageProps> = ({ businessId }) => {
               </button>
             </div>
 
-            {/* Modal Body - ALL ITEMS ARE NOW CLICKABLE */}
+            {/* Modal Body - ALL ITEMS ARE NOW CLICKABLE WITH CORRECT ROUTES */}
             <div className="modal-body">
               <div className="profile-section">
                 
-                {/* Business Name - CLICKABLE */}
+                {/* Business Name - UPDATED */}
                 <div 
                   className="profile-item clickable"
-                  onClick={() => handleFieldClick('name')}
+                  onClick={() => handleFieldClick('Business Name')}
                 >
                   <div className="item-icon">
                     <Building size={20} />
@@ -443,10 +485,10 @@ const BusinessEditPage: React.FC<BusinessEditPageProps> = ({ businessId }) => {
                   </div>
                 </div>
 
-                {/* Contact Details - CLICKABLE */}
+                {/* Contact Details - UPDATED */}
                 <div 
                   className="profile-item clickable"
-                  onClick={() => handleFieldClick('contact')}
+                  onClick={() => handleFieldClick('Contact Details')}
                 >
                   <div className="item-icon">
                     <Phone size={20} />
@@ -463,10 +505,10 @@ const BusinessEditPage: React.FC<BusinessEditPageProps> = ({ businessId }) => {
                   </div>
                 </div>
 
-                {/* Business Address - CLICKABLE */}
+                {/* Business Address - UPDATED */}
                 <div 
                   className="profile-item clickable"
-                  onClick={() => handleFieldClick('address')}
+                  onClick={() => handleFieldClick('Business Address')}
                 >
                   <div className="item-icon">
                     <MapPin size={20} />
@@ -483,10 +525,10 @@ const BusinessEditPage: React.FC<BusinessEditPageProps> = ({ businessId }) => {
                   </div>
                 </div>
 
-                {/* Map Location - CLICKABLE */}
+                {/* Map Location - UPDATED */}
                 <div 
                   className="profile-item clickable"
-                  onClick={() => handleFieldClick('map-location')}
+                  onClick={() => handleFieldClick('Map Location')}
                 >
                   <div className="item-icon">
                     <MapPin size={20} />
@@ -501,10 +543,10 @@ const BusinessEditPage: React.FC<BusinessEditPageProps> = ({ businessId }) => {
                   </div>
                 </div>
 
-                {/* Business Timings - CLICKABLE */}
+                {/* Business Timings - UPDATED */}
                 <div 
                   className="profile-item clickable"
-                  onClick={() => handleFieldClick('timings')}
+                  onClick={() => handleFieldClick('Business Timings')}
                 >
                   <div className="item-icon">
                     <Clock size={20} />
@@ -518,10 +560,10 @@ const BusinessEditPage: React.FC<BusinessEditPageProps> = ({ businessId }) => {
                   </div>
                 </div>
 
-                {/* Year of Establishment - CLICKABLE */}
+                {/* Year of Establishment - UPDATED */}
                 <div 
                   className="profile-item clickable"
-                  onClick={() => handleFieldClick('year-establishment')}
+                  onClick={() => handleFieldClick('Year of Establishment')}
                 >
                   <div className="item-icon">
                     <Calendar size={20} />
@@ -536,10 +578,10 @@ const BusinessEditPage: React.FC<BusinessEditPageProps> = ({ businessId }) => {
                   </div>
                 </div>
 
-                {/* Business Categories - CLICKABLE */}
+                {/* Business Categories - UPDATED */}
                 <div 
                   className="profile-item clickable"
-                  onClick={() => handleFieldClick('categories')}
+                  onClick={() => handleFieldClick('Business Categories')}
                 >
                   <div className="item-icon">
                     <Tag size={20} />
@@ -553,10 +595,10 @@ const BusinessEditPage: React.FC<BusinessEditPageProps> = ({ businessId }) => {
                   </div>
                 </div>
 
-                {/* Yearly Turnover - CLICKABLE */}
+                {/* Yearly Turnover - UPDATED */}
                 <div 
                   className="profile-item clickable"
-                  onClick={() => handleFieldClick('turnover')}
+                  onClick={() => handleFieldClick('Yearly Turnover')}
                 >
                   <div className="item-icon">
                     <DollarSign size={20} />
@@ -571,10 +613,10 @@ const BusinessEditPage: React.FC<BusinessEditPageProps> = ({ businessId }) => {
                   </div>
                 </div>
 
-                {/* Number of Employees - CLICKABLE */}
+                {/* Number of Employees - UPDATED */}
                 <div 
                   className="profile-item clickable"
-                  onClick={() => handleFieldClick('employees')}
+                  onClick={() => handleFieldClick('Number of Employees')}
                 >
                   <div className="item-icon">
                     <Users size={20} />
@@ -591,10 +633,10 @@ const BusinessEditPage: React.FC<BusinessEditPageProps> = ({ businessId }) => {
 
                 <div className="divider"></div>
 
-                {/* Business Website - CLICKABLE */}
+                {/* Business Website - UPDATED */}
                 <div 
                   className="profile-item clickable"
-                  onClick={() => handleFieldClick('website')}
+                  onClick={() => handleFieldClick('Business Website')}
                 >
                   <div className="item-icon">
                     <Globe size={20} />
@@ -609,10 +651,10 @@ const BusinessEditPage: React.FC<BusinessEditPageProps> = ({ businessId }) => {
                   </div>
                 </div>
 
-                {/* Social Media - CLICKABLE */}
+                {/* Social Media - UPDATED */}
                 <div 
                   className="profile-item clickable"
-                  onClick={() => handleFieldClick('social-media')}
+                  onClick={() => handleFieldClick('Social Media')}
                 >
                   <div className="item-icon">
                     <Share size={20} />
@@ -627,10 +669,10 @@ const BusinessEditPage: React.FC<BusinessEditPageProps> = ({ businessId }) => {
                   </div>
                 </div>
 
-                {/* Business Tools - CLICKABLE */}
+                {/* Business Tools - UPDATED */}
                 <div 
                   className="profile-item clickable"
-                  onClick={() => handleFieldClick('tools')}
+                  onClick={() => handleFieldClick('Business Tools')}
                 >
                   <div className="item-icon">
                     <Edit size={20} />
@@ -645,10 +687,10 @@ const BusinessEditPage: React.FC<BusinessEditPageProps> = ({ businessId }) => {
                   </div>
                 </div>
 
-                {/* KYC, Payments & Invoices - CLICKABLE */}
+                {/* KYC, Payments & Invoices - UPDATED */}
                 <div 
                   className="profile-item clickable"
-                  onClick={() => handleFieldClick('kyc')}
+                  onClick={() => handleFieldClick('KYC, Payments & Invoices')}
                 >
                   <div className="item-icon">
                     <Shield size={20} />
@@ -663,10 +705,10 @@ const BusinessEditPage: React.FC<BusinessEditPageProps> = ({ businessId }) => {
                   </div>
                 </div>
 
-                {/* Additional Business Info - CLICKABLE */}
+                {/* Additional Business Info - UPDATED */}
                 <div 
                   className="profile-item clickable"
-                  onClick={() => handleFieldClick('additional-info')}
+                  onClick={() => handleFieldClick('Additional Business Info')}
                 >
                   <div className="item-icon">
                     <Info size={20} />
