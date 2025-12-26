@@ -3,8 +3,6 @@ import ListPageClient from './ListPageClient'
 
 // ================= API FETCH =================
 async function getBusiness(id: string) {
-  console.log('🔍 getBusiness() called with id:', id)
-
   try {
     const res = await fetch(
       `https://allupipay.in/publicsewa/api/users/matadata.php?id=${id}`,
@@ -19,16 +17,13 @@ async function getBusiness(id: string) {
       }
     )
 
-    console.log('📡 API status123:', res.status)
-
     if (!res.ok) return null
-
     const data = await res.json()
     if (data?.error) return null
 
     return data
   } catch (err) {
-    console.error('🔥 Fetch failed:', err)
+    console.error('Fetch error:', err)
     return null
   }
 }
@@ -40,12 +35,10 @@ export async function generateMetadata(
 
   const slugArr = params.slug
   const lastSegment = slugArr[slugArr.length - 1]
-  
-  // 🔴 FIXED: बेहतर ID डिटेक्शन
-  // ID या तो पूरी तरह नंबर हो सकता है (123) या sub/cat/child prefix के साथ (sub324)
+
+  // ID detect (123 | sub123 | cat123 | child123)
   const isBusinessPage = /^\d+$|^(sub|cat|child)\d+/i.test(lastSegment)
 
-  // 👉 CANONICAL URL (COMMON FOR ALL CASES)
   const canonical = `https://www.publicin.in/list/${slugArr.join('/')}`
 
   // ================= CATEGORY PAGE =================
@@ -64,22 +57,15 @@ export async function generateMetadata(
   }
 
   // ================= BUSINESS PAGE =================
-  // 🔴 FIXED: ID निकालने के लिए regex
   const idMatch = lastSegment.match(/\d+/)
   const businessId = idMatch ? idMatch[0] : lastSegment
 
-  console.log('📡 BDDDDDDD:', isBusinessPage);
-
   const business = await getBusiness(businessId)
 
-  // 👉 BUSINESS NOT FOUND - SHOW SLUGS IN TITLE
   if (!business) {
-    // Format slugs for title
     const formattedSlugs = slugArr
-      .map(slug => 
-        slug
-          .replace(/-/g, ' ')
-          .replace(/\b\w/g, l => l.toUpperCase())
+      .map(slug =>
+        slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
       )
       .join(' | ')
 
@@ -92,37 +78,28 @@ export async function generateMetadata(
     }
   }
 
-  // 👉 CATEGORY CHAIN (NULL SAFE)
   const categories = [
     business.mainCategory,
     business.subCategory,
     business.childCategory
-  ]
-    .filter(Boolean)
-    .join(' > ')
+  ].filter(Boolean).join(' > ')
 
-  // 👉 LOCATION CHAIN
   const location = [
     business.village,
     business.block,
     business.district
-  ]
-    .filter(Boolean)
-    .join(', ')
+  ].filter(Boolean).join(', ')
 
-  // 👉 SEO TITLE
   const title =
     `${business.businessName}` +
     (categories ? ` | ${categories}` : '') +
     (location ? ` in ${location}` : '')
 
-  // 👉 META DESCRIPTION
   const description =
     `${business.businessName} is a trusted ${categories || 'local service provider'}` +
     (location ? ` in ${location}` : '') +
     `. Call ${business.mobile} for details, directions and services.`
 
-  // 👉 OG IMAGE (FIRST IMAGE SAFE)
   const ogImage =
     business.images?.length > 0
       ? `https://allupipay.in/${business.images[0]}`
@@ -140,13 +117,7 @@ export async function generateMetadata(
       url: canonical,
       siteName: 'PublicIn',
       type: 'article',
-      images: [
-        {
-          url: ogImage,
-          width: 1200,
-          height: 630
-        }
-      ]
+      images: [{ url: ogImage, width: 1200, height: 630 }]
     },
 
     twitter: {
@@ -156,10 +127,7 @@ export async function generateMetadata(
       images: [ogImage]
     },
 
-    robots: {
-      index: true,
-      follow: true
-    }
+    robots: { index: true, follow: true }
   }
 }
 
