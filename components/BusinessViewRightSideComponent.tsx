@@ -240,14 +240,18 @@ export default function BusinessViewRightSideComponent({
       }
     }
   }
-
+   console.log('Directions URL:',businessData?.latitude)
 const handleGetDirections = () => {
-  // MANUAL coordinates
-  const latitude = 25.0052608
-  const longitude = 86.2060544
+  const lat = Number(businessData?.latitude)
+  const lng = Number(businessData?.longitude)
 
-  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`
-  window.open(mapsUrl, '_blank')
+  if (!isNaN(lat) && !isNaN(lng)) {
+    const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`
+    window.open(mapsUrl, '_blank')
+ 
+  } else {
+    alert('GPS coordinates not available for directions')
+  }
 }
 
   const handleCall = (phoneNumber?: string) => {
