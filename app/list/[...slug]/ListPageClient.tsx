@@ -15,7 +15,9 @@ import BusinessViewRightSideComponent from "@/components/BusinessViewRightSideCo
  * - Handles both category listings and business details pages
  * - All data is dynamic from API
  */
-export default function ListPage({ params }: { params: Promise<{ slug: string[] }> }) {
+export default function ListPage({ params }: { params: { slug: string[] } }) {
+
+//export default function ListPage({ params }: { params: Promise<{ slug: string[] }> }) {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
