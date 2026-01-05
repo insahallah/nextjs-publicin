@@ -4,10 +4,43 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import React, { useState, useEffect, useCallback } from 'react';
 import { API_ENDPOINTS2 } from '@/configs/api';
 
+// Interface for form data
+interface FormData {
+  plot: string;
+  building: string;
+  street: string;
+  landmark: string;
+}
+
+// Interface for area options
+interface AreaOption {
+  value: string;
+  label: string;
+  description: string;
+}
+
+// Interface for post office data
+interface PostOffice {
+  Name: string;
+  District: string;
+  State: string;
+  Taluk: string;
+}
+
+// Interface for pincode API response
+interface PincodeResponse {
+  Status: string;
+  PostOffice?: PostOffice[];
+  Message?: string;
+}
+
 // Debounce function for API calls
-const debounce = (func, delay) => {
-  let timeoutId;
-  return (...args) => {
+const debounce = <T extends (...args: any[]) => any>(
+  func: T,
+  delay: number
+): ((...args: Parameters<T>) => void) => {
+  let timeoutId: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => func(...args), delay);
   };
@@ -17,31 +50,31 @@ const BusinessAddressEditPage = () => {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const id = params.id;
+  const id = params.id as string;
   const field = searchParams.get('field');
   
-  const [selectedArea, setSelectedArea] = useState('');
-  const [showAreaDropdown, setShowAreaDropdown] = useState(false);
-  const [formData, setFormData] = useState({
+  const [selectedArea, setSelectedArea] = useState<string>('');
+  const [showAreaDropdown, setShowAreaDropdown] = useState<boolean>(false);
+  const [formData, setFormData] = useState<FormData>({
     plot: '',
     building: '',
     street: '',
     landmark: ''
   });
-  const [activeModal, setActiveModal] = useState(null);
-  const [isEntireBuilding, setIsEntireBuilding] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [areaOptions, setAreaOptions] = useState([]);
-  const [pincode, setPincode] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [taluk, setTaluk] = useState(''); // New state for Taluk
-  const [isVerifyingPincode, setIsVerifyingPincode] = useState(false);
-  const [pincodeError, setPincodeError] = useState('');
-  const [availablePostOffices, setAvailablePostOffices] = useState([]);
+  const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [isEntireBuilding, setIsEntireBuilding] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [areaOptions, setAreaOptions] = useState<AreaOption[]>([]);
+  const [pincode, setPincode] = useState<string>('');
+  const [city, setCity] = useState<string>('');
+  const [state, setState] = useState<string>('');
+  const [taluk, setTaluk] = useState<string>('');
+  const [isVerifyingPincode, setIsVerifyingPincode] = useState<boolean>(false);
+  const [pincodeError, setPincodeError] = useState<string>('');
+  const [availablePostOffices, setAvailablePostOffices] = useState<PostOffice[]>([]);
 
   // Verify pincode using CORS proxy
-  const verifyPincode = useCallback(async (pin) => {
+  const verifyPincode = useCallback(async (pin: string) => {
     if (!pin || pin.length !== 6) {
       setPincodeError('Please enter a valid 6-digit pincode');
       setCity('');
@@ -62,8 +95,8 @@ const BusinessAddressEditPage = () => {
         `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(`https://www.postalpincode.in/api/pincode/${pin}`)}`
       ];
       
-      let response = null;
-      let data = null;
+      let response: Response | null = null;
+      let data: PincodeResponse | null = null;
       
       // Try each proxy URL
       for (const url of proxyUrls) {
@@ -117,7 +150,7 @@ const BusinessAddressEditPage = () => {
       
       if (data.Status === 'Success' && data.PostOffice && data.PostOffice.length > 0) {
         // Extract unique districts, states, and taluk from the response
-        const uniqueLocations = data.PostOffice.reduce((acc, postOffice) => {
+        const uniqueLocations = data.PostOffice.reduce((acc: { districts: string[], states: string[], taluks: string[] }, postOffice) => {
           if (!acc.districts.includes(postOffice.District)) {
             acc.districts.push(postOffice.District);
           }
@@ -197,7 +230,7 @@ const BusinessAddressEditPage = () => {
 
   // Debounced pincode verification
   const debouncedVerifyPincode = useCallback(
-    debounce(async (pin) => {
+    debounce(async (pin: string) => {
       if (pin && pin.length === 6) {
         await verifyPincode(pin);
       }
@@ -206,7 +239,7 @@ const BusinessAddressEditPage = () => {
   );
 
   // Handle pincode change
-  const handlePincodeChange = (value) => {
+  const handlePincodeChange = (value: string) => {
     const numericValue = value.replace(/\D/g, '').slice(0, 6);
     setPincode(numericValue);
     
@@ -316,7 +349,7 @@ const BusinessAddressEditPage = () => {
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.data) {
-          setAreaOptions(result.data.map(area => ({
+          setAreaOptions(result.data.map((area: any) => ({
             value: area.name,
             label: area.name,
             description: area.description || `${area.city || ''}, ${area.state || ''}`.trim()
@@ -343,7 +376,7 @@ const BusinessAddressEditPage = () => {
   };
 
   // Handle area search
-  const handleAreaSearch = async (searchTerm) => {
+  const handleAreaSearch = async (searchTerm: string) => {
     if (searchTerm.length > 1) {
       await fetchAreaOptions(searchTerm);
       setShowAreaDropdown(true);
@@ -364,7 +397,7 @@ const BusinessAddressEditPage = () => {
     }
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -372,7 +405,7 @@ const BusinessAddressEditPage = () => {
     }));
   };
 
-  const handleAreaSelect = async (area) => {
+  const handleAreaSelect = async (area: AreaOption) => {
     setSelectedArea(area.value);
     setShowAreaDropdown(false);
     
@@ -415,7 +448,7 @@ const BusinessAddressEditPage = () => {
     }
   };
 
-  const openModal = (modalType) => {
+  const openModal = (modalType: string) => {
     setActiveModal(modalType);
   };
 
@@ -428,7 +461,7 @@ const BusinessAddressEditPage = () => {
     closeModal();
   };
 
-const handleSave = async () => {
+  const handleSave = async () => {
     if (!id) {
         alert('Business ID is required');
         return;
@@ -496,7 +529,7 @@ const handleSave = async () => {
         console.error('Error saving address:', error);
         alert(`Error saving address: ${error.message}`);
     }
-};
+  };
 
   const renderModal = () => {
     switch (activeModal) {
@@ -714,7 +747,7 @@ const handleSave = async () => {
 
         .verificationSuccessIcon {
           background-color: #10b981;
-          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E") no-repeat center/contain;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z'/%3E%3C/svg%3E") no-repeat center/contain;
         }
 
         .verificationErrorIcon {
