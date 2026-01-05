@@ -52,7 +52,7 @@ const BusinessAddressEditPage = () => {
   const router = useRouter();
   const id = params.id as string;
   const field = searchParams.get('field');
-  
+
   const [selectedArea, setSelectedArea] = useState<string>('');
   const [showAreaDropdown, setShowAreaDropdown] = useState<boolean>(false);
   const [formData, setFormData] = useState<FormData>({
@@ -86,7 +86,7 @@ const BusinessAddressEditPage = () => {
 
     setIsVerifyingPincode(true);
     setPincodeError('');
-    
+
     try {
       // Method 1: Try with CORS proxy first
       const proxyUrls = [
@@ -94,10 +94,10 @@ const BusinessAddressEditPage = () => {
         `https://corsproxy.io/?${encodeURIComponent(`https://www.postalpincode.in/api/pincode/${pin}`)}`,
         `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(`https://www.postalpincode.in/api/pincode/${pin}`)}`
       ];
-      
+
       let response: Response | null = null;
       let data: PincodeResponse | null = null;
-      
+
       // Try each proxy URL
       for (const url of proxyUrls) {
         try {
@@ -106,7 +106,7 @@ const BusinessAddressEditPage = () => {
               'Accept': 'application/json',
             }
           });
-          
+
           if (response.ok) {
             data = await response.json();
             break;
@@ -116,7 +116,7 @@ const BusinessAddressEditPage = () => {
           continue;
         }
       }
-      
+
       // If all proxies fail, use hardcoded data for 815318
       if (!data) {
         console.log('Using hardcoded data for pincode:', pin);
@@ -141,13 +141,13 @@ const BusinessAddressEditPage = () => {
             Message: 'No data found'
           };
         }
-        
+
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 500));
       }
-      
+
       console.log('Pincode API Response:', data);
-      
+
       if (data.Status === 'Success' && data.PostOffice && data.PostOffice.length > 0) {
         // Extract unique districts, states, and taluk from the response
         const uniqueLocations = data.PostOffice.reduce((acc: { districts: string[], states: string[], taluks: string[] }, postOffice) => {
@@ -162,30 +162,30 @@ const BusinessAddressEditPage = () => {
           }
           return acc;
         }, { districts: [], states: [], taluks: [] });
-        
+
         // Set city as the first district found (District = City)
         if (uniqueLocations.districts.length > 0) {
           setCity(uniqueLocations.districts[0]);
         }
-        
+
         // Set state as the first state found
         if (uniqueLocations.states.length > 0) {
           setState(uniqueLocations.states[0]);
         }
-        
+
         // Set taluk as the first taluk found
         if (uniqueLocations.taluks.length > 0) {
           setTaluk(uniqueLocations.taluks[0]);
         }
-        
+
         // Store all post offices for area suggestions
         setAvailablePostOffices(data.PostOffice);
-        
+
         // If area is empty, suggest the first post office name
         if (!selectedArea && data.PostOffice.length > 0) {
           setSelectedArea(data.PostOffice[0].Name);
         }
-        
+
         setPincodeError('');
         return true;
       } else {
@@ -198,7 +198,7 @@ const BusinessAddressEditPage = () => {
       }
     } catch (error) {
       console.error('Error verifying pincode:', error);
-      
+
       // Fallback: Use hardcoded data on error for 815318
       if (pin === '815318') {
         setCity('Giridih');
@@ -208,15 +208,15 @@ const BusinessAddressEditPage = () => {
           { Name: 'Jamua', District: 'Giridih', State: 'Jharkhand', Taluk: 'Jamua' },
           { Name: 'Jamua (Giridh)', District: 'Giridih', State: 'Jharkhand', Taluk: 'Giridih' }
         ]);
-        
+
         if (!selectedArea) {
           setSelectedArea('Jamua');
         }
-        
+
         setPincodeError('');
         return true;
       }
-      
+
       setPincodeError('Failed to verify pincode. Please check your connection and try again.');
       setCity('');
       setState('');
@@ -242,7 +242,7 @@ const BusinessAddressEditPage = () => {
   const handlePincodeChange = (value: string) => {
     const numericValue = value.replace(/\D/g, '').slice(0, 6);
     setPincode(numericValue);
-    
+
     if (numericValue.length === 6) {
       debouncedVerifyPincode(numericValue);
     } else {
@@ -258,7 +258,7 @@ const BusinessAddressEditPage = () => {
   useEffect(() => {
     const fetchBusinessData = async () => {
       if (!id) return;
-      
+
       setLoading(true);
       try {
         const response = await fetch(API_ENDPOINTS2.AUTH.BUSSINESS_ADDRESS_FETCH, {
@@ -270,31 +270,31 @@ const BusinessAddressEditPage = () => {
             businessId: id
           })
         });
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch business data');
         }
-        
+
         const businessData = await response.json();
 
         console.log('Business Data from API:', businessData);
-        
+
         if (businessData.success && businessData.data) {
           const apiData = businessData.data;
           const apiAddress = apiData.address || {};
-          
+
           setFormData({
             plot: apiAddress.plot || apiData.plotNo || '',
             building: apiAddress.building || apiData.buildingName || '',
             street: apiAddress.street || apiData.streetName || '',
             landmark: apiAddress.landmark || ''
           });
-          
+
           setSelectedArea(apiAddress.area || apiData.village || apiData.locality || '');
-          
+
           const existingPincode = apiAddress.pincode || apiData.pinCode || '';
           setPincode(existingPincode);
-          
+
           // If we have pincode, verify it on load
           if (existingPincode && existingPincode.length === 6) {
             await verifyPincode(existingPincode);
@@ -303,12 +303,12 @@ const BusinessAddressEditPage = () => {
             setState(apiAddress.state || '');
             setTaluk(apiAddress.taluk || '');
           }
-          
+
           setIsEntireBuilding(apiData.isEntireBuilding || false);
         } else {
           console.error('API returned unsuccessful response:', businessData);
         }
-        
+
         await fetchAreaOptions('');
         setLoading(false);
       } catch (error) {
@@ -345,7 +345,7 @@ const BusinessAddressEditPage = () => {
           search: searchTerm
         })
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.data) {
@@ -408,13 +408,13 @@ const BusinessAddressEditPage = () => {
   const handleAreaSelect = async (area: AreaOption) => {
     setSelectedArea(area.value);
     setShowAreaDropdown(false);
-    
+
     // Try to find the selected area in post offices to auto-fill city, state, and taluk
     if (availablePostOffices.length > 0) {
       const matchedPostOffice = availablePostOffices.find(
         po => po.Name.toLowerCase() === area.value.toLowerCase()
       );
-      
+
       if (matchedPostOffice) {
         setCity(matchedPostOffice.District || '');
         setState(matchedPostOffice.State || '');
@@ -422,7 +422,7 @@ const BusinessAddressEditPage = () => {
         return;
       }
     }
-    
+
     // Fallback: Fetch location details using POST
     try {
       const response = await fetch(API_ENDPOINTS2.AUTH.BUSSINESS_ADDRESS_UPDATE, {
@@ -434,7 +434,7 @@ const BusinessAddressEditPage = () => {
           area: area.value
         })
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.data) {
@@ -461,75 +461,81 @@ const BusinessAddressEditPage = () => {
     closeModal();
   };
 
-  const handleSave = async () => {
-    if (!id) {
-        alert('Business ID is required');
-        return;
-    }
+const handleSave = async () => {
+  if (!id) {
+    alert('Business ID is required');
+    return;
+  }
 
-    if (!selectedArea.trim()) {
-        alert('Please select an area');
-        return;
-    }
+  if (!selectedArea.trim()) {
+    alert('Please select an area');
+    return;
+  }
 
-    if (!pincode.trim() || pincode.length !== 6) {
-        alert('Please enter a valid 6-digit pincode');
-        return;
-    }
+  if (!pincode.trim() || pincode.length !== 6) {
+    alert('Please enter a valid 6-digit pincode');
+    return;
+  }
 
-    try {
-        const addressData = {
-            businessId: id,
-            plot: formData.plot,
-            building: formData.building,
-            street: formData.street,
-            landmark: formData.landmark,
-            area: selectedArea,
-            pincode: pincode,
-            city: city,
-            state: state,
-            taluk: taluk, // Include taluk in saved data
-            isEntireBuilding: isEntireBuilding,
-            updatedAt: new Date().toISOString()
-        };
+  try {
+    const addressData = {
+      businessId: id,
+      plot: formData.plot,
+      building: formData.building,
+      street: formData.street,
+      landmark: formData.landmark,
+      area: selectedArea,
+      pincode: pincode,
+      city: city,
+      state: state,
+      taluk: taluk, // Include taluk in saved data
+      isEntireBuilding: isEntireBuilding,
+      updatedAt: new Date().toISOString()
+    };
 
-        console.log('Saving address data:', addressData);
+    console.log('Saving address data:', addressData);
 
-        const response = await fetch(API_ENDPOINTS2.AUTH.BUSSINESS_ADDRESS_UPDATE, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(addressData)
-        });
+    const response = await fetch(API_ENDPOINTS2.AUTH.BUSSINESS_ADDRESS_UPDATE, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(addressData)
+    });
 
-        const result = await response.json();
+    const result = await response.json();
 
-        if (response.ok) {
-            // Check for success status
-            if (result.status === 'success' || result.success) {
-                // Use alert for success message
-                alert(result.message || 'Address saved successfully!');
-                
-                // Redirect to BusinessEdit page with dynamic ID
-                router.push(`/BusinessEdit/${id}/edit`);
-            } else {
-                // Handle warning or error responses
-                alert(result.message || 'Address update completed with some issues.');
-                
-                // Still redirect even if it's a warning
-                if (result.status === 'warning') {
-                    router.push(`/BusinessEdit/${id}/edit`);
-                }
-            }
-        } else {
-            throw new Error(result.message || 'Failed to save address');
+    if (response.ok) {
+      // Check for success status
+      if (result.status === 'success' || result.success) {
+        // Use alert for success message
+        alert(result.message || 'Address saved successfully!');
+        
+        // Redirect to BusinessEdit page with dynamic ID
+        router.push(`/BusinessEdit/${id}/edit`);
+      } else {
+        // Handle warning or error responses
+        alert(result.message || 'Address update completed with some issues.');
+        
+        // Still redirect even if it's a warning
+        if (result.status === 'warning') {
+          router.push(`/BusinessEdit/${id}/edit`);
         }
-    } catch (error) {
-        console.error('Error saving address:', error);
-        alert(`Error saving address: ${error.message}`);
+      }
+    } else {
+      throw new Error(result.message || 'Failed to save address');
     }
-  };
+  } catch (error) {
+    console.error('Error saving address:', error);
+    
+    // Type-safe way to handle the error
+    if (error instanceof Error) {
+      alert(`Error saving address: ${error.message}`);
+    } else {
+      alert('Error saving address: An unknown error occurred');
+    }
+  }
+};
 
   const renderModal = () => {
     switch (activeModal) {
@@ -548,14 +554,14 @@ const BusinessAddressEditPage = () => {
                 <div className="popupContent">
                   <div className="modalText">
                     <div className="infoParagraph">
-                      Please select the checkbox below if this business occupies the entire space, 
-                      both inside and outside (such as all floors, offices, or areas within the building). 
+                      Please select the checkbox below if this business occupies the entire space,
+                      both inside and outside (such as all floors, offices, or areas within the building).
                       This means that no other businesses or tenants share the space with this business.
                     </div>
                     <div className="checkboxContainer">
                       <label className="customCheckbox">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           className="checkboxInput"
                           checked={isEntireBuilding}
                           onChange={(e) => setIsEntireBuilding(e.target.checked)}
@@ -574,7 +580,7 @@ const BusinessAddressEditPage = () => {
                 </div>
                 <div className="popupFooter">
                   <div className="footerButtons">
-                    <button 
+                    <button
                       className="confirmButton"
                       onClick={handleOccupancyConfirm}
                     >
@@ -1653,10 +1659,10 @@ const BusinessAddressEditPage = () => {
       <div className="pageWrapper">
         <div className="containerDiv">
           <noscript>You need to enable JavaScript to run this app.</noscript>
-          
+
           <div className="editDetailWrapper">
             <header className="headerContainer">
-              <span 
+              <span
                 className="backButtonContainer"
                 onClick={() => router.back()}
               >
@@ -1672,8 +1678,8 @@ const BusinessAddressEditPage = () => {
 
             <div className="fixedBottomButton">
               <div className="buttonWrapper">
-                <button 
-                  className="saveButton" 
+                <button
+                  className="saveButton"
                   onClick={handleSave}
                   disabled={!selectedArea || !pincode || pincode.length !== 6 || isVerifyingPincode}
                 >
@@ -1754,7 +1760,7 @@ const BusinessAddressEditPage = () => {
                       />
                       <label className="inputLabel">Area / Locality / Village *</label>
                     </div>
-                    
+
                     {showAreaDropdown && areaOptions.length > 0 && (
                       <div className="dropdownList">
                         {areaOptions.map((option) => (
@@ -1809,7 +1815,7 @@ const BusinessAddressEditPage = () => {
                 </div>
 
                 <div className="noticeContainer">
-                  <span 
+                  <span
                     className="clickableLink"
                     onClick={() => openModal('occupancy')}
                   >
