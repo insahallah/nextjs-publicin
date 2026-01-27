@@ -1,9 +1,17 @@
 // config/api.ts
 // Simple API Configuration
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://allupipay.in/publicsewa/api';
 
-export const IMAGES_URL = process.env.NEXT_PUBLIC_API_URL || 'https://allupipay.in/publicsewa/images';
-export const API_BASE_URL2 = process.env.NEXT_PUBLIC_API_URL || 'https://allupipay.in/publicsewa/api/users';
+//https://apidata.bar/
+//export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://allupipay.in/publicsewa/api';
+
+//export const IMAGES_URL = process.env.NEXT_PUBLIC_API_URL || 'https://allupipay.in/publicsewa/images';
+//export const API_BASE_URL2 = process.env.NEXT_PUBLIC_API_URL || 'https://allupipay.in/publicsewa/api/users';
+
+
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://apidata.bar/publicsewa/api';
+
+export const IMAGES_URL = process.env.NEXT_PUBLIC_API_URL || 'https://apidata.bar/publicsewa/images';
+export const API_BASE_URL2 = process.env.NEXT_PUBLIC_API_URL || 'https://apidata.bar/publicsewa/api/users';
 
 export const API_ENDPOINTS2 = {
   // Auth endpoints 
@@ -33,6 +41,17 @@ export const API_ENDPOINTS2 = {
     BUSSINESS_CONTACT_UPDATE: `${API_BASE_URL2}/business_contact_edit/business_contact_update.php`,
     BUSSINESS_ADDRESS_FETCH: `${API_BASE_URL2}/bussiness_address_edit/bussiness_address_fetch.php`,
     BUSSINESS_ADDRESS_UPDATE: `${API_BASE_URL2}/bussiness_address_edit/bussiness_address_edit.php`,
+    SUBMIT_REVIEW: `${API_BASE_URL2}/submit_review.php`, 
+    GET_REVIEW_FOR_ONE_BUSSINESS: `${API_BASE_URL2}/get_reviews_for_one_bussiness.php`,
+    GET_BUSINESS_BY_ID_FOR_WEB: `${API_BASE_URL2}/get-business-by-id-for-web.php`,
+    BUSINESS_DETAILS: `${API_BASE_URL2}/business-details.php`,
+    MAIN_SEARCH_DISPLAY_REQUEST_FOR_WEB: `${API_BASE_URL2}/main-search-display-request-for-web.php`,
+    GET_MULTI_BUSINESS_PHOTO_BY_ID: `${API_BASE_URL2}/get-multi-business-photos_by_id.php`,
+     MATADATA: `${API_BASE_URL2}/matadata.php`,
+
+ 
+   
+
 
   }
 }

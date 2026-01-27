@@ -2,7 +2,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-
+import { API_ENDPOINTS2 } from '@/configs/api';
+import { IMAGES_URL } from '@/configs/api';
 interface ReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -42,7 +43,7 @@ export default function ReviewModal({
     }
     
     if (firstImage.path) {
-      return `https://allupipay.in/publicsewa/images/${firstImage.path}`;
+      return `${IMAGES_URL}/${firstImage.path}`;
     }
     
     return '/default-business.jpg';

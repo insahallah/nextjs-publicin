@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 import ListPageClient from './ListPageClient'
-
+import { API_ENDPOINTS2 } from '@/configs/api';
 // ================= API FETCH =================
 async function getBusiness(id: string) {
   try {
     const res = await fetch(
-      `https://allupipay.in/publicsewa/api/users/matadata.php?id=${id}`,
+      `${API_ENDPOINTS2.AUTH.MATADATA}?id=${id}`,
       {
         method: 'GET',
         cache: 'no-store',

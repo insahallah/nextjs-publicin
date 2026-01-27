@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Swal from 'sweetalert2';
 import AwesomeLogin from './AwesomeLogin';
 import AwesomeSignup from './AwesomeSignup';
+import { API_ENDPOINTS } from '@/configs/api';
 //const navigate = useNavigate();
 const Header = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -22,8 +23,8 @@ const Header = () => {
     const [isSticky, setIsSticky] = useState(false);
 
     // API endpoints
-    const API_BASE_URL = 'https://allupipay.in/publicsewa/api/users';
-    const LOGIN_ENDPOINT = `${API_BASE_URL}/login.php`;
+    //const API_BASE_URL = 'https://allupipay.in/publicsewa/api/users';
+   const LOGIN_ENDPOINT = `${API_ENDPOINTS.AUTH.LOGIN}`;
 
     // helper: non-blocking toast (replaces console.log)
     const toast = (message: string, icon: 'info' | 'success' | 'error' | 'warning' = 'info') => {
@@ -244,7 +245,7 @@ const Header = () => {
         try {
             const mobileNumber = signupData.mobile;
 
-            const response = await fetch(`${API_BASE_URL}/register.php`, {
+            const response = await fetch(`${API_ENDPOINTS.AUTH.REGISTER}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

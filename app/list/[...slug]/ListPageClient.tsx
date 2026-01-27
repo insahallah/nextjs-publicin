@@ -9,6 +9,9 @@ import ReviewModal from "@/components/ReviewModal";
 import AwesomeLogin from "@/components/AwesomeLogin";
 import AwesomeSignup from "@/components/AwesomeSignup";
 import BusinessViewRightSideComponent from "@/components/BusinessViewRightSideComponent";
+import { API_ENDPOINTS2 } from '@/configs/api';
+import { API_ENDPOINTS } from '@/configs/api';
+import { IMAGES_URL } from '@/configs/api';
 
 /**
  * ListPage Component
@@ -188,8 +191,7 @@ export default function ListPage({ params }: { params: { slug: string[] } }) {
       const formData = new FormData();
       formData.append('business_id', businessId);
 
-      const res = await fetch(
-        "https://allupipay.in/publicsewa/api/users/get-multi-business-photos_by_id.php",
+      const res = await fetch(API_ENDPOINTS2.AUTH.GET_MULTI_BUSINESS_PHOTO_BY_ID,
         {
           method: "POST",
           body: formData,
@@ -208,7 +210,7 @@ export default function ListPage({ params }: { params: { slug: string[] } }) {
           
           // ✅ CORRECTED: Proper mapping with unique IDs
           const photos = data.data.map((photo: any, index: number) => {
-            const imageUrl = `https://allupipay.in/publicsewa/images/${photo.path}`;
+            const imageUrl = `${IMAGES_URL}/${photo.path}`;
             
             return {
               id: `photo-${photo.id}-${index}-${Date.now()}`, // ✅ Unique ID
@@ -554,8 +556,7 @@ export default function ListPage({ params }: { params: { slug: string[] } }) {
     };
 
     try {
-      const res = await fetch(
-        "https://allupipay.in/publicsewa/api/users/submit_review.php",
+      const res = await fetch(API_ENDPOINTS2.AUTH.SUBMIT_REVIEW,
         {
           method: "POST",
           headers: {
@@ -605,14 +606,14 @@ export default function ListPage({ params }: { params: { slug: string[] } }) {
        //console.log('📥XXXXXXXXXXXXXXXXXXXX:',  `https://allupipay.in/publicsewa/api/users/get-reviews-for-one-business.php?${params}`);
 
       const res = await fetch(
-        `https://allupipay.in/publicsewa/api/users/get_reviews_for_one_bussiness.php?${params}`,
+        `${API_ENDPOINTS2.AUTH.GET_REVIEW_FOR_ONE_BUSSINESS}?${params}`,
         {
           method: "GET",
           cache: "no-store"
         }
       );
 
-      console.log('📥XXXXXXXXXXXXXXXXXXXX:', res.status);
+      //console.log('📥XXXXXXXXXXXXXXXXXXXX:', res.status);
 
       if (res.ok) {
         const data = await res.json();
@@ -682,7 +683,7 @@ export default function ListPage({ params }: { params: { slug: string[] } }) {
       formData.append('mobile', loginData.mobile);
       formData.append('password', loginData.password);
 
-      const response = await fetch('https://allupipay.in/publicsewa/api/login.php', {
+      const response = await fetch(`${API_ENDPOINTS.AUTH.LOGIN}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -961,7 +962,7 @@ export default function ListPage({ params }: { params: { slug: string[] } }) {
                     (typeof businessData.images[0] === 'string' ?
                       businessData.images[0] :
                       businessData.images[0].path ?
-                        `https://allupipay.in/publicsewa/images/${businessData.images[0].path}` :
+                        `${IMAGES_URL}/${businessData.images[0].path}` :
                         "/default-listing.jpg"
                     ) : "/default-listing.jpg"
                   }
@@ -1972,8 +1973,7 @@ export default function ListPage({ params }: { params: { slug: string[] } }) {
       const formData = new FormData();
       formData.append('business_id', businessId);
 
-      const res = await fetch(
-        "https://allupipay.in/publicsewa/api/users/get-business-by-id-for-web.php",
+      const res = await fetch(API_ENDPOINTS2.AUTH.GET_BUSINESS_BY_ID_FOR_WEB,
         {
           method: "POST",
           body: formData,
@@ -1987,11 +1987,15 @@ export default function ListPage({ params }: { params: { slug: string[] } }) {
           return data.data;
         }
       }
+  const params = new URLSearchParams({ id: businessId });
 
-      const res2 = await fetch(
-        `https://allupipay.in/publicsewa/api/users/business-details.php?id=${businessId}`,
-        { cache: "no-store" }
-      );
+const res2 = await fetch(
+  `${API_ENDPOINTS2.AUTH.BUSINESS_DETAILS}?${params}`,
+  {
+    method: "GET",
+    cache: "no-store"
+  }
+);
 
       if (res2.ok) {
         const data = await res2.json();
@@ -2416,14 +2420,14 @@ function getListingImagesFromAPI(listing: any): string[] {
 
 function getImageUrl(imagePath?: string): string {
   if (!imagePath) return "/default-listing.jpg";
-  if (imagePath.startsWith('post_images/')) return `https://allupipay.in/publicsewa/images/${imagePath}`;
+  if (imagePath.startsWith('post_images/')) return `${IMAGES_URL}/${imagePath}`;
   if (imagePath.startsWith('https://')) return imagePath;
-  return `https://allupipay.in/publicsewa/images/${imagePath.replace(/^[\\/]+/, "")}`;
+  return `${IMAGES_URL}/${imagePath.replace(/^[\\/]+/, "")}`;
 }
 
 async function fetchAndFormatCategories(): Promise<{ fullPath: string; name: string }[]> {
   try {
-    const res = await fetch("https://allupipay.in/publicsewa/api/main-search.php", { cache: "no-store" });
+    const res = await fetch(API_ENDPOINTS2.AUTH.MAIN_SEARCH, { cache: "no-store" });
     if (!res.ok) throw new Error(`Failed: ${res.status}`);
     const data = await res.json();
     const formattedCategories: { fullPath: string; name: string }[] = [];
@@ -2537,8 +2541,7 @@ async function fetchListings(slugArray: string[]) {
     else if (lastPart.startsWith("sub")) formData.append("subcategoryId", lastPart);
     else if (lastPart.startsWith("cat")) formData.append("category", lastPart);
 
-    const res = await fetch(
-      "https://allupipay.in/publicsewa/api/users/main-search-display-request-for-web.php",
+    const res = await fetch(API_ENDPOINTS2.AUTH.MAIN_SEARCH_DISPLAY_REQUEST_FOR_WEB,
       { method: "POST", body: formData, cache: "no-store" }
     );
 

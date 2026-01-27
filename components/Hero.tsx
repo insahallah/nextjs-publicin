@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_ENDPOINTS2 } from '@/configs/api';
 
 interface Category {
   id?: string | number;
@@ -82,8 +83,8 @@ const Hero = () => {
     try {
       setLoading(true);
       setError(null);
-
-      const res = await fetch('https://allupipay.in/publicsewa/api/main-search.php');
+///https://allupipay.in/publicsewa/api/main-search.php
+      const res = await fetch(API_ENDPOINTS2.AUTH.MAIN_SEARCH);
       
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
